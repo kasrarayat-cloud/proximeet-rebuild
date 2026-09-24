@@ -1,12 +1,12 @@
 # Rebuild lead status — 2026-09-24
 
-## Current checkpoint: build 3 evidence reviewed; native test correction ready
+## Current checkpoint: native build and both interaction tests passed
 
-The founder supplied the full build 3 archive. Actual captures confirm the woven band and mounted metal plate render natively. The first-test recording shows the band appear around 49 seconds, while its slow accessibility sampling still reports the earlier loading value. Several short timed fixtures are blank and are not completion evidence. Material and camera presentation remain short of the reference; no final visual approval is claimed.
+[Codemagic build 4](https://codemagic.io/app/6ab4d02869609bf0cdd94b08/build/6ab56aa9937257efe291463f) passed on frozen `229efefcd5b8dc0349b9afa8da4d5afcc351cd74` in 16m 27s. Xcode 26.6 compiled for iPhone 17 Pro Max / iOS 26.5; all 53 Mac domain tests and both UI tests passed with zero failures. The normal path exercises all intents/signals, reselection and Ready; the second path uses the app's reduced-motion override. The exact 3D readiness assertion is retained with a 90-second deadline and diagnostics, under a 600-second per-test allowance.
 
-The unchanged product source is `44f0cb6`. Build 3 compiled it with Xcode 26.6 on iPhone 17 Pro Max / iOS 26.5; 53 Mac domain tests passed. Its overall UI verdict remains FAILED. The test correction retains the exact model-ready assertion, increases its bounded deadline from 30 to 90 seconds, adds failure diagnostics and uses the previously committed 600-second per-test allowance. All 13 project checks pass. The next native run must validate this correction. See [native evidence and diagnosis](native-3d-verification.md).
+The supplied build 3 archive has been visually reviewed. Native Band, Signal and Ready PNGs and a 21-second cut of the reduced-motion recording are delivered. Product source/assets are unchanged between builds 3 and 4; build 4 changes test timing/diagnostics and reports. The new build 4 logs/verdict are reviewed, but its exported pixels are not yet locally reviewed. See [complete native evidence](native-3d-verification.md).
 
-TestFlight has not been uploaded. The Apple signing/team setup and physical-device behavior remain unverified. The first four onboarding scenes retain their prior design; the app remains an offline demo. The original code and recovery copies are preserved.
+This is a working offline native prototype, not final visual approval: the plate needs stronger surface/reflection detail, preview resources reload across screens, and Band card heights need polish. A [bounded next fidelity assignment](../tasks/task05-native-fidelity.md) is prepared. No TestFlight upload or physical-device verification has occurred. Signing requires the owner's own Apple team. Legacy code, recovery copies and private evidence remain preserved.
 
 ## Current direction: editable 3D band proof
 
