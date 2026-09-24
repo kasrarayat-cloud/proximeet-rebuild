@@ -1,5 +1,16 @@
 # Rebuild lead status — 2026-09-24
 
+## Current checkpoint: native 3D app builds; interaction verification failed
+
+The native Band → Signal → Ready increment is committed and pushed as `44f0cb6` in the new repository. It includes the mobile USDZ (22,112 triangles; 3.45 MB), compiled studio lighting, actual native selections, interruptible attachment, drag rotation and UI tests. Codex authored this increment. The previous detailed authoring proof and legacy project remain preserved.
+
+Codemagic build 3 compiled the app with Xcode 26.6 for iPhone 17 Pro Max / iOS 26.5. All 53 Mac domain tests passed; model and lighting bundle gates passed; 12 fixture PNGs and the fixture movie were generated. The overall run FAILED in 13m 31s: the normal test timed out on initial model readiness, while the reduced-motion path reached Ready but exceeded the runner allowance and was included in the final failed verdict. There is no passing UI suite and no native visual approval.
+
+The runner allowance is corrected to 600 seconds per test without removing checks or changing the 30-minute workflow cap. It has not been rerun. The initial model-ready predicate remains unchanged until its captured state is inspected. Cloud-browser artifact downloading failed; direct HTTPS retrieval without an authenticated session returned 401. No credentials were extracted. The required next input is `proximeet-rebuild_3_artifacts.zip` (80.27 MB), downloaded by the founder from the existing build page and attached to the conversation. This contains the actual screenshots, recording and failure diagnostics needed for the next fix. See [the complete native 3D verification record](native-3d-verification.md).
+
+TestFlight has not been uploaded. The Apple signing/team setup and physical-device performance remain unverified. The first four onboarding scenes retain the prior design; no backend or live account features were added.
+
+
 ## Current direction: editable 3D band proof
 
 The owner rejected the flat tinted-PNG band approach and approved an editable 3D band with an integrated metal plate. Codex authored the working Blender generator and refinements after two actual Opus 5.5 attempts produced no source and were stopped. The four source/helper files are now preserved under `assets/three_d/`, with destination hashes verified against the lead's working copies.

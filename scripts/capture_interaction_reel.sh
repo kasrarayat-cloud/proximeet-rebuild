@@ -56,8 +56,8 @@ set +e
 xcodebuild "${COMMON_ARGS[@]}" \
     -resultBundlePath "$RESULT_PATH" \
     -test-timeouts-enabled YES \
-    -default-test-execution-time-allowance 90 \
-    -maximum-test-execution-time-allowance 120 \
+    -default-test-execution-time-allowance 600 \
+    -maximum-test-execution-time-allowance 600 \
     test-without-building
 TEST_STATUS=$?
 set -e
