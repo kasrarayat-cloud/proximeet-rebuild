@@ -1,0 +1,98 @@
+{
+  "source_sha256": "60b6ee6c79f2f2b2e26de437d05a38ee7de5b29047071ba4a101f56856e79d79",
+  "asset": "ProximeetSignature.usdz",
+  "asset_sha256": "de87c07e6f9975be84d63be1240f6d2586ec905c2839fc1e5afff5e9b61b81b6",
+  "asset_bytes": 3446467,
+  "triangles": 22112,
+  "triangles_by_object": {
+    "Band_Core": 8192,
+    "PlateBody": 716,
+    "Clasp": 716,
+    "Band_Edge_Bottom": 4096,
+    "Band_Edge_Top": 4096,
+    "Clasp_Retention_L": 716,
+    "Clasp_Retention_R": 716,
+    "Plate_Cushion_L": 716,
+    "Plate_Cushion_R": 716,
+    "Plate_Lug_L": 716,
+    "Plate_Lug_R": 716
+  },
+  "units": "metres",
+  "up": "Y",
+  "front": "+Z",
+  "bounds_min": [
+    -0.036000002175569534,
+    0.0014999983832240105,
+    -0.029825002246070653
+  ],
+  "bounds_max": [
+    0.036000002175569534,
+    0.028000001795589924,
+    0.030750002129934728
+  ],
+  "plate_root_verified_local": [
+    0,
+    0.015000001527369022,
+    0.029250001534819603
+  ],
+  "plate_root_verified_world": [
+    0,
+    0.015000001527369022,
+    0.029250001534819603
+  ],
+  "usd_up_axis": "Y",
+  "plate_root_rest_position": [
+    0,
+    0.015,
+    0.02925
+  ],
+  "plate_glyph_local_position": [
+    0,
+    0,
+    0.00156
+  ],
+  "glyph_size_m": [
+    0.018,
+    0.014
+  ],
+  "hero_camera": [
+    0.038,
+    0.09,
+    0.207
+  ],
+  "hero_target": [
+    0,
+    0.015,
+    0.001
+  ],
+  "hero_focal_mm": 85,
+  "hero_sensor_width_mm": 36,
+  "band_material": "WovenFabric_Neutral_PBR",
+  "band_tinting": "Preserve authored base-color texture, normal and roughness maps when changing tint.",
+  "limitations": [
+    "Cycles review render is not an iPhone render.",
+    "Native glyph decal supplied at runtime; plate mesh is blank.",
+    "USDZ visual/material import still requires native verification."
+  ],
+  "archive_contents": [
+    "ProximeetSignature.usdc",
+    "textures/Woven_Normal.png",
+    "textures/Woven_Roughness.png",
+    "textures/Woven_BaseColor_Neutral.png"
+  ],
+  "roundtrip_objects": {
+    "Band_Core_Mesh": 8192,
+    "Band_Edge_Bottom_Mesh": 4096,
+    "Band_Edge_Top_Mesh": 4096,
+    "Clasp_Mesh": 716,
+    "Clasp_Retention_L_Mesh": 716,
+    "Clasp_Retention_R_Mesh": 716,
+    "Plate_Cushion_L_Mesh": 716,
+    "Plate_Cushion_R_Mesh": 716,
+    "Plate_Lug_L_Mesh": 716,
+    "Plate_Lug_R_Mesh": 716,
+    "PlateBody_Mesh": 716
+  },
+  "roundtrip_render": "mobile-roundtrip-final.png",
+  "roundtrip_render_note": "Frozen Y-up USDZ rendered in a matching Y-up Blender studio. Native RealityKit verification remains separate."
+}

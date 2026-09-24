@@ -17,7 +17,7 @@ struct ReadyForCheckInView: View {
                     title: "Your demo\nis ready.",
                     subtitle: "Your band and signal, together."
                 )
-                BandStage(intent: ready.band, signal: ready.signal, maxLoopHeight: 92)
+                SignatureBandHero(intent: ready.band, signal: ready.signal, height: 156, interactive: false)
                 SummarySheet(
                     ready: ready,
                     onEditProfile: { isEditingProfile = true },

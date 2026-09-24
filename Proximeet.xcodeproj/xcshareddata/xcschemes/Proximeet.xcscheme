@@ -20,6 +20,20 @@
                ReferencedContainer = "container:Proximeet.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A8309941D6B07785FF53BCEC"
+               BuildableName = "ProximeetUITests.xctest"
+               BlueprintName = "ProximeetUITests"
+               ReferencedContainer = "container:Proximeet.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -29,6 +43,17 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A8309941D6B07785FF53BCEC"
+               BuildableName = "ProximeetUITests.xctest"
+               BlueprintName = "ProximeetUITests"
+               ReferencedContainer = "container:Proximeet.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
          <TestableReference
             skipped = "NO">
             <BuildableReference

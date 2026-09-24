@@ -26,9 +26,18 @@ workflows:
         script: bash scripts/codemagic_verify.sh package
       - name: Boot, install, warm up and capture entrance, Ready and B2 variant fixture screenshots
         script: bash scripts/codemagic_verify.sh captures
+      - name: Verify real Band-to-Signal taps and record native 3D interaction
+        script: bash scripts/codemagic_verify.sh interaction
     artifacts:
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
       - build/artifacts/screenshots/*
       - build/artifacts/app/*
+      - build/artifacts/interaction/*.mp4
+      - build/artifacts/interaction/*.sha256
+      - build/artifacts/interaction/*.txt
+      - build/artifacts/interaction/*.json
+      - build/artifacts/interaction/*.log
+      - build/artifacts/interaction/*.zip
+      - build/artifacts/interaction/attachments/**/*

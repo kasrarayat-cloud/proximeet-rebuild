@@ -11,6 +11,7 @@
 #   select-simulator  choose an installed iPhone simulator from simctl JSON (never downloads)
 #   build             Proximeet scheme, Debug, for that simulator UDID, code signing disabled
 #   package           ditto zip of the simulator .app, preserving the executable bit
+#   interaction       XCTest-driven Band-to-Signal taps, captured movie and test attachments
 #   captures          boot, install, one uncaptured warmup launch, then relaunch each DEBUG
 #                     fixture (six entrance scenes, B1/B2 selections, Ready, a labelled B2
 #                     Reduce Motion preview) and take real simctl screenshots; B2 at the
@@ -38,7 +39,7 @@ DERIVED_DATA="$ROOT/build/DerivedData"
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Proximeet.app"
 EXPECTED_XCODE="Xcode 26.6"
 EXPECTED_BUNDLE_ID="com.proximeet.demo"
-PREFERRED_SIMULATOR="iPhone 17"
+PREFERRED_SIMULATOR="iPhone 17 Pro Max"
 MIN_IOS="17.0"
 # Fixed pause after each launch so the first frame and short decorative animations
 # settle before the capture. A capture aid only, never a timing or performance figure.
@@ -53,9 +54,9 @@ RESTORE_CONTENT_SIZE=""
 
 STAGE="${1:-}"
 case "$STAGE" in
-    metadata|validate|domain-tests|select-simulator|build|package|captures) ;;
+    metadata|validate|domain-tests|select-simulator|build|package|captures|interaction) ;;
     *)
-        echo "usage: $0 metadata|validate|domain-tests|select-simulator|build|package|captures" >&2
+        echo "usage: $0 metadata|validate|domain-tests|select-simulator|build|package|captures|interaction" >&2
         exit 2
         ;;
 esac
@@ -329,6 +330,16 @@ stage_build() {
         echo "note=Unsigned Debug iOS Simulator build. It cannot be installed on a device or distributed through TestFlight."
     } > "$META/app.txt"
     run cat "$META/app.txt"
+    if [ ! -s "$APP_PATH/ProximeetSignature.usdz" ]; then
+        note "ERROR: the built bundle is missing ProximeetSignature.usdz."
+        return 1
+    fi
+    run shasum -a 256 "$APP_PATH/ProximeetSignature.usdz"
+    if [ ! -e "$APP_PATH/SignatureStudio.realityenv" ]; then
+        note "ERROR: the built bundle is missing compiled SignatureStudio.realityenv (a raw .skybox copy is insufficient)."
+        return 1
+    fi
+    run ls -ld "$APP_PATH/SignatureStudio.realityenv"
 }
 
 stage_package() {
@@ -511,6 +522,13 @@ stage_captures() {
     run cat "$SHOTS/captures.tsv"
 }
 
+stage_interaction() {
+    load_simulator
+    check_app
+    run bash scripts/capture_interaction_reel.sh "$SIM_UDID" "$DERIVED_DATA" "$ARTIFACTS"
+    summary_line "interaction" "XCTest real taps passed; native simulator movie and xcresult recorded"
+}
+
 case "$STAGE" in
     metadata) stage_metadata ;;
     validate) stage_validate ;;
@@ -519,4 +537,5 @@ case "$STAGE" in
     build) stage_build ;;
     package) stage_package ;;
     captures) stage_captures ;;
+    interaction) stage_interaction ;;
 esac

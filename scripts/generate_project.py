@@ -30,9 +30,9 @@ Format decisions
 
 Sources are discovered at render time: every *.swift file under Proximeet/
 (recursively, sorted) is compiled by the app target, grouped by directory.
-Proximeet/Resources/Assets.xcassets and Proximeet/Resources/PrivacyInfo.xcprivacy
-are the only resources. Run this again after adding, moving or removing Swift
-files.
+Resources are explicitly allowlisted below. UI test Swift files are discovered
+under ProximeetUITests/ and compiled only by the UI test target. Run this again
+after adding, moving or removing Swift files.
 
 Usage:
   python3 scripts/generate_project.py           # write or update the files
@@ -52,10 +52,14 @@ PROJECT_NAME = "Proximeet"
 TARGET_NAME = "Proximeet"
 PRODUCT_FILE = "Proximeet.app"
 APP_DIR = "Proximeet"
+UI_TEST_TARGET = "ProximeetUITests"
+UI_TEST_PRODUCT = "ProximeetUITests.xctest"
 PROJECT_DIR = "Proximeet.xcodeproj"
 RESOURCE_FILES = (
     "Proximeet/Resources/Assets.xcassets",
     "Proximeet/Resources/PrivacyInfo.xcprivacy",
+    "Proximeet/Resources/3D/ProximeetSignature.usdz",
+    "Proximeet/Resources/SignatureStudio.skybox",
 )
 PACKAGE_RELATIVE_PATH = "ProximeetDomain"
 PACKAGE_PRODUCT = "ProximeetDomain"
@@ -82,6 +86,8 @@ FILE_TYPES = {
     ".swift": "sourcecode.swift",
     ".xcassets": "folder.assetcatalog",
     ".xcprivacy": "text.xml",
+    ".usdz": "file.usdz",
+    ".skybox": "file.skybox",
 }
 
 # --------------------------------------------------------------------------
@@ -184,6 +190,17 @@ _TARGET_SHARED = {
 }
 
 TARGET_SETTINGS = {"Debug": dict(_TARGET_SHARED), "Release": dict(_TARGET_SHARED)}
+UI_TEST_SETTINGS = {name: {
+    "CODE_SIGN_STYLE": "Automatic",
+    "GENERATE_INFOPLIST_FILE": "YES",
+    "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @loader_path/Frameworks",
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.proximeet.demo.uitests",
+    "PRODUCT_NAME": "$(TARGET_NAME)",
+    "SWIFT_STRICT_CONCURRENCY": "complete",
+    "SWIFT_VERSION": "5.0",
+    "TARGETED_DEVICE_FAMILY": "1",
+    "TEST_TARGET_NAME": TARGET_NAME,
+} for name in ("Debug", "Release")}
 
 CONFIGURATIONS = ("Debug", "Release")
 
@@ -281,6 +298,12 @@ def discover_swift_sources(root: Path) -> list[str]:
     return sorted(path.relative_to(root).as_posix() for path in app.rglob("*.swift") if path.is_file())
 
 
+def discover_ui_test_sources(root: Path) -> list[str]:
+    directory = root / UI_TEST_TARGET
+    return sorted(path.relative_to(root).as_posix() for path in directory.rglob("*.swift")
+                  if path.is_file()) if directory.is_dir() else []
+
+
 def _sort_key(name: str) -> tuple[str, str]:
     return (name.lower(), name)
 
@@ -293,7 +316,8 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
         return obj
 
     sources = discover_swift_sources(root)
-    members = sources + list(RESOURCE_FILES)
+    ui_sources = discover_ui_test_sources(root)
+    members = sources + ui_sources + list(RESOURCE_FILES)
 
     # File references.
     file_refs: dict[str, PBXObject] = {}
@@ -312,6 +336,12 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
          "includeInIndex": "0", "path": PRODUCT_FILE, "sourceTree": "BUILT_PRODUCTS_DIR"},
         inline=True,
     ))
+    ui_product = add(PBXObject(
+        object_id(f"product:{UI_TEST_PRODUCT}"), UI_TEST_PRODUCT,
+        {"isa": "PBXFileReference", "explicitFileType": "wrapper.cfbundle",
+         "includeInIndex": "0", "path": UI_TEST_PRODUCT, "sourceTree": "BUILT_PRODUCTS_DIR"},
+        inline=True,
+    ))
 
     # Groups mirroring the directory tree under Proximeet/.
     directories: set[str] = set()
@@ -320,6 +350,7 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
         for depth in range(1, len(parts) + 1):
             directories.add("/".join(parts[:depth]))
     directories.add(APP_DIR)
+    directories.add(UI_TEST_TARGET)
     groups: dict[str, PBXObject] = {}
     for directory in sorted(directories, key=lambda d: (-d.count("/"), d)):
         name = directory.rsplit("/", 1)[-1]
@@ -338,12 +369,12 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
         ))
     products_group = add(PBXObject(
         object_id("group:<products>"), "Products",
-        {"isa": "PBXGroup", "children": [product.ref()], "name": "Products",
+        {"isa": "PBXGroup", "children": [product.ref(), ui_product.ref()], "name": "Products",
          "sourceTree": "<group>"},
     ))
     main_group = add(PBXObject(
         object_id("group:<main>"), None,
-        {"isa": "PBXGroup", "children": [groups[APP_DIR].ref(), products_group.ref()],
+        {"isa": "PBXGroup", "children": [groups[APP_DIR].ref(), groups[UI_TEST_TARGET].ref(), products_group.ref()],
          "sourceTree": "<group>"},
     ))
 
@@ -374,9 +405,9 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
         {"isa": "PBXBuildFile", "productRef": product_dependency.ref()}, inline=True,
     ))
 
-    def phase(isa: str, name: str, files: list[PBXObject]) -> PBXObject:
+    def phase(isa: str, name: str, files: list[PBXObject], owner: str = TARGET_NAME) -> PBXObject:
         return add(PBXObject(
-            object_id(f"phase:{TARGET_NAME}:{name}"), name,
+            object_id(f"phase:{owner}:{name}"), name,
             {"isa": isa, "buildActionMask": "2147483647",
              "files": [item.ref() for item in files],
              "runOnlyForDeploymentPostprocessing": "0"},
@@ -385,6 +416,10 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
     sources_phase = phase("PBXSourcesBuildPhase", "Sources", source_files)
     frameworks_phase = phase("PBXFrameworksBuildPhase", "Frameworks", [framework_file])
     resources_phase = phase("PBXResourcesBuildPhase", "Resources", resource_files)
+    ui_sources_phase = phase("PBXSourcesBuildPhase", "Sources",
+                             [build_file("UISources", relative) for relative in ui_sources], UI_TEST_TARGET)
+    ui_frameworks_phase = phase("PBXFrameworksBuildPhase", "Frameworks", [], UI_TEST_TARGET)
+    ui_resources_phase = phase("PBXResourcesBuildPhase", "Resources", [], UI_TEST_TARGET)
 
     # Build configurations.
     def configuration_list(owner_key: str, owner_comment: str,
@@ -407,6 +442,8 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
 
     target_configs = configuration_list(
         f"target:{TARGET_NAME}", f'PBXNativeTarget "{TARGET_NAME}"', TARGET_SETTINGS)
+    ui_configs = configuration_list(
+        f"target:{UI_TEST_TARGET}", f'PBXNativeTarget "{UI_TEST_TARGET}"', UI_TEST_SETTINGS)
     project_configs = configuration_list(
         "project", f'PBXProject "{PROJECT_NAME}"', PROJECT_SETTINGS)
 
@@ -423,6 +460,23 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
          "productReference": product.ref(),
          "productType": "com.apple.product-type.application"},
     ))
+    ui_proxy = add(PBXObject(
+        object_id("proxy:uitests:app"), "PBXContainerItemProxy",
+        {"isa": "PBXContainerItemProxy", "containerPortal": Ref(object_id("project"), "Project object"),
+         "proxyType": "1", "remoteGlobalIDString": target_id(), "remoteInfo": TARGET_NAME},
+    ))
+    ui_dependency = add(PBXObject(
+        object_id("dependency:uitests:app"), "PBXTargetDependency",
+        {"isa": "PBXTargetDependency", "target": target.ref(), "targetProxy": ui_proxy.ref()},
+    ))
+    ui_target = add(PBXObject(
+        ui_target_id(), UI_TEST_TARGET,
+        {"isa": "PBXNativeTarget", "buildConfigurationList": ui_configs.ref(),
+         "buildPhases": [ui_sources_phase.ref(), ui_frameworks_phase.ref(), ui_resources_phase.ref()],
+         "buildRules": [], "dependencies": [ui_dependency.ref()], "name": UI_TEST_TARGET,
+         "productName": UI_TEST_TARGET, "productReference": ui_product.ref(),
+         "productType": "com.apple.product-type.bundle.ui-testing"},
+    ))
 
     project = add(PBXObject(
         object_id("project"), "Project object",
@@ -433,6 +487,8 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
              "LastUpgradeCheck": TOOLS_VERSION,
              "TargetAttributes": {
                  target.oid: {"CreatedOnToolsVersion": CREATED_ON_TOOLS_VERSION},
+                 ui_target.oid: {"CreatedOnToolsVersion": CREATED_ON_TOOLS_VERSION,
+                                 "TestTargetID": target_id()},
              },
          },
          "buildConfigurationList": project_configs.ref(),
@@ -445,7 +501,7 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
          "productRefGroup": products_group.ref(),
          "projectDirPath": "",
          "projectRoot": "",
-         "targets": [target.ref()]},
+         "targets": [target.ref(), ui_target.ref()]},
     ))
 
     identifiers = [obj.oid for obj in objects]
@@ -457,6 +513,10 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
 
 def target_id() -> str:
     return object_id(f"target:{TARGET_NAME}")
+
+
+def ui_target_id() -> str:
+    return object_id(f"target:{UI_TEST_TARGET}")
 
 
 def render_pbxproj(root: Path) -> str:
@@ -533,6 +593,9 @@ def render_scheme() -> str:
     def app_ref(indent: int) -> str:
         return _buildable_reference(indent, target_id(), PRODUCT_FILE, TARGET_NAME, app_container)
 
+    def ui_ref(indent: int) -> str:
+        return _buildable_reference(indent, ui_target_id(), UI_TEST_PRODUCT, UI_TEST_TARGET, app_container)
+
     arguments = "".join(
         "         <CommandLineArgument\n"
         f'            argument = "{_xml_attr(argument)}"\n'
@@ -557,6 +620,14 @@ def render_scheme() -> str:
         '            buildForAnalyzing = "YES">\n'
         + app_ref(12)
         + "         </BuildActionEntry>\n"
+        "         <BuildActionEntry\n"
+        '            buildForTesting = "YES"\n'
+        '            buildForRunning = "NO"\n'
+        '            buildForProfiling = "NO"\n'
+        '            buildForArchiving = "NO"\n'
+        '            buildForAnalyzing = "YES">\n'
+        + ui_ref(12)
+        + "         </BuildActionEntry>\n"
         "      </BuildActionEntries>\n"
         "   </BuildAction>\n"
         "   <TestAction\n"
@@ -566,6 +637,11 @@ def render_scheme() -> str:
         '      shouldUseLaunchSchemeArgsEnv = "YES"\n'
         '      shouldAutocreateTestPlan = "YES">\n'
         "      <Testables>\n"
+        "         <TestableReference\n"
+        '            skipped = "NO"\n'
+        '            parallelizable = "NO">\n'
+        + ui_ref(12)
+        + "         </TestableReference>\n"
         "         <TestableReference\n"
         '            skipped = "NO">\n'
         + _buildable_reference(12, PACKAGE_TEST_TARGET, PACKAGE_TEST_TARGET, PACKAGE_TEST_TARGET,
@@ -648,7 +724,7 @@ def unmanaged_files(root: Path) -> list[str]:
     found = []
     for path in sorted(app.rglob("*")):
         relative = path.relative_to(root).as_posix()
-        if not path.is_file() or ".xcassets/" in relative or relative in included:
+        if not path.is_file() or ".xcassets/" in relative or ".skybox/" in relative or relative in included:
             continue
         if path.name == ".DS_Store":
             continue

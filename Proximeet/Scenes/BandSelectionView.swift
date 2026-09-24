@@ -1,85 +1,107 @@
 import SwiftUI
+import UIKit
 import ProximeetDomain
 
-/// B1 — choose a band. Four complete woven loops in wide, shallow rows.
-/// Rows expand naturally at accessibility text sizes. Selection is immediate and replaces any earlier choice; the
-/// primary action confirms and moves straight to the signal scene, where the same
-/// assembled band appears secured. Nothing waits for the arrival or selection animations.
+/// B1 — one physical object, four clear intents. The preview starts cyan without
+/// silently choosing Social: confirmation remains disabled until a real selection.
 struct BandSelectionView: View {
     @Environment(DemoSession.self) private var session
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Adaptive private var adaptive
-    @State private var hasArrived = false
 
     var body: some View {
         let selected = session.draft.band
         ScreenScaffold(title: "Band", step: 5) {
-            SceneHeader(title: "Which band\ntonight?", subtitle: "One intent. Your kind of connection.")
+            SceneHeader(title: "Your night.\nYour intention.", subtitle: "Choose what you're open to.")
 
-            bandChoices(selected: selected)
-                .padding(.top, 4)
+            SignatureBandHero(intent: selected ?? .social, height: 212)
 
-            Footnote(text: DraftVisibility.notVisibleToAnyone.notice)
+            LazyVGrid(columns: columns, spacing: 10) {
+                ForEach(BandIntent.allCases) { intent in
+                    intentButton(intent, selected: selected == intent)
+                }
+            }
+
+            Text(selected?.summary ?? "Select a band to make it yours.")
+                .font(.subheadline)
+                .foregroundStyle(Palette.quiet(increasedContrast: adaptive.increaseContrast))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
+                .accessibilityIdentifier("band.description")
         } actions: {
             Button {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 session.confirmBand()
             } label: {
-                Text(selected.map { "Choose \($0.title)" } ?? "Select a band")
+                Text(selected.map { "Wear \($0.title)" } ?? "Choose your band")
             }
             .buttonStyle(.proximeetPrimary)
             .disabled(selected == nil)
-            .accessibilityHint(Text(selected == nil ? "Select a band first." : "Secures this band and moves to your signal."))
+            .accessibilityIdentifier("band.confirm")
+            .accessibilityHint("Confirms your band and opens signal selection.")
+
+            Text("Private demo · Nothing is shared")
+                .font(.caption2)
+                .foregroundStyle(Palette.quietText)
         }
-        .sensoryFeedback(.selection, trigger: selected) { _, newValue in
-            newValue != nil
-        }
-        .onAppear {
-            hasArrived = true
-        }
+        .sensoryFeedback(.selection, trigger: selected) { _, newValue in newValue != nil }
     }
 
-    /// Four wide, shallow objects like the showcase. Larger text expands each row
-    /// naturally and scrolls; no fixed height can hide a caption or action.
-    private func bandChoices(selected: BandIntent?) -> some View {
-        VStack(spacing: 6) {
-            ForEach(BandIntent.allCases) { intent in
-                option(intent, selected: selected)
-            }
-        }
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 10), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
     }
 
-    private func option(_ intent: BandIntent, selected: BandIntent?) -> some View {
-        BandOption(intent: intent, isSelected: intent == selected) {
+    private func intentButton(_ intent: BandIntent, selected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        return Button {
             session.selectBand(intent)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: intent.symbolName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(intent.tint)
+                    .frame(width: 30)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(intent.title)
+                        .font(.headline)
+                        .foregroundStyle(Palette.porcelain)
+                    Text(intent.tagline)
+                        .font(.caption)
+                        .foregroundStyle(Palette.quietText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if selected {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(intent.tint)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
+            .background(selected ? intent.tint.opacity(0.09) : Palette.graphite, in: shape)
+            .overlay {
+                shape.strokeBorder(selected ? intent.tint : Palette.hairline.opacity(0.7), lineWidth: selected ? 1.5 : 1)
+            }
+            .contentShape(shape)
         }
-        .frame(maxWidth: .infinity)
-        // Measured arrival: offset and partial opacity only, so every band is visible
-        // and tappable from the first frame.
-        .offset(y: hasArrived || !adaptive.playsEntrances ? 0 : 18)
-        .opacity(hasArrived || !adaptive.playsEntrances ? 1 : 0.35)
-        .animation(adaptive.arrivalAnimation(index: intent.order), value: hasArrived)
+        .buttonStyle(ObjectPressStyle())
+        .accessibilityLabel("\(intent.title) band")
+        .accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityHint(intent.summary)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("intent.\(intent.rawValue)")
+        .animation(adaptive.selectionAnimation, value: selected)
     }
 }
 
 #if DEBUG
-#Preview("B1 · no selection") {
+#Preview("B1 · native 3D") {
     NavigationStack { BandSelectionView() }
         .environment(PreviewFixtures.session(at: .band))
-}
-
-#Preview("B1 · Dating selected") {
-    NavigationStack { BandSelectionView() }
-        .environment(PreviewFixtures.session(at: .bandSelected, band: .dating))
-}
-
-#Preview("B1 · largest text") {
-    NavigationStack { BandSelectionView() }
-        .environment(PreviewFixtures.session(at: .bandSelected, band: .business))
-        .dynamicTypeSize(.accessibility5)
-}
-
-#Preview("B1 · Reduce Motion presentation") {
-    NavigationStack { BandSelectionView() }
-        .environment(PreviewFixtures.session(at: .bandSelected, band: .activity))
-        .environment(\.prefersReducedMotionPreview, true)
 }
 #endif

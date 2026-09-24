@@ -44,10 +44,13 @@ PRIVACY = RESOURCES_DIR / "PrivacyInfo.xcprivacy"
 PACKAGE_NAME = "ProximeetDomain"
 PACKAGE_TEST_TARGET = "ProximeetDomainTests"
 APP_TARGET = "Proximeet"
+UI_TEST_TARGET = "ProximeetUITests"
 EXPECTED_BUNDLE_ID = "com.proximeet.demo"
 EXPECTED_RESOURCES = {
     "Proximeet/Resources/Assets.xcassets",
     "Proximeet/Resources/PrivacyInfo.xcprivacy",
+    "Proximeet/Resources/3D/ProximeetSignature.usdz",
+    "Proximeet/Resources/SignatureStudio.skybox",
 }
 ALLOWED_PHASES = ("PBXSourcesBuildPhase", "PBXFrameworksBuildPhase", "PBXResourcesBuildPhase")
 FORBIDDEN_PHASES = ("PBXShellScriptBuildPhase", "PBXCopyFilesBuildPhase", "PBXHeadersBuildPhase",
@@ -506,7 +509,7 @@ def check_sources(ctx: Context, c: Check) -> None:
 # ==========================================================================
 
 
-@check(3, "Resources phase == Assets.xcassets + PrivacyInfo.xcprivacy")
+@check(3, "Resources phase contains only catalog, privacy, signature USDZ and studio skybox")
 def check_resources(ctx: Context, c: Check) -> None:
     paths, _ = ctx.resolved_paths()
     _, target = ctx.app_target()
@@ -526,6 +529,12 @@ def check_resources(ctx: Context, c: Check) -> None:
         if rel(path).endswith(".xcprivacy"):
             c.require(obj.get("lastKnownFileType") == "text.xml",
                       f"{rel(path)} lastKnownFileType is {obj.get('lastKnownFileType')!r}")
+        if rel(path).endswith(".skybox"):
+            c.require(obj.get("lastKnownFileType") == "file.skybox",
+                      "studio skybox must be a compilable skybox resource, not a generic copied folder")
+            images = [child for child in path.iterdir() if child.is_file()] if path.is_dir() else []
+            c.require(len(images) == 1 and images[0].suffix == ".exr",
+                      "studio skybox must contain exactly one EXR image")
 
 
 # ==========================================================================
@@ -586,9 +595,12 @@ def check_phases(ctx: Context, c: Check) -> None:
                   f"target {target.get('name')} phases are {kinds}")
         c.require(target.get("buildRules", []) == [], f"target {target.get('name')} has build rules")
     targets = ctx.of_isa("PBXNativeTarget")
-    c.require(len(targets) == 1, f"expected exactly one native target, found {len(targets)}")
+    expected = {APP_TARGET: "com.apple.product-type.application",
+                UI_TEST_TARGET: "com.apple.product-type.bundle.ui-testing"}
+    c.require({target.get("name") for target in targets.values()} == set(expected),
+              f"expected app and UI test targets, found {[t.get('name') for t in targets.values()]}")
     for oid, target in targets.items():
-        c.require(target.get("productType") == "com.apple.product-type.application",
+        c.require(target.get("productType") == expected.get(target.get("name")),
                   f"target {target.get('name')} productType is {target.get('productType')!r}")
 
 
@@ -645,7 +657,7 @@ def check_settings(ctx: Context, c: Check) -> None:
 # ==========================================================================
 
 
-@check(7, "shared scheme references the app target and the package test target")
+@check(7, "shared scheme references the app, UI tests and package test target")
 def check_scheme(ctx: Context, c: Check) -> None:
     for path in (WORKSPACE_DATA, WORKSPACE_CHECKS):
         c.require(v_is_file(path), f"{rel(path)} missing")
@@ -689,11 +701,14 @@ def check_scheme(ctx: Context, c: Check) -> None:
     build_names = [ref.get("BlueprintName") for entry in scheme.iter("BuildActionEntry")
                    for ref in entry.iter("BuildableReference")]
     c.require(APP_TARGET in build_names, "BuildAction does not build the app")
+    c.require(UI_TEST_TARGET in build_names, "BuildAction does not build the UI test bundle")
     testables = [(ref.get("BlueprintName"), ref.get("ReferencedContainer"))
                  for testable in scheme.iter("TestableReference")
                  for ref in testable.iter("BuildableReference")]
     c.require((PACKAGE_TEST_TARGET, f"container:{PACKAGE_NAME}") in testables,
               f"TestAction does not include {PACKAGE_TEST_TARGET}")
+    c.require((UI_TEST_TARGET, "container:Proximeet.xcodeproj") in testables,
+              f"TestAction does not include {UI_TEST_TARGET}")
     for name in testables:
         c.require(manifest_targets.get(name[0]) == "testTarget" or name[1] == "container:Proximeet.xcodeproj",
                   f"testable {name[0]} is not a package testTarget")
@@ -1194,6 +1209,38 @@ def _provides_namespace(folder: Path) -> bool:
     except (OSError, ValueError):
         return False
     return properties.get("provides-namespace") is True
+
+
+# ==========================================================================
+# UI test isolation and runner settings
+# ==========================================================================
+
+
+@check(13, "UI test target compiles only UI tests and depends on the app")
+def check_ui_tests(ctx: Context, c: Check) -> None:
+    matches = [(oid, target) for oid, target in ctx.of_isa("PBXNativeTarget").items()
+               if target.get("name") == UI_TEST_TARGET]
+    if not c.require(len(matches) == 1, "one UI test target is required"):
+        return
+    _, target = matches[0]
+    paths, _ = ctx.resolved_paths()
+    sources = ctx.build_file_paths(ctx.phase_of(target, "PBXSourcesBuildPhase"), paths)
+    on_disk = {rel(path) for path in (ROOT / UI_TEST_TARGET).rglob("*.swift") if path.is_file()}
+    c.require(bool(on_disk), "UI test source is absent")
+    c.require(len(sources) == len(set(sources)) and set(sources) == on_disk,
+              f"UI test source membership differs: project={sources}, disk={sorted(on_disk)}")
+    app_id, _ = ctx.app_target()
+    dependencies = [ctx.objects.get(oid, {}).get("target") for oid in target.get("dependencies", [])]
+    c.require(dependencies == [app_id], "UI runner must depend on exactly the app target")
+    for name, settings in configurations(ctx, target).items():
+        c.require(settings.get("TEST_TARGET_NAME") == APP_TARGET,
+                  f"{name}: TEST_TARGET_NAME must name the demo app")
+        c.require(settings.get("GENERATE_INFOPLIST_FILE") == "YES",
+                  f"{name}: UI test Info.plist must be generated")
+        c.require(settings.get("PRODUCT_BUNDLE_IDENTIFIER") == "com.proximeet.demo.uitests",
+                  f"{name}: unexpected UI test bundle identifier")
+        c.require(not settings.get("DEVELOPMENT_TEAM"), f"{name}: UI runner has a signing team")
+    c.note(f"{len(on_disk)} UI test source(s); real taps are separate from fixture captures")
 
 
 # ==========================================================================
