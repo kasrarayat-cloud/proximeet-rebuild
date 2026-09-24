@@ -2,7 +2,7 @@
 
 ## Current visual refinement
 
-The supplied Social Objects showcase and four uploaded native captures were compared. Three custom production assets are now installed with verified byte hashes. Actual Opus 5.5 ultracode implemented the six-screen material pass; the lead reviewed it and corrected B1 layout, metal selection alignment and the Ready summary. Linux verification passed 12 project checks, all app syntax, both shell scripts and 53 domain tests. The domain is unchanged. A new manual Mac build, its full native screenshots and fixture entrance reel are the next gate. Source and test evidence: [refinement report](visual-refinement.md). No final visual approval or TestFlight claim is made.
+The supplied Social Objects showcase and four uploaded native captures were compared. Three custom production assets are now installed with verified byte hashes. Actual Opus 5.5 ultracode implemented the six-screen material pass; the lead reviewed it and corrected B1 layout, metal selection alignment and the Ready summary. Linux verification passed 12 project checks, all app syntax, both shell scripts and 53 domain tests. The domain is unchanged. The refinement then passed native Mac verification on `0f21dea`: 53 Mac tests, 12 screenshots and a fixture entrance movie, in 6m 4s. The previous concurrency warnings are gone. The browser could not retrieve the new archive, so its images and motion remain unreviewed. See [the exact native result and remaining visual gate](visual-mac-verification.md). Source and test evidence: [refinement report](visual-refinement.md). No final visual approval or TestFlight claim is made.
 
 ## Cloud setup update
 

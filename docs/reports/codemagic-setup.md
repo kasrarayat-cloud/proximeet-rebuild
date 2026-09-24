@@ -1,5 +1,9 @@
 # Codemagic: first unsigned native verification
 
+## Current visual refinement: PASS
+
+Build 2 passed on `0f21dea` in 6m 4s with 53 Mac tests, 12 native captures and a fixture entrance recording. The two concurrency warnings are absent. New image/movie review is pending because the browser artifact download failed. See [build 2 evidence](visual-mac-verification.md). The historical first-build evidence follows.
+
 ## First cloud verdict: PASS
 
 [Codemagic build 1](https://codemagic.io/app/6ab4d02869609bf0cdd94b08/build/6ab4d1f52f2d1907d24566bd), ID `6ab4d1f52f2d1907d24566bd`, finished successfully on 24 September 2026 in **4m 22s**. It checked out clean source `70a2a8479a29aa5edf258ac98226fd35026b6bd8` from `redesign/social-objects`.

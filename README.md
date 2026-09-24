@@ -6,7 +6,7 @@ This is an offline, in-memory demo. It does not authenticate anyone, verify iden
 
 ## Verification status
 
-As of 24 September 2026: the first Codemagic Mac run passed on `70a2a8479a29aa5edf258ac98226fd35026b6bd8` (Xcode 26.6, 53 macOS domain tests). The owner supplied its screenshot archive; the lead reviewed all four native PNGs against the Social Objects showcase. That review led to the current material/layout refinement, custom generated artwork, full entrance capture set and a native fixture entrance reel. The refinement passes 12 Linux project checks, app Swift syntax parsing, shell syntax and 53 domain tests; its new Mac run and visual review are still pending. This is an offline demo and is not TestFlight-ready.
+As of 24 September 2026: the Social Objects visual refinement passed Codemagic build 2 on source `0f21deac21b76377969cf32bf7a4cac12d15389a` in 6m 4s. Xcode 26.6 compiled the native simulator app, 53 macOS domain tests passed, 12 screenshots were captured and a native fixture entrance reel was recorded. The prior concurrency warnings are gone. The artifact archive could not be retrieved by the lead browser, so the new pixels and motion still need visual review. This remains an offline demo and is not TestFlight-ready. See [native verification evidence](docs/reports/visual-mac-verification.md).
 
 See [lead status](docs/reports/LEAD_STATUS.md), [domain evidence](docs/reports/task01-domain.md), [native implementation and acceptance checklist](docs/reports/task01-ui.md), and [design direction](docs/design/PROXIMEET_SOCIAL_OBJECTS_DESIGN.md).
 

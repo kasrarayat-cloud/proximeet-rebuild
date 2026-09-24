@@ -1,8 +1,12 @@
-# Visual refinement — Social Objects material pass (source only)
+# Visual refinement — Social Objects material pass
 
 Date: 24 September 2026. Base: `1db1e6f` plus uncommitted lead changes. Author: Claude Code, `claude-opus-5-5`, ultracode, ordinary permissions. Nothing committed, pushed, built, signed or dispatched.
 
-**Evidence status.** This is a source change. It is **not** a native compile, simulator or device run, motion measurement or visual approval. Every Linux check I tried was denied by the session's permission policy (listed below), so **no automated check ran in this pass**. The lead must run the scoped checks and the Codemagic workflow.
+**Worker checkpoint before lead verification.** This is a source change. It is **not** a native compile, simulator or device run, motion measurement or visual approval. Every Linux check I tried was denied by the session's permission policy (listed below), so **no automated check ran in this pass**. The lead must run the scoped checks and the Codemagic workflow.
+
+## Native verification result
+
+The lead subsequently verified source `0f21dea` on Codemagic build 2: native BUILD SUCCEEDED, 53 Mac domain tests, 12 native captures and a fixture entrance movie. The two prior concurrency warnings are gone. The new archive could not be downloaded by the browser; actual image and movie review is still pending. [Full evidence and limits](visual-mac-verification.md). The authoring and Linux checkpoints below are preserved in context.
 
 ## Lead review checkpoint
 
