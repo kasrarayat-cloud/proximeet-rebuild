@@ -1,0 +1,486 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03567CC08B6EC3A79FE6B942 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AF09BDFAC765B06B25D864 /* Palette.swift */; };
+		0529859D1916D2390BBAF93F /* SignalTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */; };
+		053CA3F24FB96ECE55F240F4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */; };
+		1EAD9E154C5D4D0623E00902 /* Adaptations.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */; };
+		2996E0A5D648C86FED3BA9BC /* ProximeetDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 97672CDF22265746DE6E7693 /* ProximeetDomain */; };
+		34447E70E0D3EEC0E10E81C2 /* BandOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 746B8699332625989FCA280E /* BandOption.swift */; };
+		36BCE8422677F7BC20BF760D /* ProximeetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586B8C2BE5175B1718607857 /* ProximeetApp.swift */; };
+		3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29FA62256BD7E4755C13781C /* IntentStyle.swift */; };
+		44504F04444EE2A7F545AC28 /* BandStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */; };
+		4F339DDF08CFE74EC534483F /* ScreenScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */; };
+		5C420BEF23E3F9027C17A184 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */; };
+		641107C75798A0F0B3E8C92F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE467721E15337452098FA6 /* RootView.swift */; };
+		834EF4BBCBA66AE3B1CBF734 /* SignalSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */; };
+		8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBF4AD5F388E4A893AA059C /* GuestListView.swift */; };
+		96926943F2EFA30ABE1B1089 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C808A64B77F06AC2C52124A /* Controls.swift */; };
+		A7AAF815BE2863E203C7ECCD /* DemoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56510F116CB0A2C325F396E0 /* DemoSession.swift */; };
+		A9F437110C55F2C75F2BFD77 /* ProfileEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0603CB7A287A3B2BE60E72CD /* ProfileEditorSheet.swift */; };
+		AD05325380AB6EA9B6FCB5A2 /* ReadyForCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */; };
+		BA3BC8C45C9739105CB529E6 /* DemoPassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5499541143B991E4BB751E76 /* DemoPassView.swift */; };
+		BAB64C1831539CBA82403DE2 /* Clasp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9C741008D10D13E76F07D0 /* Clasp.swift */; };
+		C059ACDEAEE045DC4E6CC843 /* Materials.swift in Sources */ = {isa = PBXBuildFile; fileRef = C97C5C6E00528CFA84E4DB88 /* Materials.swift */; };
+		C15A67F4D5254DDF108A2E42 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973C8D800835EE14440BF5B3 /* Typography.swift */; };
+		C83708C29AB8F57779D1FF5D /* DebugFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */; };
+		DBDE63CD1A82675CE1423C90 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */; };
+		E65623348C459A3449DBC83A /* BandSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52FFAC32F49E4D9157254E25 /* BandSelectionView.swift */; };
+		F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B9055BE62D6166F7331A15 /* Fabric.swift */; };
+		FAD66E8A0A87BB1C4BE92EFB /* BirthdayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0603CB7A287A3B2BE60E72CD /* ProfileEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEditorSheet.swift; sourceTree = "<group>"; };
+		0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayView.swift; sourceTree = "<group>"; };
+		29FA62256BD7E4755C13781C /* IntentStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentStyle.swift; sourceTree = "<group>"; };
+		3C808A64B77F06AC2C52124A /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
+		42D219AD24B8242F8235FBBD /* Proximeet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Proximeet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalSelectionView.swift; sourceTree = "<group>"; };
+		4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalTag.swift; sourceTree = "<group>"; };
+		52FFAC32F49E4D9157254E25 /* BandSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandSelectionView.swift; sourceTree = "<group>"; };
+		5499541143B991E4BB751E76 /* DemoPassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoPassView.swift; sourceTree = "<group>"; };
+		56510F116CB0A2C325F396E0 /* DemoSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSession.swift; sourceTree = "<group>"; };
+		586B8C2BE5175B1718607857 /* ProximeetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximeetApp.swift; sourceTree = "<group>"; };
+		5B9C741008D10D13E76F07D0 /* Clasp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clasp.swift; sourceTree = "<group>"; };
+		746B8699332625989FCA280E /* BandOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandOption.swift; sourceTree = "<group>"; };
+		7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7CE467721E15337452098FA6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugFixtures.swift; sourceTree = "<group>"; };
+		8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenScaffold.swift; sourceTree = "<group>"; };
+		973C8D800835EE14440BF5B3 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadyForCheckInView.swift; sourceTree = "<group>"; };
+		9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adaptations.swift; sourceTree = "<group>"; };
+		BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		BEBF4AD5F388E4A893AA059C /* GuestListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListView.swift; sourceTree = "<group>"; };
+		C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandStage.swift; sourceTree = "<group>"; };
+		C97C5C6E00528CFA84E4DB88 /* Materials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Materials.swift; sourceTree = "<group>"; };
+		D5AF09BDFAC765B06B25D864 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		E2B9055BE62D6166F7331A15 /* Fabric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fabric.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6E1FF88A9D55A7C6F5A32023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2996E0A5D648C86FED3BA9BC /* ProximeetDomain in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		295E3B3653EA69AC89C7E82A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */,
+				BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		4BBD0633004A085BA0999DC0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				746B8699332625989FCA280E /* BandOption.swift */,
+				C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */,
+				5B9C741008D10D13E76F07D0 /* Clasp.swift */,
+				E2B9055BE62D6166F7331A15 /* Fabric.swift */,
+				29FA62256BD7E4755C13781C /* IntentStyle.swift */,
+				4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		70BA62A58D2B503196088CEC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				42D219AD24B8242F8235FBBD /* Proximeet.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		977DEF0F00FFACF56BDA1858 = {
+			isa = PBXGroup;
+			children = (
+				D191B56054CF72F82A333911 /* Proximeet */,
+				70BA62A58D2B503196088CEC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A5E25625E144C719C93F031A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */,
+				56510F116CB0A2C325F396E0 /* DemoSession.swift */,
+				586B8C2BE5175B1718607857 /* ProximeetApp.swift */,
+				7CE467721E15337452098FA6 /* RootView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D191B56054CF72F82A333911 /* Proximeet */ = {
+			isa = PBXGroup;
+			children = (
+				A5E25625E144C719C93F031A /* App */,
+				4BBD0633004A085BA0999DC0 /* Components */,
+				D56EB8D93488FCA0A396036F /* DesignSystem */,
+				295E3B3653EA69AC89C7E82A /* Resources */,
+				DF0722A0595FF9958F9D3EB9 /* Scenes */,
+			);
+			path = Proximeet;
+			sourceTree = "<group>";
+		};
+		D56EB8D93488FCA0A396036F /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */,
+				3C808A64B77F06AC2C52124A /* Controls.swift */,
+				C97C5C6E00528CFA84E4DB88 /* Materials.swift */,
+				D5AF09BDFAC765B06B25D864 /* Palette.swift */,
+				8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */,
+				973C8D800835EE14440BF5B3 /* Typography.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		DF0722A0595FF9958F9D3EB9 /* Scenes */ = {
+			isa = PBXGroup;
+			children = (
+				52FFAC32F49E4D9157254E25 /* BandSelectionView.swift */,
+				0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */,
+				5499541143B991E4BB751E76 /* DemoPassView.swift */,
+				BEBF4AD5F388E4A893AA059C /* GuestListView.swift */,
+				0603CB7A287A3B2BE60E72CD /* ProfileEditorSheet.swift */,
+				993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */,
+				4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */,
+				9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */,
+			);
+			path = Scenes;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		108FE7DC4EBC5B91D92CC09F /* Proximeet */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B8F647AAE96749E7C640500 /* Build configuration list for PBXNativeTarget "Proximeet" */;
+			buildPhases = (
+				9F3123DDE46A368E9F692C52 /* Sources */,
+				6E1FF88A9D55A7C6F5A32023 /* Frameworks */,
+				8C58DDB66FF72078B647F692 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Proximeet;
+			packageProductDependencies = (
+				97672CDF22265746DE6E7693 /* ProximeetDomain */,
+			);
+			productName = Proximeet;
+			productReference = 42D219AD24B8242F8235FBBD /* Proximeet.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F57A0BBB249DF689E2D8F377 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					108FE7DC4EBC5B91D92CC09F = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 9E3B057554DF5163BCB0DBA0 /* Build configuration list for PBXProject "Proximeet" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 977DEF0F00FFACF56BDA1858;
+			packageReferences = (
+				AE8C0A59F2A15E0DDC8FF351 /* XCLocalSwiftPackageReference "ProximeetDomain" */,
+			);
+			productRefGroup = 70BA62A58D2B503196088CEC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				108FE7DC4EBC5B91D92CC09F /* Proximeet */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8C58DDB66FF72078B647F692 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DBDE63CD1A82675CE1423C90 /* Assets.xcassets in Resources */,
+				053CA3F24FB96ECE55F240F4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9F3123DDE46A368E9F692C52 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C83708C29AB8F57779D1FF5D /* DebugFixtures.swift in Sources */,
+				A7AAF815BE2863E203C7ECCD /* DemoSession.swift in Sources */,
+				36BCE8422677F7BC20BF760D /* ProximeetApp.swift in Sources */,
+				641107C75798A0F0B3E8C92F /* RootView.swift in Sources */,
+				34447E70E0D3EEC0E10E81C2 /* BandOption.swift in Sources */,
+				44504F04444EE2A7F545AC28 /* BandStage.swift in Sources */,
+				BAB64C1831539CBA82403DE2 /* Clasp.swift in Sources */,
+				F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */,
+				3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */,
+				0529859D1916D2390BBAF93F /* SignalTag.swift in Sources */,
+				1EAD9E154C5D4D0623E00902 /* Adaptations.swift in Sources */,
+				96926943F2EFA30ABE1B1089 /* Controls.swift in Sources */,
+				C059ACDEAEE045DC4E6CC843 /* Materials.swift in Sources */,
+				03567CC08B6EC3A79FE6B942 /* Palette.swift in Sources */,
+				4F339DDF08CFE74EC534483F /* ScreenScaffold.swift in Sources */,
+				C15A67F4D5254DDF108A2E42 /* Typography.swift in Sources */,
+				E65623348C459A3449DBC83A /* BandSelectionView.swift in Sources */,
+				FAD66E8A0A87BB1C4BE92EFB /* BirthdayView.swift in Sources */,
+				BA3BC8C45C9739105CB529E6 /* DemoPassView.swift in Sources */,
+				8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */,
+				A9F437110C55F2C75F2BFD77 /* ProfileEditorSheet.swift in Sources */,
+				AD05325380AB6EA9B6FCB5A2 /* ReadyForCheckInView.swift in Sources */,
+				834EF4BBCBA66AE3B1CBF734 /* SignalSelectionView.swift in Sources */,
+				5C420BEF23E3F9027C17A184 /* WelcomeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1F14D145C580BB044BE85933 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		2B48034317404E4780A8AAA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Proximeet Demo";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.proximeet.demo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		4125B174EC6A027C5900D543 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Proximeet Demo";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.proximeet.demo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BB76BE0D8C5CF3E0E1A6FA63 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B8F647AAE96749E7C640500 /* Build configuration list for PBXNativeTarget "Proximeet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4125B174EC6A027C5900D543 /* Debug */,
+				2B48034317404E4780A8AAA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9E3B057554DF5163BCB0DBA0 /* Build configuration list for PBXProject "Proximeet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB76BE0D8C5CF3E0E1A6FA63 /* Debug */,
+				1F14D145C580BB044BE85933 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AE8C0A59F2A15E0DDC8FF351 /* XCLocalSwiftPackageReference "ProximeetDomain" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ProximeetDomain;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		97672CDF22265746DE6E7693 /* ProximeetDomain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ProximeetDomain;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F57A0BBB249DF689E2D8F377 /* Project object */;
+}
