@@ -1,15 +1,12 @@
 # Rebuild lead status — 2026-09-24
 
-## Current checkpoint: native 3D app builds; interaction verification failed
+## Current checkpoint: build 3 evidence reviewed; native test correction ready
 
-The native Band → Signal → Ready increment is committed and pushed as `44f0cb6` in the new repository. It includes the mobile USDZ (22,112 triangles; 3.45 MB), compiled studio lighting, actual native selections, interruptible attachment, drag rotation and UI tests. Codex authored this increment. The previous detailed authoring proof and legacy project remain preserved.
+The founder supplied the full build 3 archive. Actual captures confirm the woven band and mounted metal plate render natively. The first-test recording shows the band appear around 49 seconds, while its slow accessibility sampling still reports the earlier loading value. Several short timed fixtures are blank and are not completion evidence. Material and camera presentation remain short of the reference; no final visual approval is claimed.
 
-Codemagic build 3 compiled the app with Xcode 26.6 for iPhone 17 Pro Max / iOS 26.5. All 53 Mac domain tests passed; model and lighting bundle gates passed; 12 fixture PNGs and the fixture movie were generated. The overall run FAILED in 13m 31s: the normal test timed out on initial model readiness, while the reduced-motion path reached Ready but exceeded the runner allowance and was included in the final failed verdict. There is no passing UI suite and no native visual approval.
+The unchanged product source is `44f0cb6`. Build 3 compiled it with Xcode 26.6 on iPhone 17 Pro Max / iOS 26.5; 53 Mac domain tests passed. Its overall UI verdict remains FAILED. The test correction retains the exact model-ready assertion, increases its bounded deadline from 30 to 90 seconds, adds failure diagnostics and uses the previously committed 600-second per-test allowance. All 13 project checks pass. The next native run must validate this correction. See [native evidence and diagnosis](native-3d-verification.md).
 
-The runner allowance is corrected to 600 seconds per test without removing checks or changing the 30-minute workflow cap. It has not been rerun. The initial model-ready predicate remains unchanged until its captured state is inspected. Cloud-browser artifact downloading failed; direct HTTPS retrieval without an authenticated session returned 401. No credentials were extracted. The required next input is `proximeet-rebuild_3_artifacts.zip` (80.27 MB), downloaded by the founder from the existing build page and attached to the conversation. This contains the actual screenshots, recording and failure diagnostics needed for the next fix. See [the complete native 3D verification record](native-3d-verification.md).
-
-TestFlight has not been uploaded. The Apple signing/team setup and physical-device performance remain unverified. The first four onboarding scenes retain the prior design; no backend or live account features were added.
-
+TestFlight has not been uploaded. The Apple signing/team setup and physical-device behavior remain unverified. The first four onboarding scenes retain their prior design; the app remains an offline demo. The original code and recovery copies are preserved.
 
 ## Current direction: editable 3D band proof
 

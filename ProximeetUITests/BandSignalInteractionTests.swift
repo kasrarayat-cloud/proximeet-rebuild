@@ -98,8 +98,18 @@ final class BandSignalInteractionTests: XCTestCase {
         XCTAssertTrue(hero.waitForExistence(timeout: 5))
         let ready = NSPredicate(format: "value == %@", "3D model ready")
         let expectation = XCTNSPredicateExpectation(predicate: ready, object: hero)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 30), .completed,
-                       "The actual bundled USDZ must load; a loading or fallback view does not pass.")
+        // Build 3 rendered the model while a slow simulator AX snapshot still reported
+        // loading. Keep the readiness contract, but bound cold-start sampling separately
+        // from the complete interaction test's execution allowance.
+        let result = XCTWaiter.wait(for: [expectation], timeout: 90)
+        if result != .completed {
+            capture("model-readiness-failure", app)
+            let diagnostics = XCTAttachment(string: hero.debugDescription)
+            diagnostics.name = "model-readiness-accessibility"
+            diagnostics.lifetime = .keepAlways
+            add(diagnostics)
+            XCTFail("The actual bundled USDZ must load; observed hero value: \(String(describing: hero.value)). A loading or fallback view does not pass.")
+        }
     }
 
     private func capture(_ name: String, _ app: XCUIApplication) {
