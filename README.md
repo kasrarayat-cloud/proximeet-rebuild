@@ -6,7 +6,7 @@ This is an offline, in-memory demo. It does not authenticate anyone, verify iden
 
 ## Verification status
 
-As of 24 September 2026: the first Codemagic Mac run passed for source commit `70a2a8479a29aa5edf258ac98226fd35026b6bd8`, in 4m 22s. Xcode 26.6 compiled the unsigned Debug app for an iPhone 17 simulator on iOS 26.5; all 53 domain tests passed on macOS. The app installed and four DEBUG fixture captures were produced. **The capture archive could not be retrieved by the lead browser, so its pixels have not been visually reviewed.** Earlier Linux checks also passed. Full-flow interaction, accessibility, device behavior and final visual acceptance remain pending. The first four scenes, icons, materials and app branding still need refinement. This is not TestFlight-ready.
+As of 24 September 2026: the first Codemagic Mac run passed on `70a2a8479a29aa5edf258ac98226fd35026b6bd8` (Xcode 26.6, 53 macOS domain tests). The owner supplied its screenshot archive; the lead reviewed all four native PNGs against the Social Objects showcase. That review led to the current material/layout refinement, custom generated artwork, full entrance capture set and a native fixture entrance reel. The refinement passes 12 Linux project checks, app Swift syntax parsing, shell syntax and 53 domain tests; its new Mac run and visual review are still pending. This is an offline demo and is not TestFlight-ready.
 
 See [lead status](docs/reports/LEAD_STATUS.md), [domain evidence](docs/reports/task01-domain.md), [native implementation and acceptance checklist](docs/reports/task01-ui.md), and [design direction](docs/design/PROXIMEET_SOCIAL_OBJECTS_DESIGN.md).
 

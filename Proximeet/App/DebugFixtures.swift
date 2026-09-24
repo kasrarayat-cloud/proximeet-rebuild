@@ -2,9 +2,10 @@
 import Foundation
 import ProximeetDomain
 
-/// DEBUG-only launch arguments for inspecting B1/B2 directly. Never compiled into Release.
+/// DEBUG-only launch arguments for inspecting scenes directly. Never compiled into Release.
 ///
-///     -ProximeetFixture guest-list | band | band-selected | signal | signal-selected | ready
+///     -ProximeetFixture welcome | birthday | pass | guest-list | band | band-selected |
+///                       signal | signal-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
 ///     -ProximeetFixtureSignal comeSayHi | chatFirst | withMyCrew | justLooking
 ///     -ProximeetReduceMotionPreview YES
@@ -33,11 +34,20 @@ enum DebugLaunch {
     }
 }
 
-/// Explicitly fictional data for previews and DEBUG launches. Built only through the
-/// public domain transitions, so fixtures can never reach a state the real flow cannot.
+/// Explicitly fictional, deterministic data for previews and DEBUG launches. Built only
+/// through the public domain transitions, so fixtures can never reach a state the real
+/// flow cannot.
 enum PreviewFixtures {
     enum Stage: String {
+        /// Fresh demo: nothing entered.
+        case welcome
+        /// The birthday scene after returning from the pass, so the wheel shows the
+        /// fixture date instead of the capture day.
+        case birthday
+        /// The demo pass right after an eligible fixture birthday.
+        case pass
         case guestList = "guest-list"
+        case guestListFilled = "guest-list-filled"
         case band
         case bandSelected = "band-selected"
         case signal
@@ -45,7 +55,7 @@ enum PreviewFixtures {
         case ready
     }
 
-    static let firstName = "Fixture"
+    static let firstName = "Alex"
     static let interests = ["Bouldering", "Film photography", "Board games"]
 
     static func session(
@@ -59,16 +69,28 @@ enum PreviewFixtures {
     static func flow(at stage: Stage, band: BandIntent, signal: ApproachSignal) -> DemoFlow {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-        let reference = calendar.date(from: DateComponents(year: 2026, month: 9, day: 24)) ?? Date(timeIntervalSince1970: 0)
-        let birthday = calendar.date(from: DateComponents(year: 1995, month: 5, day: 17)) ?? Date(timeIntervalSince1970: 0)
+        // Midday UTC, so the fixture birthday is 17 May in every time zone within ±11 h.
+        let reference = calendar.date(from: DateComponents(year: 2026, month: 9, day: 24, hour: 12))
+            ?? Date(timeIntervalSince1970: 0)
+        let birthday = calendar.date(from: DateComponents(year: 1995, month: 5, day: 17, hour: 12))
+            ?? Date(timeIntervalSince1970: 0)
 
         var flow = DemoFlow()
+        if stage == .welcome { return flow }
+
         flow.begin()
         flow.submitBirthday(birthday, using: BirthdayEligibility(referenceDate: reference, calendar: calendar))
+        if stage == .birthday {
+            flow.returnTo(.birthday)
+            return flow
+        }
+        if stage == .pass { return flow }
+
         flow.continueFromPass()
         if stage == .guestList { return flow }
 
         flow.saveProfile(firstName: firstName, interests: interests)
+        if stage == .guestListFilled { return flow }
         flow.continueFromGuestList()
         if stage == .band { return flow }
 

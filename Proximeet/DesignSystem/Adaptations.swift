@@ -58,7 +58,7 @@ enum Motion {
     static let bandSecure: Double = 0.75
     static let claspCloseDelay: Double = 0.42
     static let claspClose: Double = 0.30
-    /// Signal selected → tag seated against the band (450–650 ms).
+    /// Signal selected → plate clipped onto the band (450–650 ms).
     static let tagSeat: Double = 0.55
     /// Reduce Motion crossfades (opacity only).
     static let reducedBandCrossfade: Double = 0.18
@@ -67,6 +67,12 @@ enum Motion {
     static let arrivalItem: Double = 0.42
     static let arrivalStagger: Double = 0.08
     static let selection: Double = 0.18
+    /// First welcome appearance: the worlds tableau settles (800–1,100 ms).
+    static let welcomeSettle: Double = 0.9
+    /// Reduce Motion welcome reveal (150–200 ms opacity).
+    static let reducedWelcomeReveal: Double = 0.18
+    /// Pass or roster stock settling into place (450–650 ms).
+    static let paperSettle: Double = 0.5
 }
 
 extension AccessibilityContext {
@@ -99,7 +105,7 @@ extension AccessibilityContext {
             : nil
     }
 
-    /// Single arc into the clasp; opacity only under Reduce Motion.
+    /// Single arc onto the clasp; opacity only under Reduce Motion.
     var tagSeatTransition: AnyTransition {
         reduceMotion
             ? .opacity
@@ -108,10 +114,31 @@ extension AccessibilityContext {
                 removal: .opacity
             )
     }
+
+    /// Welcome tableau: a short settle, an opacity-only reveal under Reduce Motion, and
+    /// nothing at all for VoiceOver.
+    var welcomeAnimation: Animation? {
+        if voiceOverRunning { return nil }
+        return reduceMotion
+            ? .easeOut(duration: Motion.reducedWelcomeReveal)
+            : .timingCurve(0.2, 0.8, 0.2, 1, duration: Motion.welcomeSettle)
+    }
+
+    var paperSettleAnimation: Animation? {
+        if voiceOverRunning { return nil }
+        return reduceMotion
+            ? .easeOut(duration: Motion.reducedTagCrossfade)
+            : .timingCurve(0.25, 0.8, 0.25, 1, duration: Motion.paperSettle)
+    }
 }
 
-/// Lifts the tag from below-left along one arc and settles it into the clasp.
-struct ArcSeat: ViewModifier, Animatable {
+/// Lifts the signal plate from below-left along one arc and settles it onto the clasp.
+///
+/// The arc (a sine lift) is not linear in `progress`, so this modifier interpolates its
+/// own value. It is declared `nonisolated` so the `Animatable` witness is genuinely
+/// nonisolated instead of inheriting main-actor isolation from `ViewModifier`; its
+/// state is a single `Double`. Only `body`, which builds views, runs on the main actor.
+nonisolated struct ArcSeat: ViewModifier, Animatable {
     var progress: Double
 
     var animatableData: Double {
@@ -119,30 +146,52 @@ struct ArcSeat: ViewModifier, Animatable {
         set { progress = newValue }
     }
 
+    @MainActor
     func body(content: Content) -> some View {
         let remaining = 1 - progress
         content
-            .offset(x: -28 * remaining, y: 70 * remaining - 34 * sin(progress * .pi))
-            .rotationEffect(.degrees(-14 * remaining))
+            .offset(x: -24 * remaining, y: 56 * remaining - 26 * sin(progress * .pi))
+            .rotationEffect(.degrees(-12 * remaining))
             .scaleEffect(0.86 + 0.14 * progress)
             .opacity(min(1, progress * 3))
     }
 }
 
 /// Lift-and-curve pose of the band before it settles flat and secured.
-struct LiftCurvePose: ViewModifier, Animatable {
-    var progress: Double
-
-    var animatableData: Double {
-        get { progress }
-        set { progress = newValue }
-    }
+///
+/// Every transform is linear in `progress`, so the standard modifiers interpolate it
+/// exactly; no custom `Animatable` conformance (and no isolation crossing) is needed.
+struct LiftCurvePose: ViewModifier {
+    let progress: Double
 
     func body(content: Content) -> some View {
         let remaining = 1 - progress
         content
-            .rotation3DEffect(.degrees(34 * remaining), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
-            .scaleEffect(x: 0.82 + 0.18 * progress, y: 1)
-            .offset(y: -22 * remaining)
+            .rotation3DEffect(.degrees(30 * remaining), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
+            .scaleEffect(x: 0.84 + 0.16 * progress, y: 1)
+            .offset(y: -20 * remaining)
+    }
+}
+
+// MARK: - Finite entrances
+
+/// One-shot entrance keyed to a view instance: `settled` flips once in `onAppear` and the
+/// view is always interactive. Offset/scale only with normal motion; opacity only under
+/// Reduce Motion; no entrance for VoiceOver.
+struct SettleEntrance: ViewModifier {
+    let settled: Bool
+    var offsetY: CGFloat = 0
+    var startScale: CGFloat = 1
+    let animation: Animation?
+    @Adaptive private var adaptive
+
+    func body(content: Content) -> some View {
+        let plays = animation != nil && !settled
+        let moves = plays && !adaptive.reduceMotion
+        content
+            .offset(y: moves ? offsetY : 0)
+            .scaleEffect(moves ? startScale : 1)
+            .opacity(plays ? (adaptive.reduceMotion ? 0 : 0.4) : 1)
+            .animation(animation, value: settled)
     }
 }

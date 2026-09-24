@@ -1,20 +1,23 @@
 import SwiftUI
 import ProximeetDomain
 
-/// Scene 4 — honest functional scaffold. Only the guest's own entry appears; no fixture
-/// attendees. Editing happens in a native sheet that closes only after a successful save.
+/// Scene 4 — bright roster stock held by an aluminium clip. Only the guest's own entry
+/// appears; there are no fixture attendees. Editing happens in a native sheet that closes
+/// only after a successful save.
 struct GuestListView: View {
     @Environment(DemoSession.self) private var session
+    @Adaptive private var adaptive
     @State private var isEditing = false
+    @State private var hasAppeared = false
 
     var body: some View {
         let profile = session.draft.profile
         ScreenScaffold(title: "Guest list", step: 4) {
             SceneHeader(
-                title: "Add yourself to the list.",
+                title: "Add yourself\nto the list.",
                 subtitle: "Your first name and three interests. Only you appear on this demo list."
             )
-            RosterBoard {
+            RosterSheet {
                 if let profile {
                     GuestEntry(profile: profile) {
                         isEditing = true
@@ -30,6 +33,15 @@ struct GuestListView: View {
                     }
                     .accessibilityElement(children: .combine)
                 }
+            }
+            .modifier(SettleEntrance(
+                settled: hasAppeared,
+                offsetY: 14,
+                startScale: 0.98,
+                animation: adaptive.paperSettleAnimation
+            ))
+            .onAppear {
+                hasAppeared = true
             }
         } actions: {
             if profile == nil {
@@ -50,29 +62,27 @@ struct GuestListView: View {
     }
 }
 
-/// Bright roster stock held by an aluminium clip.
-struct RosterBoard<Content: View>: View {
+/// Clipped roster stock with a printed heading and one ruled entry.
+struct RosterSheet<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        PaperSheet {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Guest list")
+                    .textRole(.section)
+                Spacer(minLength: 12)
+                Text("Demo")
+                    .textRole(.label)
+                    .foregroundStyle(Palette.stockInk)
+            }
+            .accessibilityElement(children: .combine)
+            Rectangle()
+                .fill(Palette.paperRule)
+                .frame(height: 1.5)
+                .accessibilityHidden(true)
             content
         }
-        .foregroundStyle(Palette.carbon)
-        .padding(20)
-        .padding(.top, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.porcelain, in: NotchedPlate(cornerRadius: 22, notchWidth: 28, notchDepth: 6))
-        .overlay(alignment: .top) {
-            MetalSurface(
-                shape: RoundedRectangle(cornerRadius: 8, style: .continuous),
-                stops: MetalFinish.clasp,
-                angle: MetalFinish.claspAngle
-            )
-            .frame(width: 96, height: 26)
-            .offset(y: -12)
-        }
-        .padding(.top, 12)
     }
 }
 
@@ -128,7 +138,7 @@ struct InterestChips: View {
 #if DEBUG
 #Preview("Guest list · empty") {
     NavigationStack { GuestListView() }
-        .environment(DemoSession())
+        .environment(PreviewFixtures.session(at: .guestList))
 }
 
 #Preview("Guest list · fixture") {

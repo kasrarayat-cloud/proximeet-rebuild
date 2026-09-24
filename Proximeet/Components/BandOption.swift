@@ -1,8 +1,9 @@
 import SwiftUI
 import ProximeetDomain
 
-/// One woven band on B1. The whole object is the button; selection changes the object
-/// itself (lift, engaged latch, Porcelain ring, check mark) rather than the screen.
+/// One complete woven loop on B1. The whole object and its external subtitle form the
+/// button; selection changes the object itself (a small lift, the clasp latching and a
+/// local light spill) plus a thin intent-colour rim and check, never the whole screen.
 struct BandOption: View {
     let intent: BandIntent
     let isSelected: Bool
@@ -15,7 +16,7 @@ struct BandOption: View {
         }
         .buttonStyle(ObjectPressStyle())
         .accessibilityLabel(Text("\(intent.title) band"))
-        .accessibilityValue(Text(intent.tagline))
+        .accessibilityValue(Text("\(intent.tagline). \(intent.summary)"))
         .accessibilityHint(Text("Selects this band for your draft."))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .animation(adaptive.selectionAnimation, value: isSelected)
@@ -26,58 +27,58 @@ private struct BandOptionFace: View {
     let intent: BandIntent
     let isSelected: Bool
     @Adaptive private var adaptive
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// Clasp width (Figma 58 pt) plus its inset from the strap end.
-    private let claspWidth: CGFloat = 58
-    private let claspInset: CGFloat = 6
+    private var lifts: Bool { isSelected && !adaptive.reduceMotion }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        VStack(spacing: 2) {
+            BandAssembly(
+                intent: intent,
+                mount: .bare,
+                claspClosed: isSelected,
+                glows: isSelected,
+                verticalProjection: 0.52,
+                claspAnimation: adaptive.selectionAnimation
+            )
+            .frame(maxWidth: 310)
+            .scaleEffect(lifts ? 1.03 : 1)
+            .offset(y: lifts ? -3 : 0)
+
+            if dynamicTypeSize.isAccessibilitySize {
                 Text(intent.title)
-                    .textRole(.bandWord)
-                    .textCase(.uppercase)
+                    .textRole(.section)
+                    .foregroundStyle(Palette.porcelain)
+            }
+            HStack(alignment: .center, spacing: 6) {
                 if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3.weight(.bold))
+                    SelectionCheck(accent: intent.tint)
                         .transition(.opacity)
                 }
+                Text(intent.tagline)
+                    .textRole(.supporting)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(
+                        isSelected ? Palette.porcelain : Palette.quiet(increasedContrast: adaptive.increaseContrast)
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(intent.tagline)
-                .textRole(.label)
+            .frame(maxWidth: .infinity)
         }
-        .foregroundStyle(Palette.carbon)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.leading, 18)
-        .padding(.trailing, claspWidth + claspInset + 8)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, minHeight: 65, alignment: .leading)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .top)
         .background {
-            WovenStrip(tint: intent.tint)
-        }
-        .overlay(alignment: .trailing) {
-            // The overlay is proposed the strap's size, so the clasp always matches the
-            // strap height and overhangs it by 2 pt top and bottom as in the Figma study.
-            BandClasp(intent: intent, isEngaged: isSelected)
-                .frame(width: claspWidth)
-                .padding(.vertical, -2)
-                .padding(.trailing, claspInset)
+            if isSelected {
+                shape.fill(intent.tint.opacity(0.08))
+            }
         }
         .overlay {
             if isSelected {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Palette.porcelain, lineWidth: adaptive.increaseContrast ? 3 : 2)
-                    .padding(-5)
+                shape.strokeBorder(intent.tint, lineWidth: adaptive.increaseContrast ? 2.5 : 1.5)
             }
         }
-        .scaleEffect(isSelected && !adaptive.reduceMotion ? 1.02 : 1)
-        .shadow(
-            color: intent.tint.opacity(isSelected && !adaptive.reduceTransparency ? 0.45 : 0),
-            radius: 16,
-            y: 6
-        )
-        .shadow(color: Color.black.opacity(0.55), radius: 4, y: 3)
-        .padding(.vertical, 6)
-        .contentShape(Rectangle())
+        .contentShape(shape)
     }
 }

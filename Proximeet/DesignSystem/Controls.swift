@@ -78,6 +78,33 @@ private struct SecondaryActionBody: View {
     }
 }
 
+// MARK: - Quiet action (44 pt, no fill or outline)
+
+/// Low-emphasis secondary action, e.g. starting the demo over. The confirmation dialog
+/// that follows carries the destructive emphasis.
+struct QuietActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        QuietActionBody(configuration: configuration)
+    }
+}
+
+private struct QuietActionBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Adaptive private var adaptive
+
+    var body: some View {
+        configuration.label
+            .textRole(.label)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(Palette.quiet(increasedContrast: adaptive.increaseContrast))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
 // MARK: - Inline edit link (44 pt target)
 
 struct EditLinkStyle: ButtonStyle {
@@ -129,4 +156,8 @@ extension ButtonStyle where Self == PrimaryActionStyle {
 extension ButtonStyle where Self == SecondaryActionStyle {
     static var proximeetSecondary: SecondaryActionStyle { SecondaryActionStyle() }
     static var proximeetDestructive: SecondaryActionStyle { SecondaryActionStyle(tint: Palette.danger) }
+}
+
+extension ButtonStyle where Self == QuietActionStyle {
+    static var proximeetQuiet: QuietActionStyle { QuietActionStyle() }
 }

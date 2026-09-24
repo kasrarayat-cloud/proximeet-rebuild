@@ -11,7 +11,11 @@
 #   select-simulator  choose an installed iPhone simulator from simctl JSON (never downloads)
 #   build             Proximeet scheme, Debug, for that simulator UDID, code signing disabled
 #   package           ditto zip of the simulator .app, preserving the executable bit
-#   captures          boot, install, relaunch each DEBUG fixture, take simctl screenshots
+#   captures          boot, install, one uncaptured warmup launch, then relaunch each DEBUG
+#                     fixture (six entrance scenes, B1/B2 selections, Ready, a labelled B2
+#                     Reduce Motion preview) and take real simctl screenshots; B2 at the
+#                     largest accessibility text size only if simctl can read and restore
+#                     the simulator text size
 #
 # Each stage writes build/artifacts/logs/<stage>.log, appends PASS or FAIL with its real
 # exit status to build/artifacts/summary.txt, and exits with that status. Nothing is
@@ -39,6 +43,13 @@ MIN_IOS="17.0"
 # Fixed pause after each launch so the first frame and short decorative animations
 # settle before the capture. A capture aid only, never a timing or performance figure.
 SETTLE_SECONDS=5
+# One uncaptured launch right after installation, so first-run system notifications on a
+# fresh simulator (for example the Apple Intelligence prompt) settle before any capture.
+WARMUP_SECONDS=15
+# Simulator text size for the large-text B2 capture; the original value is restored.
+LARGE_CONTENT_SIZE="accessibility-extra-extra-extra-large"
+# Set while the simulator text size is changed; finish() restores it on any exit.
+RESTORE_CONTENT_SIZE=""
 
 STAGE="${1:-}"
 case "$STAGE" in
@@ -59,6 +70,12 @@ summary_line() { printf '%s  %-17s %s\n' "$(utc_now)" "$1" "$2" >> "$SUMMARY"; }
 
 finish() {
     local status=$?
+    if [ -n "$RESTORE_CONTENT_SIZE" ]; then
+        # Reached only when a failure interrupted the large-text capture.
+        if ! restore_content_size && [ "$status" -eq 0 ]; then
+            status=1
+        fi
+    fi
     if [ "$status" -eq 0 ]; then
         summary_line "$STAGE" "PASS"
     else
@@ -334,30 +351,51 @@ stage_package() {
     note "NOTE: $zip is an unsigned Debug iOS Simulator app. It cannot be installed on a device or through TestFlight."
 }
 
-# capture <name> <note or empty> <launch arguments...>
-capture() {
-    local name="$1" label="$2"
-    shift 2
-    local png="$SHOTS/$name.png"
-    local output status pid width height digest
-    note ""
-    note "== $name"
+# launch_app <launch arguments...>: relaunch the app and set LAUNCH_PID from simctl.
+# ${1+"$@"} keeps bash 3.2 with `set -u` happy when no arguments are given.
+launch_app() {
+    local output status
+    LAUNCH_PID=""
     set +e
-    output="$(xcrun simctl launch --terminate-running-process "$SIM_UDID" "$APP_BUNDLE_ID" "$@" 2>&1)"
+    output="$(xcrun simctl launch --terminate-running-process "$SIM_UDID" "$APP_BUNDLE_ID" ${1+"$@"} 2>&1)"
     status=$?
     set -e
     note "$output"
-    note "[exit $status] xcrun simctl launch --terminate-running-process $SIM_UDID $APP_BUNDLE_ID $*"
+    note "[exit $status] xcrun simctl launch --terminate-running-process $SIM_UDID $APP_BUNDLE_ID ${*-}"
     if [ "$status" -ne 0 ]; then
         return "$status"
     fi
-    pid="${output##*: }"
-    case "$pid" in
+    LAUNCH_PID="${output##*: }"
+    case "$LAUNCH_PID" in
         ''|*[!0-9]*)
             note "ERROR: no process ID in the simctl launch output."
             return 1
             ;;
     esac
+}
+
+# First launch after installation, never captured. The pause lets first-run system
+# notifications settle; the process must still be alive afterwards.
+warmup() {
+    note ""
+    note "== warmup: first launch after installation (not captured)"
+    launch_app -ProximeetFixture welcome
+    note "Waiting ${WARMUP_SECONDS}s for first-run simulator notifications to settle."
+    sleep "$WARMUP_SECONDS"
+    run ps -p "$LAUNCH_PID" -o pid= -o stat= -o comm=
+    summary_line "warmup" "first launch, ${WARMUP_SECONDS}s, process alive (PID $LAUNCH_PID)"
+}
+
+# capture <name> <note or empty> <launch arguments...>
+capture() {
+    local name="$1" label="$2"
+    shift 2
+    local png="$SHOTS/$name.png"
+    local pid width height digest
+    note ""
+    note "== $name"
+    launch_app "$@"
+    pid="$LAUNCH_PID"
     sleep "$SETTLE_SECONDS"
     run ps -p "$pid" -o pid= -o stat= -o comm=
     rm -f "$png"
@@ -377,6 +415,55 @@ capture() {
     note "Captured $png (${width}x${height}) from PID $pid."
 }
 
+# Prints the simulator's current text size as one simctl size name, or fails if simctl
+# cannot report one this script recognises.
+read_content_size() {
+    local raw size
+    raw="$(xcrun simctl ui "$SIM_UDID" content_size 2>&1)" || return 1
+    size="$(printf '%s\n' "$raw" | tail -n 1 | awk '{ print $NF }')"
+    case "$size" in
+        extra-small|small|medium|large|extra-large|extra-extra-large|extra-extra-extra-large) ;;
+        accessibility-medium|accessibility-large|accessibility-extra-large) ;;
+        accessibility-extra-extra-large|accessibility-extra-extra-extra-large) ;;
+        *) return 1 ;;
+    esac
+    printf '%s\n' "$size"
+}
+
+# Restores the text size recorded in RESTORE_CONTENT_SIZE and confirms it by reading it
+# back. Uses explicit returns so it behaves the same inside the EXIT trap.
+restore_content_size() {
+    local wanted="$RESTORE_CONTENT_SIZE" actual
+    [ -n "$wanted" ] || return 0
+    RESTORE_CONTENT_SIZE=""
+    run xcrun simctl ui "$SIM_UDID" content_size "$wanted" || return 1
+    actual="$(read_content_size)" || actual="unreadable"
+    note "Simulator text size after restore: '$actual' (expected '$wanted')."
+    if [ "$actual" != "$wanted" ]; then
+        note "ERROR: the simulator text size was not restored."
+        return 1
+    fi
+    summary_line "text-size" "restored to $wanted"
+}
+
+# capture_large_text <name> <note> <launch arguments...>: capture at LARGE_CONTENT_SIZE
+# only when simctl can read the current size, so it can be restored afterwards.
+capture_large_text() {
+    local name="$1" original
+    note ""
+    note "== $name: reading the simulator text size"
+    if ! original="$(read_content_size)"; then
+        note "SKIPPED $name: 'xcrun simctl ui $SIM_UDID content_size' gave no readable size, so the setting was not changed."
+        summary_line "large-text" "SKIPPED (simctl ui content_size unavailable or unreadable)"
+        return 0
+    fi
+    note "Current simulator text size: $original"
+    RESTORE_CONTENT_SIZE="$original"
+    run xcrun simctl ui "$SIM_UDID" content_size "$LARGE_CONTENT_SIZE"
+    capture "$@"
+    restore_content_size
+}
+
 stage_captures() {
     load_simulator
     check_app
@@ -385,16 +472,42 @@ stage_captures() {
     rm -f "$SHOTS"/*.png
     printf 'file\tpid\tcaptured_utc\tpixel_width\tpixel_height\tsha256\tlaunch_arguments\tnote\n' \
         > "$SHOTS/captures.tsv"
-    capture 01-b1-band "" \
+    warmup
+    # The six entrance scenes in flow order, then selections and Ready.
+    capture 01-welcome "" \
+        -ProximeetFixture welcome
+    capture 02-birthday-fixture-date \
+        "Birthday scene after returning from the pass, so the wheel shows the fixture date (17 May 1995)" \
+        -ProximeetFixture birthday
+    capture 03-demo-pass "" \
+        -ProximeetFixture pass
+    capture 04-guest-list-empty "" \
+        -ProximeetFixture guest-list
+    capture 04b-guest-list-filled "Saved fictional profile through the normal domain transition" \
+        -ProximeetFixture guest-list-filled
+    capture 05-b1-band "" \
         -ProximeetFixture band
-    capture 02-b2-signal-selected-social-chatFirst "" \
+    capture 06-b1-band-selected-social "" \
+        -ProximeetFixture band-selected -ProximeetFixtureBand social
+    capture 07-b2-signal-social "" \
+        -ProximeetFixture signal -ProximeetFixtureBand social
+    capture 08-b2-signal-selected-social-chatFirst "" \
         -ProximeetFixture signal-selected -ProximeetFixtureBand social -ProximeetFixtureSignal chatFirst
-    capture 03-ready-social-chatFirst "" \
+    capture 09-ready-social-chatFirst "" \
         -ProximeetFixture ready -ProximeetFixtureBand social -ProximeetFixtureSignal chatFirst
-    capture 04-b2-signal-selected-social-chatFirst-reduce-motion-preview-app-override \
+    capture 10-b2-signal-selected-social-chatFirst-reduce-motion-preview-app-override \
         "App-level -ProximeetReduceMotionPreview override only; not the system Reduce Motion setting and not an accessibility test" \
         -ProximeetFixture signal-selected -ProximeetFixtureBand social -ProximeetFixtureSignal chatFirst \
         -ProximeetReduceMotionPreview YES
+    capture_large_text 11-b2-signal-selected-social-chatFirst-simulator-text-size-ax5 \
+        "Simulator text size set with simctl ui content_size $LARGE_CONTENT_SIZE, then restored; a single capture, not an accessibility review" \
+        -ProximeetFixture signal-selected -ProximeetFixtureBand social -ProximeetFixtureSignal chatFirst
+    if bash scripts/capture_fixture_reel.sh "$SIM_UDID" "$APP_BUNDLE_ID" "$SHOTS/12-fixture-entrances.mp4"; then
+        summary_line "fixture-reel" "captured native DEBUG scene entrances; not an interactive end-to-end test"
+    else
+        note "WARNING: optional native entrance recording failed; inspect its recorder log."
+        summary_line "fixture-reel" "UNAVAILABLE (recording failed; screenshots remain independent evidence)"
+    fi
     run cat "$SHOTS/captures.tsv"
 }
 

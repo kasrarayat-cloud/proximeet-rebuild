@@ -24,7 +24,7 @@ workflows:
         script: bash scripts/codemagic_verify.sh build
       - name: Zip the simulator app with ditto (simulator only; not for TestFlight)
         script: bash scripts/codemagic_verify.sh package
-      - name: Boot, install and capture B1, B2 and Ready fixture screenshots
+      - name: Boot, install, warm up and capture entrance, Ready and B2 variant fixture screenshots
         script: bash scripts/codemagic_verify.sh captures
     artifacts:
       - build/artifacts/summary.txt

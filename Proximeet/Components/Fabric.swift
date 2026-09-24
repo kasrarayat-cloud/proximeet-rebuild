@@ -1,85 +1,114 @@
 import SwiftUI
 
-/// Interim procedural woven strap: intent colour, vertical ribs (Figma: 1 pt at 12% Carbon
-/// every 15 pt), a fine weft, tubular shading, a top highlight and edge stitching.
-/// Static drawing only; not the photoreal production textile.
-struct WovenStrip: View {
+/// Shared proportions of the assembled band object, as fractions of the loop's height
+/// (the loop image is 2 loop-heights wide).
+///
+/// B1, B2 and Ready all draw one assembly (loop, word, side clasp and, when mounted, the
+/// signal plate) from these values, so the object keeps the same geometry at every size.
+/// Positions follow the delivered `WovenBandNeutral` artwork and the lead's asset notes
+/// (docs/visual-assets/asset-manifest.json): opaque loop bounds x 86–1694 and y 47–841 of
+/// 1774 × 887 px, front-strap label at about x 0.48, y 0.76 of the image, clasp at the
+/// right-hand turn. They still need confirmation on a native render.
+enum BandGeometry {
+    /// `WovenBandNeutral` is 1774 × 887 px: one oval loop, elevated three-quarter view.
+    static let loopAspect: CGFloat = 1774.0 / 887.0
+
+    /// The intent word sits on the front strap.
+    static let wordCenterX: CGFloat = 0.48 * loopAspect
+    static let wordCenterY: CGFloat = 0.76
+    static let wordSize: CGFloat = 0.17
+    static let wordRegionWidth: CGFloat = 1.24
+    static let wordRegionHeight: CGFloat = 0.24
+
+    /// The dark clasp wraps the loop's right-hand turn (about x 0.93 of the image).
+    static let claspCenterX: CGFloat = 0.93 * loopAspect
+    static let claspCenterY: CGFloat = 0.57
+    static let claspWidth: CGFloat = 0.12
+    static let claspHeight: CGFloat = 0.44
+
+    /// Link ring between the clasp foot and a mounted plate.
+    static let linkDiameter: CGFloat = 0.09
+    static let linkCenterY: CGFloat = 0.82
+
+    /// Mounted signal plate: a small landscape plate hanging from the ring, with the
+    /// same face aspect as the plate choices (`SignalPlateGeometry.faceAspect`).
+    static let plateHeight: CGFloat = 0.34
+    static let plateTop: CGFloat = 0.855
+
+    static var plateWidth: CGFloat { SignalPlateGeometry.faceAspect * plateHeight }
+    /// How far a mounted plate extends past the loop image's trailing edge.
+    static var plateOverhang: CGFloat { max(0, claspCenterX + plateWidth / 2 - loopAspect) }
+    /// Assembly size, in loop heights, with a mounted plate.
+    static var mountedWidth: CGFloat { loopAspect + plateOverhang }
+    static var mountedHeight: CGFloat { plateTop + plateHeight }
+}
+
+/// Where the machined face sits inside the delivered `SignalPlateBlank` artwork (opaque
+/// bounds x 47–1561 and y 89–884 of 1609 × 978 px). Plates map this face, not the
+/// transparent margin, onto their frames, so a 1.904:1 frame shows it undistorted.
+enum SignalPlateGeometry {
+    static let imageSize = CGSize(width: 1609, height: 978)
+    static let face = CGRect(x: 47, y: 89, width: 1561 - 47, height: 884 - 89)
+    static var faceAspect: CGFloat { face.width / face.height }
+}
+
+/// One oval woven loop: the lead-supplied neutral raster, tinted by multiplying with the
+/// intent colour. The transparent inner hole shows whatever is behind the loop.
+struct WovenLoop: View {
+    /// Opaque loop bounds (x 86–1694, y 47–841 of 1774 × 887 px) plus an 8 px soft-edge
+    /// allowance; clipping here drops faint flecks in the transparent margin only.
+    private static let visibleBounds = CGRect(
+        x: 78.0 / 1774, y: 39.0 / 887,
+        width: (1702.0 - 78) / 1774, height: (849.0 - 39) / 887
+    )
     let tint: Color
-    var ribSpacing: CGFloat = 15
-    var cornerRadius: CGFloat = 12
-    @Adaptive private var adaptive
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape
-            .fill(tint)
-            .overlay {
-                WeaveTexture(ribSpacing: ribSpacing, strength: adaptive.increaseContrast ? 0.5 : 1)
-                    .clipShape(shape)
-            }
-            .overlay {
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(0.14), location: 0),
-                        .init(color: Color.clear, location: 0.35),
-                        .init(color: Color.black.opacity(0.16), location: 1),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .clipShape(shape)
-            }
-            .overlay(alignment: .top) {
-                Capsule()
-                    .fill(Palette.porcelain.opacity(0.4))
-                    .frame(height: 2)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 3)
-            }
-            .overlay {
-                shape
-                    .inset(by: 5)
-                    .stroke(Palette.carbon.opacity(0.22), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-            }
-            .accessibilityHidden(true)
+        Image(decorative: "WovenBandNeutral")
+            .resizable()
+            .interpolation(.high)
+            .aspectRatio(BandGeometry.loopAspect, contentMode: .fit)
+            .colorMultiply(tint)
+            .clipShape(UnitRect(bounds: Self.visibleBounds))
     }
 }
 
-/// Ribs plus a staggered weft, filled as two paths so a strap is only two draw calls.
-struct WeaveTexture: View {
-    var ribSpacing: CGFloat
-    var strength: Double = 1
+/// A rectangle given in unit coordinates of the frame it is drawn in.
+struct UnitRect: Shape {
+    let bounds: CGRect
+
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(
+            x: rect.minX + rect.width * bounds.minX,
+            y: rect.minY + rect.height * bounds.minY,
+            width: rect.width * bounds.width,
+            height: rect.height * bounds.height
+        ))
+    }
+}
+
+/// The intent word printed in white on the loop's front strap. It is part of the object,
+/// so it scales with the loop rather than with Dynamic Type; the band's accessible name
+/// and external subtitle carry the same meaning in scalable text.
+struct StrapWord: View {
+    let text: String
+    let loopHeight: CGFloat
+    @Adaptive private var adaptive
 
     var body: some View {
-        Canvas { context, size in
-            guard size.width > 1, size.height > 1 else { return }
-
-            var ribs = Path()
-            var x = ribSpacing * 0.66
-            while x < size.width {
-                ribs.addRect(CGRect(x: x, y: 1, width: 1, height: size.height - 2))
-                x += ribSpacing
-            }
-
-            var weft = Path()
-            let cell = CGSize(width: 5, height: 3)
-            let columns = Int(size.width / cell.width) + 1
-            let rows = Int(size.height / cell.height) + 1
-            for row in 0..<rows {
-                for column in 0..<columns where (row + column).isMultiple(of: 2) {
-                    weft.addRect(CGRect(
-                        x: CGFloat(column) * cell.width,
-                        y: CGFloat(row) * cell.height + 0.8,
-                        width: 3.2,
-                        height: 1.1
-                    ))
+        Text(text)
+            .font(.system(size: max(11, loopHeight * BandGeometry.wordSize), weight: .heavy))
+            .tracking(0.3)
+            .foregroundStyle(Color.white)
+            .fixedSize()
+            .shadow(color: Palette.carbon.opacity(0.8), radius: 1.2, y: 1)
+            .shadow(color: Palette.carbon.opacity(0.45), radius: 4)
+            .padding(.horizontal, adaptive.increaseContrast ? loopHeight * 0.05 : 0)
+            .padding(.vertical, adaptive.increaseContrast ? loopHeight * 0.012 : 0)
+            .background {
+                if adaptive.increaseContrast {
+                    Capsule().fill(Palette.carbon.opacity(0.78))
                 }
             }
-
-            context.fill(weft, with: .color(Palette.carbon.opacity(0.07 * strength)))
-            context.fill(ribs, with: .color(Palette.carbon.opacity(0.12 * strength)))
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }

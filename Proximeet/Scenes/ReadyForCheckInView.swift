@@ -1,8 +1,10 @@
 import SwiftUI
 import ProximeetDomain
 
-/// End of the demo. Shows the real draft profile, band and tag, and states plainly that
-/// nothing is visible to anyone. There is no check-in, venue, presence or verification.
+/// End of the demo. The compact assembled band with its plate, then the real draft
+/// profile, band and tag on bright paper, each with an edit affordance. It states plainly
+/// that this is a local demo that nobody can see. There is no check-in, venue, presence
+/// or verification.
 struct ReadyForCheckInView: View {
     @Environment(DemoSession.self) private var session
     @State private var isEditingProfile = false
@@ -11,24 +13,28 @@ struct ReadyForCheckInView: View {
     var body: some View {
         ScreenScaffold(title: "Ready", step: nil) {
             if let ready = session.readiness {
-                SceneHeader(title: "Ready for check-in.", subtitle: "Your demo draft, exactly as you set it.")
-                NoticeBanner(text: ready.visibility.notice)
-                BandStage(intent: ready.band, signal: ready.signal)
-                SummaryCard(
+                SceneHeader(
+                    title: "Your demo\nis ready.",
+                    subtitle: "Your band and signal, together."
+                )
+                BandStage(intent: ready.band, signal: ready.signal, maxLoopHeight: 92)
+                SummarySheet(
                     ready: ready,
                     onEditProfile: { isEditingProfile = true },
                     onChangeBand: { session.returnTo(.band) },
                     onChangeSignal: { session.returnTo(.signal) }
                 )
-                Footnote(text: "Check-in isn't part of this demo. Nothing you entered is saved, shared or verified.")
+                Footnote(text: "Private demo. Nothing is shared or verified.")
             } else {
-                SceneHeader(title: "Draft incomplete.", subtitle: "Go back to finish your choices.")
+                SceneHeader(title: "Draft\nincomplete.", subtitle: "Go back to finish your choices.")
             }
         } actions: {
-            Button("Clear demo and start over", role: .destructive) {
+            Button(role: .destructive) {
                 isConfirmingReset = true
+            } label: {
+                Label("Clear demo and start over", systemImage: "arrow.counterclockwise")
             }
-            .buttonStyle(.proximeetDestructive)
+            .buttonStyle(.proximeetQuiet)
         }
         .sheet(isPresented: $isEditingProfile) {
             ProfileEditorSheet(profile: session.draft.profile)
@@ -44,16 +50,15 @@ struct ReadyForCheckInView: View {
     }
 }
 
-private struct SummaryCard: View {
+/// The draft summary printed on bright paper stock (unclipped), Carbon ink throughout.
+private struct SummarySheet: View {
     let ready: ReadyForCheckIn
     let onEditProfile: () -> Void
     let onChangeBand: () -> Void
     let onChangeSignal: () -> Void
-    @Adaptive private var adaptive
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-        VStack(alignment: .leading, spacing: 18) {
+        PaperSheet(clipped: false) {
             SummaryRow(
                 label: "Guest",
                 value: ready.profile.firstName,
@@ -61,7 +66,7 @@ private struct SummaryCard: View {
                 actionTitle: "Edit profile",
                 action: onEditProfile
             )
-            divider
+            rule
             SummaryRow(
                 label: "Band",
                 value: ready.band.title,
@@ -70,7 +75,7 @@ private struct SummaryCard: View {
                 actionTitle: "Change band",
                 action: onChangeBand
             )
-            divider
+            rule
             SummaryRow(
                 label: "Signal",
                 value: ready.signal.title,
@@ -79,20 +84,11 @@ private struct SummaryCard: View {
                 action: onChangeSignal
             )
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.graphite, in: shape)
-        .overlay {
-            shape.strokeBorder(
-                adaptive.increaseContrast ? Palette.porcelain : Palette.hairline,
-                lineWidth: adaptive.increaseContrast ? 2 : 1
-            )
-        }
     }
 
-    private var divider: some View {
+    private var rule: some View {
         Rectangle()
-            .fill(Palette.hairline)
+            .fill(Palette.paperRule)
             .frame(height: 1)
             .accessibilityHidden(true)
     }
@@ -105,36 +101,42 @@ private struct SummaryRow: View {
     var swatch: Color?
     let actionTitle: String
     let action: () -> Void
-    @Adaptive private var adaptive
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(label)
-                    .textRole(.label)
-                    .foregroundStyle(Palette.quiet(increasedContrast: adaptive.increaseContrast))
-                HStack(spacing: 10) {
-                    if let swatch {
-                        Capsule()
-                            .fill(swatch)
-                            .frame(width: 28, height: 12)
-                            .accessibilityHidden(true)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(label)
+                        .textRole(.label)
+                        .foregroundStyle(Palette.stockInk)
+                    HStack(spacing: 10) {
+                        if let swatch {
+                            Capsule()
+                                .fill(swatch)
+                                .overlay { Capsule().strokeBorder(Palette.carbon.opacity(0.35), lineWidth: 1) }
+                                .frame(width: 28, height: 12)
+                                .accessibilityHidden(true)
+                        }
+                        Text(value)
+                            .textRole(.section)
+                            .foregroundStyle(Palette.carbon)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(value)
-                        .textRole(.section)
-                        .foregroundStyle(Palette.porcelain)
                 }
-                Text(detail)
-                    .textRole(.supporting)
-                    .foregroundStyle(Palette.quiet(increasedContrast: adaptive.increaseContrast))
-                    .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                Button(actionTitle, action: action)
+                    .buttonStyle(EditLinkStyle(tint: Palette.carbon))
+                    .frame(minWidth: 44, minHeight: 44)
             }
-            .accessibilityElement(children: .combine)
-
-            Button(actionTitle, action: action)
-                .buttonStyle(EditLinkStyle())
+            Text(detail)
+                .textRole(.supporting)
+                .foregroundStyle(Palette.stockInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .contain)
     }
+
 }
 
 #if DEBUG

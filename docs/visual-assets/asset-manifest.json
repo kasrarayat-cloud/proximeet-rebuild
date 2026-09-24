@@ -1,0 +1,68 @@
+{
+  "selected_assets": [
+    {
+      "file": "woven-band-neutral.png",
+      "pixel_size": [
+        1774,
+        887
+      ],
+      "mode": "RGBA",
+      "bytes": 2212365,
+      "sha256": "5e044eb31498155e433bdfa66fa64d7debe184b8025299b76781e5d5a8cf8873",
+      "source": "Built-in image_gen output copied without pixel alteration",
+      "alpha_min_max": [
+        0,
+        255
+      ],
+      "alpha_nonzero_median": 253.0,
+      "opaque_object_bounds_alpha128": [
+        86,
+        47,
+        1694,
+        841
+      ],
+      "transparent_center": true
+    },
+    {
+      "file": "signal-plate-blank-v2.png",
+      "pixel_size": [
+        1609,
+        978
+      ],
+      "mode": "RGBA",
+      "bytes": 1695694,
+      "sha256": "2c6058258f0990a1c86b49faf5ea87acbde1b54ec4deabe6740f1fa76357b9c9",
+      "source": "Built-in image_gen output copied without pixel alteration",
+      "alpha_min_max": [
+        0,
+        255
+      ],
+      "alpha_nonzero_median": 253.0,
+      "opaque_object_bounds_alpha128": [
+        47,
+        89,
+        1561,
+        884
+      ],
+      "transparent_center": false
+    },
+    {
+      "file": "social-worlds-welcome.png",
+      "pixel_size": [
+        1024,
+        1536
+      ],
+      "mode": "RGB",
+      "bytes": 2661589,
+      "sha256": "a0e4d7dd8b992bf12e21767eaa87db25bae11784308fac3c044b5f50d82eb8ca",
+      "source": "Built-in image_gen output copied without pixel alteration"
+    }
+  ],
+  "unused_variant": "signal-plate-blank.png",
+  "visual_notes": [
+    "Woven loop is neutral and suitable for app tint. View is closer to symmetric frontal-elevated than showcase angle. Label belongs on front strap at about x=0.48,y=0.76 of full image; native metal clasp can overlay at right.",
+    "Plate v2 visible face aspect ratio is 1.904:1, wider than requested1.65:1. Preserve material proportions where practical. Native text stays within center70% width and50% height.",
+    "Transparent material assets have object alpha generally253/255 and a few very low-alpha outside flecks; visually inspect final dark-background composite.",
+    "Welcome image contains six intact dioramas and no legible text or UI. Background is near carbon but not exact requested#080A0B; observedcorner#030607. Use aspect fit and native edge fading if necessary."
+  ]
+}

@@ -1,8 +1,9 @@
 import SwiftUI
 import ProximeetDomain
 
-/// Scene 2 — honest functional scaffold. A self-entered eligibility check, never proof of
-/// age. The picker and the evaluator share one Gregorian calendar and time zone.
+/// Scene 2 — a self-entered eligibility check, never proof of age. The native wheel sits
+/// in a sculpted graphite aperture. The picker and the evaluator share one Gregorian
+/// calendar and time zone.
 struct BirthdayView: View {
     @Environment(DemoSession.self) private var session
     @State private var calendar = DemoSession.birthdayCalendar()
@@ -14,7 +15,7 @@ struct BirthdayView: View {
     var body: some View {
         ScreenScaffold(title: "Birthday", step: 2) {
             SceneHeader(
-                title: "When's your birthday?",
+                title: "When's your\nbirthday?",
                 subtitle: "This demo is for people 18 and over. It's a self-entered check, not proof of age, and nothing is verified."
             )
             GraphiteAperture {
@@ -66,8 +67,8 @@ struct BirthdayView: View {
 }
 
 #if DEBUG
-#Preview("Birthday") {
+#Preview("Birthday · fixture date") {
     NavigationStack { BirthdayView() }
-        .environment(DemoSession())
+        .environment(PreviewFixtures.session(at: .birthday))
 }
 #endif

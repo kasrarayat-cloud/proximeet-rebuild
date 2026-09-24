@@ -1142,6 +1142,61 @@ def check_guardrails(ctx: Context, c: Check) -> None:
 
 
 # ==========================================================================
+# 12. Referenced raster art
+# ==========================================================================
+
+# Image("Name") and Image(decorative: "Name") literals in app code. SF Symbols use
+# Image(systemName:) and are not asset-catalog references.
+IMAGE_REFERENCE = re.compile(r'\bImage\(\s*(?:decorative:\s*)?"([^"\\]+)"')
+
+
+@check(12, "every Image(\"…\") name in app code resolves to one imageset whose files exist")
+def check_image_references(ctx: Context, c: Check) -> None:
+    names: dict[str, list[str]] = {}
+    swift_files = sorted(APP_DIR.rglob("*.swift")) if APP_DIR.is_dir() else []
+    for path in swift_files:
+        code, _ = lex_swift(path.read_text(encoding="utf-8"))
+        for match in IMAGE_REFERENCE.finditer(code):
+            line = code.count("\n", 0, match.start()) + 1
+            names.setdefault(match.group(1), []).append(f"{rel(path)}:{line}")
+    if not names:
+        c.note("no asset-catalog image references in app code")
+        return
+    for name, sites in sorted(names.items()):
+        where = ", ".join(sites)
+        sets = sorted(CATALOG.rglob(f"{name}.imageset")) if CATALOG.is_dir() else []
+        if not c.require(len(sets) == 1,
+                         f"{name!r} ({where}) matches {len(sets)} imageset(s) in {rel(CATALOG)}"):
+            continue
+        imageset = sets[0]
+        namespaced = [folder for folder in imageset.relative_to(CATALOG).parents
+                      if folder != Path(".") and _provides_namespace(CATALOG / folder)]
+        c.require(not namespaced,
+                  f"{name!r} is inside a namespace folder {[p.as_posix() for p in namespaced]}; "
+                  "the code would need the namespaced name")
+        contents = imageset / "Contents.json"
+        try:
+            images = json.loads(contents.read_text(encoding="utf-8")).get("images", [])
+        except (OSError, ValueError) as error:
+            c.fail(f"{rel(contents)}: {error}")
+            continue
+        files = [image.get("filename") for image in images if image.get("filename")]
+        if c.require(bool(files), f"{rel(contents)} lists no image files"):
+            for filename in files:
+                c.require((imageset / filename).is_file(),
+                          f"{rel(imageset)} references missing {filename}")
+            c.note(f"{name}: {rel(imageset)} ({', '.join(files)}); used at {where}")
+
+
+def _provides_namespace(folder: Path) -> bool:
+    try:
+        properties = json.loads((folder / "Contents.json").read_text(encoding="utf-8")).get("properties", {})
+    except (OSError, ValueError):
+        return False
+    return properties.get("provides-namespace") is True
+
+
+# ==========================================================================
 # Advisory plutil lint and entry point
 # ==========================================================================
 

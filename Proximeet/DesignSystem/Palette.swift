@@ -15,6 +15,11 @@ enum Palette {
     /// Secondary ink on Porcelain stock (roster and pass).
     static let stockInk = Color(hex: 0x3A3F43)
     static let stockChip = Color(hex: 0xE3E5E0)
+    /// Thick bright pass and roster stock: lit top edge, faintly shaded foot.
+    static let paper = Color(hex: 0xFCFCF9)
+    static let paperShade = Color(hex: 0xECEDE8)
+    /// Printed rules and perforations on paper stock.
+    static let paperRule = Color(hex: 0xC9CCC6)
 
     static let social = Color(hex: 0x35D7FF)
     static let dating = Color(hex: 0xFF56B8)
@@ -39,25 +44,16 @@ enum MetalFinish {
     }
     static let claspAngle = 115.0
 
-    /// B2 hero tag: 120.5°, #6E7B82 → #E4E9EC (38.4%) → #8B989F (80%).
-    static var heroTag: [Gradient.Stop] {
+    /// Subtle dark side clasp on the woven loop: smoked graphite alloy with one soft
+    /// highlight, lit from the upper left like the loop artwork.
+    static var darkClasp: [Gradient.Stop] {
         [
-            .init(color: Color(hex: 0x6E7B82), location: 0),
-            .init(color: Color(hex: 0xE4E9EC), location: 0.384),
-            .init(color: Color(hex: 0x8B989F), location: 0.8),
+            .init(color: Color(hex: 0x16191C), location: 0),
+            .init(color: Color(hex: 0x4A545A), location: 0.38),
+            .init(color: Color(hex: 0x1D2124), location: 0.86),
         ]
     }
-    static let heroTagAngle = 120.5
-
-    /// B2 tag choice: 133°, #A4AEB4 → #F0F3F4 (38.4%) → #8C99A0 (80%).
-    static var tagCard: [Gradient.Stop] {
-        [
-            .init(color: Color(hex: 0xA4AEB4), location: 0),
-            .init(color: Color(hex: 0xF0F3F4), location: 0.384),
-            .init(color: Color(hex: 0x8C99A0), location: 0.8),
-        ]
-    }
-    static let tagCardAngle = 133.0
+    static let darkClaspAngle = 112.0
 }
 
 extension Color {

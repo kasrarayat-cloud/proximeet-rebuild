@@ -1,17 +1,20 @@
 import SwiftUI
 
-/// Type roles. Figma uses Barlow Semi Condensed ExtraBold and Inter; this build substitutes
-/// SF Pro Condensed Heavy and SF Pro as the Social Objects brief proposes, pending a
-/// native render comparison. Every role scales with Dynamic Type from its base size.
+/// Type roles. Figma uses Barlow Semi Condensed ExtraBold and Inter; this build uses the
+/// native system face: heavy, normal-width, mixed-case display type for headlines and
+/// SF Pro for interface text, pending a native render comparison. Every role scales with
+/// Dynamic Type from its base size.
+///
+/// The intent word woven into a band is deliberately not a role here: it is part of the
+/// band object and scales with the object's geometry (see `BandGeometry`), while the
+/// band's accessible name and external subtitle use these scalable roles.
 enum TextRole {
-    /// Screen headline. Figma 48 pt condensed; design baseline 38/40.
+    /// Centered screen headline, normally two controlled lines (design baseline 34–38 pt).
     case hero
-    /// Large word on objects and cards, e.g. the guest name.
+    /// Large word on paper and cards, e.g. the guest name or "Demo pass".
     case title
-    /// Word woven into a band (Figma 31 pt).
-    case bandWord
-    /// Word machined into a tag (Figma 21 pt).
-    case tagWord
+    /// Short title printed on a signal plate.
+    case plateTitle
     case section
     case body
     case supporting
@@ -20,10 +23,9 @@ enum TextRole {
 
     fileprivate var baseSize: CGFloat {
         switch self {
-        case .hero: return 44
-        case .title: return 32
-        case .bandWord: return 30
-        case .tagWord: return 21
+        case .hero: return 36
+        case .title: return 30
+        case .plateTitle: return 18
         case .section: return 20
         case .body: return 17
         case .supporting: return 15
@@ -35,8 +37,9 @@ enum TextRole {
     fileprivate var textStyle: Font.TextStyle {
         switch self {
         case .hero: return .largeTitle
-        case .title, .bandWord: return .title
-        case .tagWord, .section: return .title3
+        case .title: return .title
+        case .plateTitle: return .headline
+        case .section: return .title3
         case .body: return .body
         case .supporting, .label: return .subheadline
         case .button: return .headline
@@ -45,7 +48,7 @@ enum TextRole {
 
     fileprivate var lineSpacing: CGFloat {
         switch self {
-        case .hero, .title, .bandWord, .tagWord: return 0
+        case .hero, .title, .plateTitle: return 0
         case .section: return 3
         case .body: return 5
         case .supporting, .label: return 4
@@ -53,17 +56,24 @@ enum TextRole {
         }
     }
 
+    /// Slightly tighter tracking for heavy display sizes; none for interface text.
+    fileprivate var tracking: CGFloat {
+        switch self {
+        case .hero: return -0.5
+        case .title: return -0.3
+        default: return 0
+        }
+    }
+
     fileprivate func font(size: CGFloat) -> Font {
         switch self {
-        case .hero, .title, .bandWord, .tagWord:
-            return .system(size: size, weight: .heavy).width(.condensed)
+        case .hero, .title, .plateTitle:
+            return .system(size: size, weight: .heavy)
         case .section:
             return .system(size: size, weight: .bold)
         case .body, .supporting:
             return .system(size: size)
-        case .label:
-            return .system(size: size, weight: .semibold)
-        case .button:
+        case .label, .button:
             return .system(size: size, weight: .semibold)
         }
     }
@@ -81,6 +91,7 @@ private struct TextRoleModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(role.font(size: size))
+            .tracking(role.tracking)
             .lineSpacing(role.lineSpacing)
     }
 }

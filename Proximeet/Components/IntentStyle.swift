@@ -25,7 +25,7 @@ extension BandIntent {
         }
     }
 
-    /// Short line printed on the band (Figma B1 subtitles).
+    /// Short subtitle shown outside each B1 loop (Figma B1 subtitles).
     var tagline: String {
         switch self {
         case .social: return "Friends & crews"

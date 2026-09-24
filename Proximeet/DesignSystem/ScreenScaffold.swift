@@ -78,28 +78,34 @@ struct ScreenScaffold<Content: View, Actions: View>: View {
     }
 }
 
-/// Screen headline and supporting line.
+/// Centered screen headline and supporting line.
+///
+/// Headlines are mixed-case heavy system type. Callers write the preferred two-line break
+/// as "\n", so the normal size wraps in controlled, balanced lines; larger text keeps
+/// wrapping naturally within each line, and nothing is truncated.
 struct SceneHeader: View {
     let title: String
     var subtitle: String?
     @Adaptive private var adaptive
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 8) {
             Text(title)
                 .textRole(.hero)
-                .textCase(.uppercase)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(Palette.porcelain)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(Text(title.replacingOccurrences(of: "\n", with: " ")))
                 .accessibilityAddTraits(.isHeader)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .textRole(.supporting)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(Palette.quiet(increasedContrast: adaptive.increaseContrast))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 }
 

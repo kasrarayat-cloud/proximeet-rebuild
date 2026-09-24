@@ -1,64 +1,68 @@
 import SwiftUI
-import ProximeetDomain
 
-/// Metal clasp at the end of a B1 band (Figma 58 × 69, radius 9). Engaged when selected:
-/// the latch sits flush against the strap.
-struct BandClasp: View {
-    let intent: BandIntent
-    var isEngaged: Bool
+/// Subtle dark clasp wrapped around the loop's right-hand turn, drawn natively in smoked
+/// graphite alloy. Its latch closes when the band is chosen (B1) or secured (B2). The
+/// motion is decorative: the model state already exists before the latch moves, and under
+/// Reduce Motion the latch keeps a static pose and only its opacity changes.
+struct SideClasp: View {
+    var isClosed: Bool
     @Adaptive private var adaptive
 
     var body: some View {
-        ZStack {
-            MetalSurface(
-                shape: NotchedPlate(cornerRadius: 9, notchWidth: 14, notchDepth: 3),
-                stops: MetalFinish.clasp,
-                angle: MetalFinish.claspAngle
-            )
-            Image(systemName: intent.symbolName)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(Palette.carbon)
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Palette.carbon.opacity(isEngaged ? 0.85 : 0.35))
-                .frame(width: 4)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 5)
-                .offset(x: adaptive.reduceMotion || isEngaged ? 0 : -3)
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let height = proxy.size.height
+            let closedPose = isClosed || adaptive.reduceMotion
+            ZStack {
+                MetalSurface(
+                    shape: NotchedPlate(
+                        cornerRadius: width * 0.34,
+                        notchWidth: width * 0.4,
+                        notchDepth: max(1, width * 0.08),
+                        notchPosition: 0.5
+                    ),
+                    stops: MetalFinish.darkClasp,
+                    angle: MetalFinish.darkClaspAngle
+                )
+                // Groove where the strap passes through.
+                RoundedRectangle(cornerRadius: width * 0.08, style: .continuous)
+                    .fill(Color.black.opacity(0.5))
+                    .frame(width: max(1.5, width * 0.16), height: height * 0.56)
+                    .offset(y: -height * 0.06)
+                // Latch lever, hinged at its leading end.
+                Capsule()
+                    .fill(LinearGradient(
+                        colors: [Color(hex: 0x6B777E), Color(hex: 0x2A3034)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ))
+                    .frame(width: width * 0.86, height: max(2, height * 0.09))
+                    .rotationEffect(.degrees(closedPose ? 0 : -32), anchor: .leading)
+                    .offset(y: height * 0.32)
+                    .opacity(isClosed ? 1 : 0.6)
+            }
+            .frame(width: width, height: height)
         }
-        .shadow(color: Color.black.opacity(0.45), radius: 3, y: 2)
+        .shadow(color: Color.black.opacity(0.5), radius: 2, x: -1, y: 2)
         .accessibilityHidden(true)
     }
 }
 
-/// Clasp at the centre of the secured band (B2 stage and summary). Closing is decorative;
-/// the secured state already exists in the model before this view appears.
-struct StageClasp: View {
-    let intent: BandIntent
-    var isClosed: Bool
-
+/// Small ring linking the clasp to a mounted signal plate.
+struct PlateLink: View {
     var body: some View {
-        ZStack {
-            MetalSurface(
-                shape: NotchedPlate(cornerRadius: 14, notchWidth: 16, notchDepth: 4),
-                stops: MetalFinish.heroTag,
-                angle: MetalFinish.heroTagAngle
-            )
-            Image(systemName: intent.symbolName)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Palette.carbon)
-                .offset(y: -7)
-            Capsule()
-                .fill(LinearGradient(
-                    colors: [Color(hex: 0x3B4347), Color(hex: 0x8C98A0)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ))
-                .frame(width: 44, height: 8)
-                .rotationEffect(.degrees(isClosed ? 0 : -24), anchor: .leading)
-                .offset(y: isClosed ? 17 : 6)
+        GeometryReader { proxy in
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color(hex: 0x7C888F), Color(hex: 0x23282C)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: max(1.5, proxy.size.width * 0.22)
+                )
         }
-        .shadow(color: Color.black.opacity(0.45), radius: 8, y: 6)
+        .shadow(color: Color.black.opacity(0.4), radius: 1.5, y: 1)
         .accessibilityHidden(true)
     }
 }
