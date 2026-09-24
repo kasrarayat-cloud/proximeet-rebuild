@@ -1,0 +1,648 @@
+<canvas id="0:1" name="01 · Social Objects" x="0" y="0" width="0" height="0">
+  <frame id="2:2" name="SOCIAL OBJECTS · Editable study" x="200" y="200" width="2177" height="2120">
+    <text id="4:2" name="PROXIMEET / SOCIAL OBJECTS" x="54" y="54" width="2069" height="27" />
+    <text id="4:3" name="01 — EDITABLE DESIGN STUDY · Same six-step entrance. A new material language. · Fictional people and venues." x="54" y="115" width="2069" height="18" />
+    <frame id="4:4" name="Frame" x="54" y="167" width="2069" height="881">
+      <frame id="4:6" name="Frame" x="0" y="0" width="393" height="881">
+        <text id="4:7" name="A1 · Welcome" x="0" y="0" width="393" height="17" />
+        <frame id="4:8" name="A1 · Welcome" x="0" y="29" width="393" height="852">
+          <frame id="4:9" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:10" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:11" name="01 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:12" name="Six venue windows" x="25" y="70" width="345" height="328">
+            <frame id="4:13" name="Café" x="0" y="0" width="103" height="104">
+              <rounded-rectangle id="4:14" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:15" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <rounded-rectangle id="4:16" name="Rectangle" x="20" y="46" width="57" height="8" />
+              <rounded-rectangle id="4:17" name="Rectangle" x="26" y="54" width="4" height="21" />
+              <rounded-rectangle id="4:18" name="Rectangle" x="67" y="54" width="4" height="21" />
+              <ellipse id="4:19" name="Ellipse" x="37" y="31" width="20" height="16" />
+              <rounded-rectangle id="4:20" name="Rectangle" x="46" y="33" width="15" height="10" />
+              <ellipse id="4:21" name="Ellipse" x="39" y="32" width="16" height="5" />
+              <text id="4:22" name="Café" x="7" y="84" width="90" height="13" />
+            </frame>
+            <frame id="4:23" name="Gallery" x="119" y="0" width="103" height="104">
+              <rounded-rectangle id="4:24" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:25" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <rounded-rectangle id="4:26" name="Rectangle" x="22" y="33" width="53" height="38" />
+              <rounded-rectangle id="4:27" name="Rectangle" x="27" y="38" width="43" height="28" />
+              <ellipse id="4:28" name="Ellipse" x="39" y="44" width="20" height="18" />
+              <text id="4:29" name="Gallery" x="7" y="84" width="90" height="13" />
+            </frame>
+            <frame id="4:30" name="Listening bar" x="238" y="0" width="103" height="104">
+              <rounded-rectangle id="4:31" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:32" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <ellipse id="4:33" name="Ellipse" x="26" y="28" width="50" height="50" />
+              <ellipse id="4:34" name="Ellipse" x="41" y="43" width="20" height="20" />
+              <ellipse id="4:35" name="Ellipse" x="48" y="50" width="6" height="6" />
+              <text id="4:36" name="Listening bar" x="7" y="84" width="90" height="13" />
+            </frame>
+            <frame id="4:37" name="Cinema" x="0" y="158" width="103" height="104">
+              <rounded-rectangle id="4:38" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:39" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <rounded-rectangle id="4:40" name="Rectangle" x="23" y="30" width="51" height="45" />
+              <rounded-rectangle id="4:41" name="Rectangle" x="29" y="35" width="39" height="33" />
+              <rounded-rectangle id="4:42" name="Rectangle" x="30" y="42" width="37" height="21" />
+              <text id="4:43" name="Cinema" x="7" y="84" width="90" height="13" />
+            </frame>
+            <frame id="4:44" name="Game night" x="119" y="158" width="103" height="104">
+              <rounded-rectangle id="4:45" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:46" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <ellipse id="4:47" name="Ellipse" x="22" y="41" width="55" height="30" />
+              <rounded-rectangle id="4:48" name="Rectangle" x="28" y="38" width="18" height="25" />
+              <rounded-rectangle id="4:49" name="Rectangle" x="51" y="38" width="18" height="25" />
+              <text id="4:50" name="Game night" x="7" y="84" width="90" height="13" />
+            </frame>
+            <frame id="4:51" name="Rooftop" x="238" y="158" width="103" height="104">
+              <rounded-rectangle id="4:52" name="Rectangle" x="0" y="8" width="98" height="88" />
+              <rounded-rectangle id="4:53" name="Rectangle" x="8" y="18" width="78" height="4" />
+              <rounded-rectangle id="4:54" name="Rectangle" x="22" y="32" width="57" height="42" />
+              <ellipse id="4:55" name="Ellipse" x="30" y="44" width="14" height="14" />
+              <ellipse id="4:56" name="Ellipse" x="53" y="44" width="14" height="14" />
+              <text id="4:57" name="Rooftop" x="7" y="84" width="90" height="13" />
+            </frame>
+          </frame>
+          <text id="4:58" name="EVERY PLACE. NEW PEOPLE." x="25" y="414" width="345" height="102" />
+          <text id="4:59" name="Your next hello starts here." x="25" y="532" width="345" height="22" />
+          <frame id="4:60" name="Frame" x="25" y="570" width="345" height="155" />
+          <frame id="4:61" name="Action / Start my pass" x="25" y="741" width="345" height="56">
+            <text id="4:62" name="Sign in with Apple" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:63" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:65" name="Demo sign-in · 18+ only" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:66" name="Frame" x="419" y="0" width="393" height="881">
+        <text id="4:67" name="A2 · Date of birth" x="0" y="0" width="393" height="17" />
+        <frame id="4:68" name="A2 · Date of birth" x="0" y="29" width="393" height="852">
+          <frame id="4:69" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:70" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:71" name="02 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:72" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:73" name="FIRST, YOUR BIRTHDAY." x="0" y="0" width="345" height="94" />
+            <text id="4:74" name="An adult space, from the start." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:75" name="Tactile DOB wheel" x="25" y="207" width="345" height="256">
+            <rounded-rectangle id="4:76" name="Rectangle" x="0" y="14" width="345" height="225" />
+            <rounded-rectangle id="4:77" name="Rectangle" x="8" y="91" width="329" height="68" />
+            <frame id="4:78" name="Frame" x="24" y="41" width="300" height="30">
+              <text id="4:79" name="SEP" x="0" y="0" width="118" height="30" />
+              <text id="4:80" name="11" x="126" y="0" width="72" height="30" />
+              <text id="4:81" name="1997" x="206" y="0" width="72" height="30" />
+            </frame>
+            <frame id="4:82" name="Frame" x="24" y="106" width="300" height="38">
+              <text id="4:83" name="OCT" x="0" y="0" width="118" height="38" />
+              <text id="4:84" name="12" x="126" y="0" width="72" height="38" />
+              <text id="4:85" name="1998" x="206" y="0" width="72" height="38" />
+            </frame>
+            <frame id="4:86" name="Frame" x="24" y="171" width="300" height="30">
+              <text id="4:87" name="NOV" x="0" y="0" width="118" height="30" />
+              <text id="4:88" name="13" x="126" y="0" width="72" height="30" />
+              <text id="4:89" name="1999" x="206" y="0" width="72" height="30" />
+            </frame>
+          </frame>
+          <text id="4:90" name="SAMPLE DATE" x="25" y="479" width="345" height="14" />
+          <text id="4:91" name="Your birthday stays private. This does not verify your age." x="25" y="509" width="345" height="36" />
+          <frame id="4:92" name="Frame" x="25" y="561" width="345" height="164" />
+          <frame id="4:93" name="Action / Continue" x="25" y="741" width="345" height="56">
+            <text id="4:94" name="Continue" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:95" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:97" name="Date picker concept · no verification performed" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:98" name="Frame" x="838" y="0" width="393" height="881">
+        <text id="4:99" name="A3 · Adult pass demo" x="0" y="0" width="393" height="17" />
+        <frame id="4:100" name="A3 · Adult pass demo" x="0" y="29" width="393" height="852">
+          <frame id="4:101" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:102" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:103" name="03 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:104" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:105" name="YOUR PASS. YOUR PACE." x="0" y="0" width="345" height="94" />
+            <text id="4:106" name="A look at the entrance, before the real thing." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:107" name="Notched demo pass" x="25" y="207" width="345" height="305">
+            <rounded-rectangle id="4:108" name="Rectangle" x="7" y="11" width="331" height="282" />
+            <ellipse id="4:109" name="Ellipse" x="-5" y="200" width="24" height="24" />
+            <ellipse id="4:110" name="Ellipse" x="326" y="200" width="24" height="24" />
+            <frame id="4:111" name="Frame" x="31" y="34" width="283" height="131">
+              <frame id="4:112" name="Frame" x="0" y="0" width="283" height="32">
+                <text id="4:113" name="PROXIMEET" x="0" y="6.5" width="175" height="19" />
+                <frame id="4:114" name="Frame" x="211" y="0" width="72" height="32">
+                  <text id="4:115" name="DEMO" x="10" y="7" width="56" height="18" />
+                </frame>
+              </frame>
+              <text id="4:116" name="GUEST" x="0" y="49" width="283" height="48" />
+              <text id="4:117" name="Sample pass · not verification" x="0" y="114" width="283" height="17" />
+            </frame>
+            <rounded-rectangle id="4:118" name="Rectangle" x="28" y="218" width="286" height="1" />
+            <rounded-rectangle id="4:119" name="Rectangle" x="33" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:120" name="Rectangle" x="39" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:121" name="Rectangle" x="45" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:122" name="Rectangle" x="51" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:123" name="Rectangle" x="57" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:124" name="Rectangle" x="63" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:125" name="Rectangle" x="69" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:126" name="Rectangle" x="75" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:127" name="Rectangle" x="81" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:128" name="Rectangle" x="87" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:129" name="Rectangle" x="93" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:130" name="Rectangle" x="99" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:131" name="Rectangle" x="105" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:132" name="Rectangle" x="111" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:133" name="Rectangle" x="117" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:134" name="Rectangle" x="123" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:135" name="Rectangle" x="129" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:136" name="Rectangle" x="135" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:137" name="Rectangle" x="141" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:138" name="Rectangle" x="147" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:139" name="Rectangle" x="153" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:140" name="Rectangle" x="159" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:141" name="Rectangle" x="165" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:142" name="Rectangle" x="171" y="237" width="4" height="24" />
+            <rounded-rectangle id="4:143" name="Rectangle" x="177" y="237" width="2" height="24" />
+            <rounded-rectangle id="4:144" name="Rectangle" x="183" y="237" width="3" height="24" />
+            <rounded-rectangle id="4:145" name="Rectangle" x="189" y="237" width="4" height="24" />
+          </frame>
+          <text id="4:146" name="Real age checks are required before joining a live room." x="25" y="528" width="345" height="36" />
+          <frame id="4:147" name="Frame" x="25" y="580" width="345" height="145" />
+          <frame id="4:148" name="Action / Continue demo" x="25" y="741" width="345" height="56">
+            <text id="4:149" name="Continue demo" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:150" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:152" name="No identity or age check takes place in this study" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:153" name="Frame" x="1257" y="0" width="393" height="881">
+        <text id="4:154" name="A4 · Guest profile" x="0" y="0" width="393" height="17" />
+        <frame id="4:155" name="A4 · Guest profile" x="0" y="29" width="393" height="852">
+          <frame id="4:156" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:157" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:158" name="04 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:159" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:160" name="PUT A NAME TO THE HELLO." x="0" y="0" width="345" height="94" />
+            <text id="4:161" name="A little about you. Enough to begin." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:162" name="Aluminium clipped sample guest profile" x="25" y="207" width="345" height="375">
+            <rounded-rectangle id="4:163" name="Rectangle" x="5" y="18" width="335" height="347" />
+            <rounded-rectangle id="4:164" name="Rectangle" x="101" y="1" width="143" height="28" />
+            <frame id="4:165" name="Frame" x="32" y="53" width="281" height="261">
+              <text id="4:166" name="GUEST LIST / SAMPLE" x="0" y="0" width="281" height="14" />
+              <text id="8:2" name="Sam Music · coffee" x="0" y="28" width="281" height="15" />
+              <text id="8:3" name="Mina Art · outdoors" x="0" y="57" width="281" height="15" />
+              <frame id="4:167" name="Frame" x="0" y="86" width="281" height="61">
+                <frame id="4:168" name="Object composition" x="0" y="0" width="55" height="61">
+                  <rounded-rectangle id="4:169" name="Rectangle" x="0" y="0" width="55" height="61" />
+                  <text id="4:170" name="A" x="0" y="0" width="55" height="40" />
+                </frame>
+                <frame id="4:171" name="Frame" x="70" y="2" width="203" height="57">
+                  <text id="4:172" name="Alex" x="0" y="0" width="203" height="38" />
+                  <text id="4:173" name="Photo is optional" x="0" y="41" width="203" height="16" />
+                </frame>
+              </frame>
+              <text id="4:174" name="FIRST NAME" x="0" y="161" width="281" height="13" />
+              <frame id="4:175" name="Frame" x="0" y="188" width="281" height="42">
+                <text id="4:176" name="Alex" x="12" y="10" width="257" height="22" />
+              </frame>
+              <text id="4:177" name="Interests · music / coffee" x="0" y="244" width="281" height="17" />
+            </frame>
+          </frame>
+          <text id="4:178" name="Use the name you want people to know you by." x="25" y="598" width="345" height="36" />
+          <frame id="4:179" name="Frame" x="25" y="650" width="345" height="75" />
+          <frame id="4:180" name="Action / That’s me" x="25" y="741" width="345" height="56">
+            <text id="4:181" name="That’s me" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:182" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:184" name="Sample profile · not a real account" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:185" name="Frame" x="1676" y="0" width="393" height="881">
+        <text id="4:186" name="B1 · Intent band" x="0" y="0" width="393" height="17" />
+        <frame id="4:187" name="B1 · Intent band" x="0" y="29" width="393" height="852">
+          <frame id="4:188" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:189" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:190" name="05 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:191" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:192" name="WHICH BAND TONIGHT?" x="0" y="0" width="345" height="94" />
+            <text id="4:193" name="One intent. Your kind of connection." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:194" name="Select SOCIAL" x="25" y="207" width="345" height="77">
+            <rounded-rectangle id="4:195" name="Rectangle" x="2" y="7" width="335" height="65" />
+            <rounded-rectangle id="4:196" name="Rectangle" x="12" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:197" name="Rectangle" x="27" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:198" name="Rectangle" x="42" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:199" name="Rectangle" x="57" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:200" name="Rectangle" x="72" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:201" name="Rectangle" x="87" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:202" name="Rectangle" x="102" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:203" name="Rectangle" x="117" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:204" name="Rectangle" x="132" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:205" name="Rectangle" x="147" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:206" name="Rectangle" x="162" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:207" name="Rectangle" x="177" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:208" name="Rectangle" x="192" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:209" name="Rectangle" x="207" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:210" name="Rectangle" x="222" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:211" name="Rectangle" x="237" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:212" name="Rectangle" x="252" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:213" name="Rectangle" x="267" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:214" name="Rectangle" x="282" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:215" name="Rectangle" x="297" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:216" name="Rectangle" x="12" y="10" width="314" height="2" />
+            <text id="4:217" name="SOCIAL" x="20" y="12" width="215" height="40" />
+            <text id="4:218" name="Friends &amp; crews" x="20" y="46" width="215" height="14" />
+            <rounded-rectangle id="4:219" name="Rectangle" x="273" y="5" width="58" height="69" />
+            <frame id="4:220" name="Icon / people" x="286" y="24" width="31" height="31" />
+          </frame>
+          <frame id="4:223" name="Select DATING" x="25" y="300" width="345" height="77">
+            <rounded-rectangle id="4:224" name="Rectangle" x="2" y="7" width="335" height="65" />
+            <rounded-rectangle id="4:225" name="Rectangle" x="12" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:226" name="Rectangle" x="27" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:227" name="Rectangle" x="42" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:228" name="Rectangle" x="57" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:229" name="Rectangle" x="72" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:230" name="Rectangle" x="87" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:231" name="Rectangle" x="102" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:232" name="Rectangle" x="117" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:233" name="Rectangle" x="132" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:234" name="Rectangle" x="147" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:235" name="Rectangle" x="162" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:236" name="Rectangle" x="177" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:237" name="Rectangle" x="192" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:238" name="Rectangle" x="207" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:239" name="Rectangle" x="222" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:240" name="Rectangle" x="237" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:241" name="Rectangle" x="252" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:242" name="Rectangle" x="267" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:243" name="Rectangle" x="282" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:244" name="Rectangle" x="297" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:245" name="Rectangle" x="12" y="10" width="314" height="2" />
+            <text id="4:246" name="DATING" x="20" y="12" width="215" height="40" />
+            <text id="4:247" name="Open to a match" x="20" y="46" width="215" height="14" />
+            <rounded-rectangle id="4:248" name="Rectangle" x="273" y="5" width="58" height="69" />
+            <frame id="4:249" name="Icon / heart" x="286" y="24" width="31" height="31" />
+          </frame>
+          <frame id="4:251" name="Select BUSINESS" x="25" y="393" width="345" height="77">
+            <rounded-rectangle id="4:252" name="Rectangle" x="2" y="7" width="335" height="65" />
+            <rounded-rectangle id="4:253" name="Rectangle" x="12" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:254" name="Rectangle" x="27" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:255" name="Rectangle" x="42" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:256" name="Rectangle" x="57" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:257" name="Rectangle" x="72" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:258" name="Rectangle" x="87" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:259" name="Rectangle" x="102" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:260" name="Rectangle" x="117" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:261" name="Rectangle" x="132" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:262" name="Rectangle" x="147" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:263" name="Rectangle" x="162" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:264" name="Rectangle" x="177" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:265" name="Rectangle" x="192" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:266" name="Rectangle" x="207" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:267" name="Rectangle" x="222" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:268" name="Rectangle" x="237" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:269" name="Rectangle" x="252" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:270" name="Rectangle" x="267" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:271" name="Rectangle" x="282" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:272" name="Rectangle" x="297" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:273" name="Rectangle" x="12" y="10" width="314" height="2" />
+            <text id="4:274" name="BUSINESS" x="20" y="12" width="215" height="40" />
+            <text id="4:275" name="Ideas &amp; networks" x="20" y="46" width="215" height="14" />
+            <rounded-rectangle id="4:276" name="Rectangle" x="273" y="5" width="58" height="69" />
+            <frame id="4:277" name="Icon / business" x="286" y="24" width="31" height="31" />
+          </frame>
+          <frame id="4:280" name="Select ACTIVITY" x="25" y="486" width="345" height="77">
+            <rounded-rectangle id="4:281" name="Rectangle" x="2" y="7" width="335" height="65" />
+            <rounded-rectangle id="4:282" name="Rectangle" x="12" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:283" name="Rectangle" x="27" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:284" name="Rectangle" x="42" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:285" name="Rectangle" x="57" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:286" name="Rectangle" x="72" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:287" name="Rectangle" x="87" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:288" name="Rectangle" x="102" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:289" name="Rectangle" x="117" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:290" name="Rectangle" x="132" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:291" name="Rectangle" x="147" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:292" name="Rectangle" x="162" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:293" name="Rectangle" x="177" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:294" name="Rectangle" x="192" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:295" name="Rectangle" x="207" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:296" name="Rectangle" x="222" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:297" name="Rectangle" x="237" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:298" name="Rectangle" x="252" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:299" name="Rectangle" x="267" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:300" name="Rectangle" x="282" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:301" name="Rectangle" x="297" y="8" width="1" height="62" />
+            <rounded-rectangle id="4:302" name="Rectangle" x="12" y="10" width="314" height="2" />
+            <text id="4:303" name="ACTIVITY" x="20" y="12" width="215" height="40" />
+            <text id="4:304" name="Do something together" x="20" y="46" width="215" height="14" />
+            <rounded-rectangle id="4:305" name="Rectangle" x="273" y="5" width="58" height="69" />
+            <frame id="4:306" name="Icon / activity" x="286" y="24" width="31" height="31" />
+          </frame>
+          <frame id="4:308" name="Frame" x="25" y="579" width="345" height="146" />
+          <frame id="4:309" name="Action / Choose Social" x="25" y="741" width="345" height="56">
+            <text id="4:310" name="Choose Social" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:311" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:313" name="Select any band · locks only when you join a session" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+    </frame>
+    <frame id="4:5" name="Frame" x="54" y="1082" width="2069" height="881">
+      <frame id="4:314" name="Frame" x="0" y="0" width="393" height="881">
+        <text id="4:315" name="B2 · Signal tag" x="0" y="0" width="393" height="17" />
+        <frame id="4:316" name="B2 · Signal tag" x="0" y="29" width="393" height="852">
+          <frame id="4:317" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:318" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:319" name="06 / 06" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:320" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:321" name="MAKE YOUR HELLO CLEAR." x="0" y="0" width="345" height="94" />
+            <text id="4:322" name="Social" x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:323" name="Band with selected signal tag" x="25" y="207" width="345" height="100">
+            <rounded-rectangle id="4:324" name="Rectangle" x="14" y="32" width="317" height="50" />
+            <rounded-rectangle id="4:325" name="Rectangle" x="22" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:326" name="Rectangle" x="35" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:327" name="Rectangle" x="48" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:328" name="Rectangle" x="61" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:329" name="Rectangle" x="74" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:330" name="Rectangle" x="87" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:331" name="Rectangle" x="100" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:332" name="Rectangle" x="113" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:333" name="Rectangle" x="126" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:334" name="Rectangle" x="139" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:335" name="Rectangle" x="152" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:336" name="Rectangle" x="165" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:337" name="Rectangle" x="178" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:338" name="Rectangle" x="191" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:339" name="Rectangle" x="204" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:340" name="Rectangle" x="217" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:341" name="Rectangle" x="230" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:342" name="Rectangle" x="243" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:343" name="Rectangle" x="256" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:344" name="Rectangle" x="269" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:345" name="Rectangle" x="282" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:346" name="Rectangle" x="295" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:347" name="Rectangle" x="308" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:348" name="Rectangle" x="321" y="34" width="1" height="45" />
+            <rounded-rectangle id="4:349" name="Rectangle" x="121" y="3" width="108" height="103" />
+            <frame id="4:350" name="Icon / chat" x="152" y="31" width="45" height="45" />
+          </frame>
+          <frame id="4:352" name="Frame" x="25" y="323" width="345" height="212">
+            <frame id="4:353" name="Frame" x="0" y="0" width="345" height="100">
+              <frame id="4:354" name="Select Come say hi" x="0" y="0" width="166" height="100">
+                <rounded-rectangle id="4:355" name="Rectangle" x="0" y="0" width="166" height="100" />
+                <rounded-rectangle id="4:356" name="Rectangle" x="5" y="5" width="156" height="90" />
+                <frame id="4:357" name="Icon / wave" x="17" y="18" width="32" height="32" />
+                <text id="4:359" name="COME SAY HI" x="17" y="64" width="140" height="27" />
+              </frame>
+              <frame id="4:360" name="Select Chat first" x="179" y="0" width="166" height="100">
+                <rounded-rectangle id="4:361" name="Rectangle" x="0" y="0" width="166" height="100" />
+                <rounded-rectangle id="4:362" name="Rectangle" x="5" y="5" width="156" height="90" />
+                <frame id="4:363" name="Icon / chat" x="17" y="18" width="32" height="32" />
+                <text id="4:365" name="CHAT FIRST" x="17" y="64" width="140" height="27" />
+              </frame>
+            </frame>
+            <frame id="4:366" name="Frame" x="0" y="112" width="345" height="100">
+              <frame id="4:367" name="Select With my crew" x="0" y="0" width="166" height="100">
+                <rounded-rectangle id="4:368" name="Rectangle" x="0" y="0" width="166" height="100" />
+                <rounded-rectangle id="4:369" name="Rectangle" x="5" y="5" width="156" height="90" />
+                <frame id="4:370" name="Icon / people" x="17" y="18" width="32" height="32" />
+                <text id="4:373" name="WITH MY CREW" x="17" y="64" width="140" height="27" />
+              </frame>
+              <frame id="4:374" name="Select Just looking" x="179" y="0" width="166" height="100">
+                <rounded-rectangle id="4:375" name="Rectangle" x="0" y="0" width="166" height="100" />
+                <rounded-rectangle id="4:376" name="Rectangle" x="5" y="5" width="156" height="90" />
+                <frame id="4:377" name="Icon / eye" x="17" y="18" width="32" height="32" />
+                <text id="4:380" name="JUST LOOKING" x="17" y="64" width="140" height="27" />
+              </frame>
+            </frame>
+          </frame>
+          <text id="4:381" name="Chosen signal: Chat first" x="25" y="551" width="345" height="18" />
+          <frame id="4:382" name="Frame" x="25" y="585" width="345" height="140" />
+          <frame id="4:383" name="Action / Set my signal" x="25" y="741" width="345" height="56">
+            <text id="4:384" name="Set my signal" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:385" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:387" name="Visible only after venue check-in" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:388" name="Frame" x="419" y="0" width="393" height="881">
+        <text id="4:389" name="C1 · Places" x="0" y="0" width="393" height="17" />
+        <frame id="4:390" name="C1 · Places" x="0" y="29" width="393" height="852">
+          <frame id="4:391" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:392" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:393" name="PLACES" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:394" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:395" name="FIND YOUR KIND OF HERE." x="0" y="0" width="345" height="94" />
+            <text id="4:396" name="Choose a place. Preview before joining." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="4:397" name="Fictional venue object" x="25" y="207" width="345" height="261">
+            <rounded-rectangle id="4:398" name="Rectangle" x="0" y="0" width="345" height="261" />
+            <rounded-rectangle id="4:399" name="Rectangle" x="20" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:400" name="Rectangle" x="63" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:401" name="Rectangle" x="106" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:402" name="Rectangle" x="149" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:403" name="Rectangle" x="192" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:404" name="Rectangle" x="235" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:405" name="Rectangle" x="278" y="18" width="1" height="225" />
+            <rounded-rectangle id="4:406" name="Rectangle" x="321" y="18" width="1" height="225" />
+            <ellipse id="4:407" name="Ellipse" x="78" y="20" width="200" height="200" />
+            <ellipse id="4:408" name="Ellipse" x="94" y="36" width="168" height="168" />
+            <ellipse id="4:409" name="Ellipse" x="112" y="54" width="132" height="132" />
+            <ellipse id="4:410" name="Ellipse" x="151" y="93" width="54" height="54" />
+            <ellipse id="4:411" name="Ellipse" x="171" y="113" width="14" height="14" />
+            <frame id="4:412" name="Frame" x="24" y="195" width="297" height="55">
+              <text id="4:413" name="THE FOUNDRY" x="0" y="0" width="297" height="35" />
+              <text id="4:414" name="Listening night · fictional venue" x="0" y="39" width="297" height="16" />
+            </frame>
+          </frame>
+          <frame id="4:415" name="Frame" x="25" y="484" width="345" height="24">
+            <frame id="4:416" name="Frame" x="0" y="0" width="78" height="24">
+              <rounded-rectangle id="4:417" name="Rectangle" x="0" y="0" width="78" height="4" />
+              <text id="4:418" name="SOCIAL" x="0" y="11" width="78" height="13" />
+            </frame>
+            <frame id="4:419" name="Frame" x="86" y="0" width="78" height="24">
+              <rounded-rectangle id="4:420" name="Rectangle" x="0" y="0" width="78" height="4" />
+              <text id="4:421" name="DATING" x="0" y="11" width="78" height="13" />
+            </frame>
+            <frame id="4:422" name="Frame" x="172" y="0" width="78" height="24">
+              <rounded-rectangle id="4:423" name="Rectangle" x="0" y="0" width="78" height="4" />
+              <text id="4:424" name="BUSINESS" x="0" y="11" width="78" height="13" />
+            </frame>
+            <frame id="4:425" name="Frame" x="258" y="0" width="78" height="24">
+              <rounded-rectangle id="4:426" name="Rectangle" x="0" y="0" width="78" height="4" />
+              <text id="4:427" name="ACTIVITY" x="0" y="11" width="78" height="13" />
+            </frame>
+          </frame>
+          <text id="4:428" name="Your presence is still private." x="25" y="524" width="345" height="18" />
+          <frame id="4:429" name="Frame" x="25" y="558" width="345" height="167" />
+          <frame id="4:430" name="Action / Preview The Foundry" x="25" y="741" width="345" height="56">
+            <text id="4:431" name="Preview The Foundry" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:432" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:434" name="No real location access in this design study" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:435" name="Frame" x="838" y="0" width="393" height="881">
+        <text id="4:436" name="C2 · Room" x="0" y="0" width="393" height="17" />
+        <frame id="4:437" name="C2 · Room" x="0" y="29" width="393" height="852">
+          <frame id="4:438" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:439" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:440" name="ROOM" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:441" name="Frame" x="25" y="70" width="345" height="74">
+            <text id="4:442" name="THE FOUNDRY." x="0" y="0" width="345" height="47" />
+            <text id="4:443" name="Listening night · Sample session" x="0" y="55" width="345" height="19" />
+          </frame>
+          <frame id="8:7" name="Safety and leaving" x="25" y="160" width="345" height="15">
+            <text id="8:8" name="Safety" x="0" y="0" width="150" height="15" />
+            <text id="8:9" name="Leave" x="175" y="0" width="170" height="15" />
+          </frame>
+          <frame id="4:444" name="Frame" x="25" y="191" width="345" height="47">
+            <frame id="4:445" name="Icon / people" x="14" y="12" width="23" height="23" />
+            <text id="4:448" name="Social · Chat first" x="47" y="14" width="238" height="19" />
+          </frame>
+          <frame id="4:449" name="Frame" x="25" y="254" width="345" height="83">
+            <text id="4:450" name="TONIGHT’S ICEBREAKER" x="0" y="0" width="345" height="14" />
+            <text id="4:451" name="What song would you put on next?" x="0" y="19" width="345" height="64" />
+          </frame>
+          <frame id="4:452" name="Frame" x="25" y="353" width="345" height="76">
+            <frame id="4:453" name="Object composition" x="0" y="12" width="46" height="52">
+              <rounded-rectangle id="4:454" name="Rectangle" x="0" y="0" width="46" height="52" />
+              <text id="4:455" name="N" x="0" y="9" width="46" height="36" />
+            </frame>
+            <frame id="4:456" name="Frame" x="58" y="18" width="177" height="40">
+              <text id="4:457" name="Nadia" x="0" y="0" width="177" height="22" />
+              <text id="4:458" name="Social · Chat first" x="0" y="26" width="177" height="14" />
+            </frame>
+            <text id="4:459" name="Wave" x="247" y="29" width="86" height="18" />
+          </frame>
+          <frame id="4:460" name="Frame" x="25" y="445" width="345" height="76">
+            <frame id="4:461" name="Object composition" x="0" y="12" width="46" height="52">
+              <rounded-rectangle id="4:462" name="Rectangle" x="0" y="0" width="46" height="52" />
+              <text id="4:463" name="T" x="0" y="9" width="46" height="36" />
+            </frame>
+            <frame id="4:464" name="Frame" x="58" y="18" width="177" height="40">
+              <text id="4:465" name="Theo" x="0" y="0" width="177" height="22" />
+              <text id="4:466" name="Business · Come say hi" x="0" y="26" width="177" height="14" />
+            </frame>
+            <text id="4:467" name="Different intent" x="247" y="31.5" width="86" height="13" />
+          </frame>
+          <frame id="4:468" name="Frame" x="25" y="537" width="345" height="76">
+            <frame id="4:469" name="Object composition" x="0" y="12" width="46" height="52">
+              <rounded-rectangle id="4:470" name="Rectangle" x="0" y="0" width="46" height="52" />
+              <text id="4:471" name="J" x="0" y="9" width="46" height="36" />
+            </frame>
+            <frame id="4:472" name="Frame" x="58" y="18" width="177" height="40">
+              <text id="4:473" name="Jo" x="0" y="0" width="177" height="22" />
+              <text id="4:474" name="Activity · With my crew" x="0" y="26" width="177" height="14" />
+            </frame>
+            <text id="4:475" name="Different intent" x="247" y="31.5" width="86" height="13" />
+          </frame>
+          <text id="4:476" name="Sample excerpt · more people in the full room" x="25" y="629" width="345" height="14" />
+          <frame id="4:477" name="Frame" x="25" y="659" width="345" height="66" />
+          <frame id="4:478" name="Action / View incoming Wave" x="25" y="741" width="345" height="56">
+            <text id="4:479" name="View incoming Wave" x="22" y="17.5" width="250" height="21" />
+            <frame id="4:480" name="Icon / arrow" x="303" y="18" width="20" height="20" />
+          </frame>
+          <text id="4:482" name="Same intent + open signal · chat requires acceptance" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:483" name="Frame" x="1257" y="0" width="393" height="881">
+        <text id="4:484" name="C3 · Incoming Wave" x="0" y="0" width="393" height="17" />
+        <frame id="4:485" name="C3 · Incoming Wave" x="0" y="29" width="393" height="852">
+          <frame id="4:486" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:487" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:488" name="CONNECTION" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:489" name="Frame" x="25" y="70" width="345" height="121">
+            <text id="4:490" name="A HELLO FROM NADIA." x="0" y="0" width="345" height="94" />
+            <text id="4:491" name="You’re both here for Social." x="0" y="102" width="345" height="19" />
+          </frame>
+          <frame id="8:10" name="Safety and leaving" x="25" y="207" width="345" height="15">
+            <text id="8:11" name="Safety" x="0" y="0" width="150" height="15" />
+            <text id="8:12" name="Leave" x="175" y="0" width="170" height="15" />
+          </frame>
+          <frame id="4:492" name="Mutual-consent objects" x="25" y="238" width="345" height="254">
+            <ellipse id="4:493" name="Ellipse" x="11" y="20" width="157" height="157" />
+            <ellipse id="4:494" name="Ellipse" x="177" y="78" width="157" height="157" />
+            <text id="4:495" name="A" x="11" y="40" width="157" height="94" />
+            <text id="4:496" name="N" x="177" y="98" width="157" height="94" />
+            <rounded-rectangle id="4:497" name="Rectangle" x="38" y="174" width="158" height="43" />
+            <text id="4:498" name="SOCIAL" x="51" y="181" width="135" height="31" />
+            <frame id="4:499" name="Icon / wave" x="154" y="67" width="47" height="47" />
+          </frame>
+          <text id="4:501" name="Nadia sent you a Wave." x="25" y="508" width="345" height="26" />
+          <text id="4:502" name="Chat opens only if you both agree." x="25" y="550" width="345" height="18" />
+          <frame id="4:503" name="Frame" x="25" y="584" width="345" height="141" />
+          <frame id="12:6" name="Wave decision" x="25" y="741" width="345" height="56">
+            <frame id="4:504" name="Action / Accept Wave" x="0" y="0" width="166" height="56">
+              <text id="4:505" name="Accept Wave" x="16" y="17.5" width="134" height="21" />
+            </frame>
+            <frame id="12:7" name="Action / No thanks" x="179" y="0" width="166" height="56">
+              <text id="12:8" name="No thanks" x="18" y="19.5" width="130" height="17" />
+            </frame>
+          </frame>
+          <text id="4:508" name="Accepting is your choice. Decline without an alert." x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+      <frame id="4:509" name="Frame" x="1676" y="0" width="393" height="881">
+        <text id="4:510" name="C4 · Chat and Keep" x="0" y="0" width="393" height="17" />
+        <frame id="4:511" name="C4 · Chat and Keep" x="0" y="29" width="393" height="852">
+          <frame id="4:512" name="Frame" x="25" y="25" width="345" height="29">
+            <text id="4:513" name="Proximeet" x="0" y="0" width="210" height="29" />
+            <text id="4:514" name="CONNECTION" x="267" y="7.5" width="78" height="14" />
+          </frame>
+          <frame id="4:515" name="Frame" x="25" y="70" width="345" height="74">
+            <text id="4:516" name="NADIA." x="0" y="0" width="345" height="47" />
+            <text id="4:517" name="Social · The Foundry · temporary chat" x="0" y="55" width="345" height="19" />
+          </frame>
+          <frame id="8:13" name="Safety and leaving" x="25" y="160" width="345" height="15">
+            <text id="8:14" name="Safety" x="0" y="0" width="150" height="15" />
+            <text id="8:15" name="Leave" x="175" y="0" width="170" height="15" />
+          </frame>
+          <frame id="4:518" name="Frame" x="25" y="191" width="345" height="18">
+            <frame id="4:519" name="Icon / check" x="0" y="0" width="18" height="18" />
+            <text id="4:521" name="You both accepted this connection." x="26" y="1" width="313" height="16" />
+          </frame>
+          <frame id="4:522" name="Frame" x="25" y="225" width="305" height="51">
+            <text id="4:523" name="What would you put on next?" x="16" y="15" width="273" height="21" />
+          </frame>
+          <frame id="4:524" name="Frame" x="25" y="292" width="290" height="51">
+            <text id="4:525" name="Something worth staying for." x="16" y="15" width="258" height="21" />
+          </frame>
+          <frame id="4:526" name="Frame" x="25" y="359" width="305" height="51">
+            <text id="4:527" name="Okay, I’m listening :)" x="16" y="15" width="273" height="21" />
+          </frame>
+          <frame id="4:528" name="Frame" x="25" y="426" width="345" height="44">
+            <text id="4:529" name="Your next hello…" x="16" y="12.5" width="275" height="19" />
+            <frame id="4:530" name="Icon / arrow" x="301" y="12" width="20" height="20" />
+          </frame>
+          <frame id="4:532" name="Frame" x="25" y="486" width="345" height="121">
+            <text id="4:533" name="KEEP THE CONNECTION?" x="0" y="0" width="345" height="78" />
+            <text id="4:534" name="Only continues if you both choose it. Your choice stays private." x="0" y="87" width="345" height="34" />
+          </frame>
+          <frame id="4:535" name="Frame" x="25" y="623" width="345" height="102" />
+          <frame id="8:4" name="Frame" x="25" y="741" width="345" height="56">
+            <frame id="4:536" name="Action / Keep in touch" x="0" y="0" width="166" height="56">
+              <text id="4:537" name="Keep in touch" x="16" y="17.5" width="134" height="21" />
+            </frame>
+            <frame id="8:5" name="Action / Let it expire" x="179" y="0" width="166" height="56">
+              <text id="8:6" name="Let it expire" x="18" y="19.5" width="130" height="17" />
+            </frame>
+          </frame>
+          <text id="4:540" name="Demo choice only · not mutually kept yet" x="25" y="813" width="345" height="14" />
+        </frame>
+      </frame>
+    </frame>
+    <text id="4:541" name="NATIVE EDITABLE STUDY / MATERIAL DIRECTION" x="54" y="1997" width="2069" height="17" />
+    <text id="4:542" name="Vectors, text and auto-layout remain editable. Photoreal 3D materials are a separate asset-production workstream. Demo copy and fixtures are intentional. No sign-in, verification, location or messages are real." x="54" y="2048" width="2069" height="18" />
+  </frame>
+</canvas>

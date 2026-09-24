@@ -1,0 +1,122 @@
+const imgIconChat = "https://www.figma.com/api/mcp/asset/daf6da5d-d385-42be-8c55-e18683589aa1.svg";
+const imgIconWave = "https://www.figma.com/api/mcp/asset/b0f96df7-6e03-4b21-9b70-a56b1cf420be.svg";
+const imgIconChat1 = "https://www.figma.com/api/mcp/asset/7a1f3384-ad49-4ed9-8088-207d274ed352.svg";
+const imgIconPeople = "https://www.figma.com/api/mcp/asset/21e96b20-78f5-49e0-9144-7c950c455950.svg";
+const imgIconEye = "https://www.figma.com/api/mcp/asset/db61867e-2dda-4bdd-8384-da808fd21f8e.svg";
+const imgIconArrow = "https://www.figma.com/api/mcp/asset/32ba4f12-56d8-4fff-b81a-2ff29fbb074b.svg";
+
+export default function B2SignalTag() {
+  return (
+    <div className="bg-[#080a0b] border border-[#32383b] border-solid content-stretch flex flex-col gap-[16px] items-start overflow-clip p-[24px] relative rounded-[30px] size-full" data-node-id="4:316" data-name="B2 · Signal tag">
+      <div className="[word-break:break-word] content-stretch flex items-center justify-between leading-[1.3] not-italic overflow-clip relative shrink-0 w-[345px]" data-node-id="4:317" data-name="Frame">
+        <p className="font-['Inter:Bold'] font-bold relative shrink-0 text-[#f5f6f2] text-[22px] w-[210px]" data-node-id="4:318">
+          Proximeet
+        </p>
+        <p className="font-['Inter:Medium'] font-medium relative shrink-0 text-[#9ba3a7] text-[11px] text-right w-[78px]" data-node-id="4:319">
+          06 / 06
+        </p>
+      </div>
+      <div className="[word-break:break-word] content-stretch flex flex-col gap-[8px] items-start not-italic overflow-clip relative shrink-0 w-[345px]" data-node-id="4:320" data-name="Frame">
+        <div className="font-['Barlow_Semi_Condensed:ExtraBold'] leading-[0] relative shrink-0 text-[#f5f6f2] text-[48px] tracking-[-0.96px] w-[345px]" data-node-id="4:321">
+          <p className="leading-[0.98] mb-0">MAKE YOUR</p>
+          <p className="leading-[0.98]">HELLO CLEAR.</p>
+        </div>
+        <p className="font-['Inter:Regular'] font-normal leading-[1.3] relative shrink-0 text-[#9ba3a7] text-[15px] w-[345px]" data-node-id="4:322">
+          Social
+        </p>
+      </div>
+      <div className="h-[100px] relative shrink-0 w-[345px]" data-node-id="4:323" data-name="Band with selected signal tag">
+        <div className="absolute bg-[var(--intent-color,#35d7ff)] h-[50px] left-[14px] rounded-[14px] top-[32px] w-[317px]" data-node-id="4:324" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[22px] top-[34px] w-px" data-node-id="4:325" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[35px] top-[34px] w-px" data-node-id="4:326" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[48px] top-[34px] w-px" data-node-id="4:327" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[61px] top-[34px] w-px" data-node-id="4:328" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[74px] top-[34px] w-px" data-node-id="4:329" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[87px] top-[34px] w-px" data-node-id="4:330" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[100px] top-[34px] w-px" data-node-id="4:331" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[113px] top-[34px] w-px" data-node-id="4:332" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[126px] top-[34px] w-px" data-node-id="4:333" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[139px] top-[34px] w-px" data-node-id="4:334" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[152px] top-[34px] w-px" data-node-id="4:335" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[165px] top-[34px] w-px" data-node-id="4:336" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[178px] top-[34px] w-px" data-node-id="4:337" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[191px] top-[34px] w-px" data-node-id="4:338" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[204px] top-[34px] w-px" data-node-id="4:339" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[217px] top-[34px] w-px" data-node-id="4:340" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[230px] top-[34px] w-px" data-node-id="4:341" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[243px] top-[34px] w-px" data-node-id="4:342" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[256px] top-[34px] w-px" data-node-id="4:343" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[269px] top-[34px] w-px" data-node-id="4:344" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[282px] top-[34px] w-px" data-node-id="4:345" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[295px] top-[34px] w-px" data-node-id="4:346" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[308px] top-[34px] w-px" data-node-id="4:347" data-name="Rectangle" />
+        <div className="absolute bg-[rgba(8,10,11,0.2)] h-[45px] left-[321px] top-[34px] w-px" data-node-id="4:348" data-name="Rectangle" />
+        <div className="absolute h-[103px] left-[121px] rounded-[17px] shadow-[0px_12px_16px_0px_rgba(0,0,0,0.4)] top-[3px] w-[108px]" data-node-id="4:349" style={{ backgroundImage: "linear-gradient(120.53235046310044deg, rgb(110, 123, 130) 0%, rgb(228, 233, 236) 38.4%, rgb(139, 152, 159) 80%)" }} data-name="Rectangle" />
+        <div className="absolute left-[152px] size-[45px] top-[31px]" data-node-id="4:350" data-name="Icon / chat">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconChat} />
+        </div>
+      </div>
+      <div className="content-stretch flex flex-col gap-[12px] items-start overflow-clip relative shrink-0 w-[345px]" data-node-id="4:352" data-name="Frame">
+        <div className="content-stretch flex gap-[13px] items-center overflow-clip relative shrink-0 w-[345px]" data-node-id="4:353" data-name="Frame">
+          <div className="h-[100px] relative shrink-0 w-[166px]" data-node-id="4:354" data-name="Select Come say hi">
+            <div className="absolute h-[100px] left-0 rounded-[17px] top-0 w-[166px]" data-node-id="4:355" style={{ backgroundImage: "linear-gradient(133.0378210129247deg, rgb(164, 174, 180) 0%, rgb(240, 243, 244) 38.4%, rgb(140, 153, 160) 80%)" }} data-name="Rectangle" />
+            <div className="absolute bg-[rgba(245,246,242,0.08)] h-[90px] left-[5px] rounded-[13px] top-[5px] w-[156px]" data-node-id="4:356" data-name="Rectangle" />
+            <div className="absolute left-[17px] size-[32px] top-[18px]" data-node-id="4:357" data-name="Icon / wave">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconWave} />
+            </div>
+            <p className="[word-break:break-word] absolute font-['Barlow_Semi_Condensed:ExtraBold'] leading-[1.3] left-[17px] not-italic text-[#080a0b] text-[21px] top-[64px] w-[140px]" data-node-id="4:359">
+              COME SAY HI
+            </p>
+          </div>
+          <div className="h-[100px] relative shrink-0 w-[166px]" data-node-id="4:360" data-name="Select Chat first">
+            <div className="absolute h-[100px] left-0 rounded-[17px] top-0 w-[166px]" data-node-id="4:361" style={{ backgroundImage: "linear-gradient(133.0378210129247deg, rgb(164, 174, 180) 0%, rgb(240, 243, 244) 38.4%, rgb(140, 153, 160) 80%)" }} data-name="Rectangle" />
+            <div className="absolute bg-[rgba(245,246,242,0.08)] h-[90px] left-[5px] rounded-[13px] top-[5px] w-[156px]" data-node-id="4:362" data-name="Rectangle" />
+            <div className="absolute left-[17px] size-[32px] top-[18px]" data-node-id="4:363" data-name="Icon / chat">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconChat1} />
+            </div>
+            <p className="[word-break:break-word] absolute font-['Barlow_Semi_Condensed:ExtraBold'] leading-[1.3] left-[17px] not-italic text-[#080a0b] text-[21px] top-[64px] w-[140px]" data-node-id="4:365">
+              CHAT FIRST
+            </p>
+          </div>
+        </div>
+        <div className="content-stretch flex gap-[13px] items-center overflow-clip relative shrink-0 w-[345px]" data-node-id="4:366" data-name="Frame">
+          <div className="h-[100px] relative shrink-0 w-[166px]" data-node-id="4:367" data-name="Select With my crew">
+            <div className="absolute h-[100px] left-0 rounded-[17px] top-0 w-[166px]" data-node-id="4:368" style={{ backgroundImage: "linear-gradient(133.0378210129247deg, rgb(164, 174, 180) 0%, rgb(240, 243, 244) 38.4%, rgb(140, 153, 160) 80%)" }} data-name="Rectangle" />
+            <div className="absolute bg-[rgba(245,246,242,0.08)] h-[90px] left-[5px] rounded-[13px] top-[5px] w-[156px]" data-node-id="4:369" data-name="Rectangle" />
+            <div className="absolute left-[17px] size-[32px] top-[18px]" data-node-id="4:370" data-name="Icon / people">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconPeople} />
+            </div>
+            <p className="[word-break:break-word] absolute font-['Barlow_Semi_Condensed:ExtraBold'] leading-[1.3] left-[17px] not-italic text-[#080a0b] text-[21px] top-[64px] w-[140px]" data-node-id="4:373">
+              WITH MY CREW
+            </p>
+          </div>
+          <div className="h-[100px] relative shrink-0 w-[166px]" data-node-id="4:374" data-name="Select Just looking">
+            <div className="absolute h-[100px] left-0 rounded-[17px] top-0 w-[166px]" data-node-id="4:375" style={{ backgroundImage: "linear-gradient(133.0378210129247deg, rgb(164, 174, 180) 0%, rgb(240, 243, 244) 38.4%, rgb(140, 153, 160) 80%)" }} data-name="Rectangle" />
+            <div className="absolute bg-[rgba(245,246,242,0.08)] h-[90px] left-[5px] rounded-[13px] top-[5px] w-[156px]" data-node-id="4:376" data-name="Rectangle" />
+            <div className="absolute left-[17px] size-[32px] top-[18px]" data-node-id="4:377" data-name="Icon / eye">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconEye} />
+            </div>
+            <p className="[word-break:break-word] absolute font-['Barlow_Semi_Condensed:ExtraBold'] leading-[1.3] left-[17px] not-italic text-[#080a0b] text-[21px] top-[64px] w-[140px]" data-node-id="4:380">
+              JUST LOOKING
+            </p>
+          </div>
+        </div>
+      </div>
+      <p className="[word-break:break-word] font-['Inter:Semi_Bold'] font-semibold leading-[1.3] not-italic relative shrink-0 text-[#f5f6f2] text-[14px] w-[345px]" data-node-id="4:381">
+        Chosen signal: Chat first
+      </p>
+      <div className="flex-[1_0_0] min-h-px relative w-[345px]" data-node-id="4:382" data-name="Frame" />
+      <div className="bg-[#f5f6f2] content-stretch flex h-[56px] items-center justify-between overflow-clip px-[22px] relative rounded-[28px] shrink-0 w-[345px]" data-node-id="4:383" data-name="Action / Set my signal">
+        <p className="[word-break:break-word] font-['Inter:Semi_Bold'] font-semibold leading-[1.3] not-italic relative shrink-0 text-[#080a0b] text-[16px] w-[250px]" data-node-id="4:384">
+          Set my signal
+        </p>
+        <div className="relative shrink-0 size-[20px]" data-node-id="4:385" data-name="Icon / arrow">
+          <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconArrow} />
+        </div>
+      </div>
+      <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[1.3] not-italic relative shrink-0 text-[#9ba3a7] text-[11px] text-center w-[345px]" data-node-id="4:387">
+        Visible only after venue check-in
+      </p>
+    </div>
+  );
+}

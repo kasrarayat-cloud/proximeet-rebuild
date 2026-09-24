@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+*.p12
+*.pem
+*.p8
+*.mobileprovision
+.claude/settings.local.json
+.claude-run/

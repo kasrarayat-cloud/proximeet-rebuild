@@ -1,0 +1,26 @@
+{
+  "b1": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[]}"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "b2": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"nodes\":[]}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,31 @@
+import Foundation
+
+/// Everything the guest has entered or chosen during this demo run.
+///
+/// Held in memory only: the type is deliberately not `Codable`, and `DemoFlow.reset()`
+/// replaces it with an empty draft.
+public struct DemoDraft: Equatable, Sendable {
+    /// Stored only after an eligible birthday check; cleared by any later rejected check.
+    public internal(set) var dateOfBirth: Date?
+    public internal(set) var profile: GuestProfile?
+    public internal(set) var band: BandIntent?
+    public internal(set) var signal: ApproachSignal?
+
+    public init() {}
+
+    /// Whether the draft holds everything needed to enter `scene`.
+    public func meetsRequirements(for scene: DemoScene) -> Bool {
+        switch scene {
+        case .welcome, .birthday:
+            return true
+        case .demoPass, .guestList:
+            return dateOfBirth != nil
+        case .band:
+            return dateOfBirth != nil && profile != nil
+        case .signal:
+            return meetsRequirements(for: .band) && band != nil
+        case .readyForCheckIn:
+            return meetsRequirements(for: .signal) && signal != nil
+        }
+    }
+}

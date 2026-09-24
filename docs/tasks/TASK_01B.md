@@ -1,0 +1,17 @@
+# Task 01B — native SwiftUI demo and B1/B2
+
+Continue from the completed, reviewed ProximeetDomain package. Implement the native app portion of TASK_01.md now; do not re-plan the domain or backend. Work incrementally and write the app scaffold first, then components/screens, then project and validation. The model remains Opus 5.5 with ultracode.
+
+Read the current domain API, docs/design/PROXIMEET_SOCIAL_OBJECTS_DESIGN.md, and docs/design/figma/README.md plus the B1/B2 contexts and screenshots. These are reference-only. Exact SVG downloads failed from both environments: document native semantic icon substitutes as interim and do not claim final visual fidelity. Native SF typography is permitted by the brief. Procedural fabric/metal studies are interim artwork, not the photoreal target achieved.
+
+Deliver native SwiftUI iOS 17+ source: Welcome → Birthday → Demo Pass → Guest List → Band → Signal → Ready for check-in. First four scenes are honest functional scaffolds. Give B1/B2 the material detail, responsive native text, semantic colors, persistent band/tag, explicit selection/confirmation and proposed motion in TASK_01.md. No backend, real verification, sign-in, presence or chat. Use DEMO labels; real entered profile values reach the final preview. No timers that simulate verification.
+
+Critical integration contract: rejected profile saves preserve a prior valid profile. The Guest List submit handler MUST advance only when saveProfile returns success, and rejected visible edits must remain visible with errors. Never call continueFromGuestList unconditionally after a failed save. Birthday picker and evaluator must use a consistent Gregorian calendar/timezone. Navigation back synchronizes with domain state; reset clears view drafts as well as model data.
+
+Accessibility: scalable typography/scrolling forms, clear selected states, VoiceOver order/labels, 44pt targets and normally 56pt primary actions, single-column tag options at large text, Increase Contrast/Reduce Transparency. Reduce Motion uses static poses/opacity only. No get-only accessibility environment writes in previews. State changes never wait for animation; no idle loops or stale delayed completion handlers. Deliberate selection haptics only; no simulated consent success.
+
+Supply a checked-in .xcodeproj with shared Proximeet scheme and local package reference, plus a dependency-free deterministic Python generation/validation route if useful. No external dependencies. Leave Apple team unset and provisional com.proximeet.demo clearly documented. Include appropriate minimal app assets and privacy declaration consistent with offline in-memory behavior. No permissions, credentials, copied legacy code, workflows or publishing automation.
+
+Run meaningful available checks: domain tests if domain integration changed; SwiftUI frontend syntax parsing (NOT Apple SDK compilation); project/plist/resource/scheme consistency via scripts/validate_project.py. Do not claim native compile, simulator/device screenshots, haptics, performance or TestFlight. They remain NOT RUN without a Mac. Include exact Mac build/capture commands and an accessibility check list in docs/reports/task01-ui.md.
+
+No edits outside this worktree; no permission-setting changes, bypass flags, commits, pushes, CI, signing or uploads. If any action is denied, report it and continue independent work. Stop after source implementation and checks, return concise changed-file/test/gap report.
