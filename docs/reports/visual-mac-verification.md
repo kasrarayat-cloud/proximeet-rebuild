@@ -14,10 +14,30 @@
 - Artifacts: `Proximeet-Debug-iphonesimulator-0f21deac21b7.zip` (5.57 MB) and `proximeet-rebuild_2_artifacts.zip` (21.49 MB).
 - Billing after the run showed **10 / 500** free macOS minutes used in total, no enabled subscription and no previous transactions.
 
-## Visual review still pending
+## Visual review of the supplied artifacts
 
-The browser's normal artifact download failed at the storage redirect and reached a Chrome error page. No archive synchronized locally. No alternate network path or access bypass was attempted. The lead returned to the permitted completed build page.
+The owner supplied the build 2 archive. The lead and an independent visual reviewer inspected all 12 native PNGs from the same source `0f21dea`; every capture hash matches its manifest and every image is 1206 × 2622 pixels. The earlier retrieval problem is resolved. The supplied `proximeet-rebuild_2_artifacts.zip` has SHA-256 `5a9f57aca6ff02535a5e40c2a0380f537f6b34b095697fe0749c4b1c49824e29`; the movie hash also matches its capture manifest.
 
-The new PNGs and movie therefore **have not been visually inspected**. Download `proximeet-rebuild_2_artifacts.zip` from the build page and provide it to complete the side-by-side review. Do not infer final visual approval, clean system chrome, motion quality, frame rate, small-phone fit, VoiceOver behavior or device haptics from the successful build/capture process.
+| Scene | Observed result and remaining showcase gap |
+|---|---|
+| Welcome | Appealing miniature-world artwork, but the composition is narrow and the disclosure takes substantial space. |
+| Birthday | Native picker and surrounding content are readable at the captured default text size. |
+| Demo Pass and Guest List | Readable, truthful paper surfaces, including the entered-name roster. Flat panel treatment and verbose copy remain the largest gaps from the showcase. |
+| Band (B1) | All four choices and the CTA fit. The loops appear flatter and more horizontal than the target; the lettering looks overlaid rather than part of the strap. |
+| Signal (B2) | Clear, functional hierarchy; the hero, all four options and CTA fit. The selected tag hangs below the band rather than reading as the target's front-mounted plate. |
+| Ready | The assembled object, summary and actions are readable. |
+| AX5 Signal | The capture shows the top of a longer scroll. It does not establish that scrolling, focus or every action works at that size. |
+
+No clipping was observed at the captured default text size. This does not establish small-phone fit, interactive behavior or full accessibility conformance.
+
+## Decoded motion review
+
+The H.264 reel is 16.23 seconds long with 226 decoded frames. It shows independent DEBUG fixture launches, with a leading frame from the previous B2 state, Home transitions and brief black startup surfaces between scenes. It is not an interactive end-to-end walkthrough, and the frame count is not a rendering-performance measurement.
+
+B1 rows brighten from top to bottom, then remain stable. The operating system's opening scale dominates Welcome's first frames, so the app's proposed settle cannot be isolated. B2 arrives with Chat first already selected and attached, then stays stable; no tap or attachment transition is demonstrated. No persistent rendering issue was observed after settling.
+
+## Verdict and next work
+
+This is a reviewable, improved native prototype. It is not final founder approval or TestFlight readiness. The next bounded design pass should prioritize Pass/Guest List material and copy, band depth and integrated lettering, the B2 plate attachment, and Welcome proportions. See [the prepared showcase-polish assignment](../tasks/task03-showcase-polish.md). Real interaction, system accessibility behavior, device haptics and performance still require separate evidence.
 
 This remains an offline onboarding demo. No Apple signing, TestFlight upload, production deployment or legacy repository push occurred. The original code and verified recovery archives remain preserved. Documentation-only commits after the tested revision do not change the compiled app.
