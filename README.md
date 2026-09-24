@@ -6,7 +6,7 @@ This is an offline, in-memory demo. It does not authenticate anyone, verify iden
 
 ## Verification status
 
-As of 24 September 2026: 53 domain tests pass on Linux; all 24 app Swift files pass syntax parsing; all 11 local project checks pass. **An Apple SDK build, simulator/device run and native visual acceptance have not happened.** The first four scenes, icons, materials and app branding still need visual refinement. This is not TestFlight-ready.
+As of 24 September 2026: the first Codemagic Mac run passed for source commit `70a2a8479a29aa5edf258ac98226fd35026b6bd8`, in 4m 22s. Xcode 26.6 compiled the unsigned Debug app for an iPhone 17 simulator on iOS 26.5; all 53 domain tests passed on macOS. The app installed and four DEBUG fixture captures were produced. **The capture archive could not be retrieved by the lead browser, so its pixels have not been visually reviewed.** Earlier Linux checks also passed. Full-flow interaction, accessibility, device behavior and final visual acceptance remain pending. The first four scenes, icons, materials and app branding still need refinement. This is not TestFlight-ready.
 
 See [lead status](docs/reports/LEAD_STATUS.md), [domain evidence](docs/reports/task01-domain.md), [native implementation and acceptance checklist](docs/reports/task01-ui.md), and [design direction](docs/design/PROXIMEET_SOCIAL_OBJECTS_DESIGN.md).
 
@@ -39,6 +39,6 @@ The target supports iOS 17 and later. The provisional bundle identifier is `com.
 
 ## Worktree and release boundary
 
-The active cloud checkout is `/home/proximeet/proximeet-cloud`, an independent clone of the fresh orphan branch `redesign/social-objects`. Source commit `96fd33b` is pushed to the new private repository `kasrarayat-cloud/proximeet-rebuild`. Codemagic is connected only to this new repository on the personal free plan; no paid subscription is enabled. The first cloud verification workflow is being prepared.
+The active cloud checkout is `/home/proximeet/proximeet-cloud`, an independent clone of the fresh orphan branch `redesign/social-objects`. Source commit `96fd33b` is pushed to the new private repository `kasrarayat-cloud/proximeet-rebuild`. Codemagic is connected only to this new repository on the personal free plan; no paid subscription is enabled. The manual-only unsigned simulator workflow has completed one successful run; see [cloud verification evidence](docs/reports/codemagic-setup.md).
 
 The original checkout, its remote, the initial rebuild worktree and verified recovery archive remain separate. The original repository's third-party Xcode Cloud linkage and Apple credentials are not used by this rebuild. No signing, deployment or Apple upload has been performed.
