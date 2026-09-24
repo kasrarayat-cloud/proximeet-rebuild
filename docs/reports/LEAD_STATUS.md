@@ -1,5 +1,11 @@
 # Rebuild lead status — 2026-09-24
 
+## Cloud setup update
+
+The active cloud checkout is now `/home/proximeet/proximeet-cloud`, with its own Git metadata and remote. Baseline `96fd33b` is pushed to the new private repository `kasrarayat-cloud/proximeet-rebuild` on default branch `redesign/social-objects`. The legacy origin is unchanged. Codemagic personal registration is complete; its GitHub App is restricted to the new repository. The account showed 0 of 500 free macOS minutes used and no paid subscription. The manual unsigned simulator workflow is in preparation; no build has run yet. See `codemagic-setup.md` for subsequent workflow evidence.
+
+The sections below preserve the pre-cloud implementation checkpoint. References there to no push or the initial worktree describe that checkpoint, not the current remote state.
+
 ## Current result
 
 A fresh native SwiftUI demo and pure Swift domain are implemented on orphan branch `redesign/social-objects`, in `/home/proximeet/proximeet-rebuild`. The first domain commit is `4d5bc4c`; the native increment is being committed locally with this report. No legacy product source, HaloCore code, CI workflow, signing identity or credential was copied into the new app.

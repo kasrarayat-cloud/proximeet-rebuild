@@ -1,0 +1,34 @@
+# Proximeet — first native verification: unsigned Debug build for an installed iPhone
+# simulator, host domain tests and DEBUG fixture screenshots. Start builds manually.
+#
+# Deliberately absent: triggering (no automatic builds), code signing, Apple credentials,
+# environment groups/secrets, integrations, publishing, notifications and caching.
+# The stages live in scripts/codemagic_verify.sh; see docs/reports/codemagic-setup.md.
+workflows:
+  proximeet-simulator-verification:
+    name: Proximeet simulator verification (manual, unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: ProximeetDomain tests on the Mac host (swift test)
+        script: bash scripts/codemagic_verify.sh domain-tests
+      - name: Select an installed iPhone simulator (no runtime downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Build Proximeet Debug for the selected simulator (code signing disabled)
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the simulator app with ditto (simulator only; not for TestFlight)
+        script: bash scripts/codemagic_verify.sh package
+      - name: Boot, install and capture B1, B2 and Ready fixture screenshots
+        script: bash scripts/codemagic_verify.sh captures
+    artifacts:
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/screenshots/*
+      - build/artifacts/app/*

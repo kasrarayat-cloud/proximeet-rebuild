@@ -39,4 +39,6 @@ The target supports iOS 17 and later. The provisional bundle identifier is `com.
 
 ## Worktree and release boundary
 
-This branch is a fresh orphan history on `redesign/social-objects`, currently local to the VPS at `/home/proximeet/proximeet-rebuild`. The original project and a verified recovery archive remain separate. No push, CI run, deployment or Apple upload has been performed. The old repository's third-party Xcode Cloud linkage must be addressed before using a push-based release path.
+The active cloud checkout is `/home/proximeet/proximeet-cloud`, an independent clone of the fresh orphan branch `redesign/social-objects`. Source commit `96fd33b` is pushed to the new private repository `kasrarayat-cloud/proximeet-rebuild`. Codemagic is connected only to this new repository on the personal free plan; no paid subscription is enabled. The first cloud verification workflow is being prepared.
+
+The original checkout, its remote, the initial rebuild worktree and verified recovery archive remain separate. The original repository's third-party Xcode Cloud linkage and Apple credentials are not used by this rebuild. No signing, deployment or Apple upload has been performed.
