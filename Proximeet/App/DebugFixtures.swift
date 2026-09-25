@@ -4,8 +4,8 @@ import ProximeetDomain
 
 /// DEBUG-only launch arguments for inspecting scenes directly. Never compiled into Release.
 ///
-///     -ProximeetFixture welcome | birthday | pass | guest-list | band | band-selected |
-///                       signal | signal-selected | ready
+///     -ProximeetFixture welcome | birthday | birthday-adult | birthday-under18 | pass |
+///                       guest-list | band | band-selected | signal | signal-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
 ///     -ProximeetFixtureSignal comeSayHi | chatFirst | withMyCrew | justLooking
 ///     -ProximeetReduceMotionPreview YES
@@ -41,9 +41,12 @@ enum PreviewFixtures {
     enum Stage: String {
         /// Fresh demo: nothing entered.
         case welcome
-        /// The birthday scene after returning from the pass, so the wheel shows the
-        /// fixture date instead of the capture day.
+        /// The approved Birthday, fresh: DD / MMM / YYYY.
         case birthday
+        /// The approved Birthday with 12 May 1997 entered and checked (adult example).
+        case birthdayAdult = "birthday-adult"
+        /// The approved Birthday with 12 May 2012 entered and checked (under-18 example).
+        case birthdayUnder18 = "birthday-under18"
         /// The demo pass right after an eligible fixture birthday.
         case pass
         case guestList = "guest-list"
@@ -79,11 +82,24 @@ enum PreviewFixtures {
         if stage == .welcome { return flow }
 
         flow.begin()
-        flow.submitBirthday(birthday, using: BirthdayEligibility(referenceDate: reference, calendar: calendar))
-        if stage == .birthday {
-            flow.returnTo(.birthday)
+        switch stage {
+        case .birthday:
             return flow
+        case .birthdayAdult, .birthdayUnder18:
+            // The approved Figma example dates, entered and checked through the domain.
+            let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
+            flow.updateBirthday { entry in
+                entry.setDay(12)
+                entry.setMonth(5)
+                entry.setYear(stage == .birthdayAdult ? 1997 : 2012)
+                entry.commit(today: today)
+            }
+            return flow
+        default:
+            break
         }
+        // Later scenes are reached through the earlier demo's pass flow, for their own captures.
+        flow.submitBirthday(birthday, using: BirthdayEligibility(referenceDate: reference, calendar: calendar))
         if stage == .pass { return flow }
 
         flow.continueFromPass()

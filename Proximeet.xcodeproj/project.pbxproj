@@ -19,7 +19,9 @@
 		3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29FA62256BD7E4755C13781C /* IntentStyle.swift */; };
 		44504F04444EE2A7F545AC28 /* BandStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */; };
 		4F339DDF08CFE74EC534483F /* ScreenScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */; };
+		50F8E8CDAA1BC811F6684C0F /* BirthdayWheels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26260C95BB498A2DFED925E1 /* BirthdayWheels.swift */; };
 		5C420BEF23E3F9027C17A184 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */; };
+		5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */; };
 		641107C75798A0F0B3E8C92F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE467721E15337452098FA6 /* RootView.swift */; };
 		7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */; };
 		834EF4BBCBA66AE3B1CBF734 /* SignalSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */; };
@@ -56,6 +58,7 @@
 		01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeReviewTests.swift; sourceTree = "<group>"; };
 		0603CB7A287A3B2BE60E72CD /* ProfileEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEditorSheet.swift; sourceTree = "<group>"; };
 		0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayView.swift; sourceTree = "<group>"; };
+		26260C95BB498A2DFED925E1 /* BirthdayWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayWheels.swift; sourceTree = "<group>"; };
 		29FA62256BD7E4755C13781C /* IntentStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentStyle.swift; sourceTree = "<group>"; };
 		3C808A64B77F06AC2C52124A /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 		3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandSignalInteractionTests.swift; sourceTree = "<group>"; };
@@ -86,6 +89,7 @@
 		C97C5C6E00528CFA84E4DB88 /* Materials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Materials.swift; sourceTree = "<group>"; };
 		D2422688E30C7E0457EA4CB1 /* ProximeetSignature.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = ProximeetSignature.usdz; sourceTree = "<group>"; };
 		D5AF09BDFAC765B06B25D864 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayReviewTests.swift; sourceTree = "<group>"; };
 		E2B9055BE62D6166F7331A15 /* Fabric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fabric.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -124,6 +128,7 @@
 			children = (
 				746B8699332625989FCA280E /* BandOption.swift */,
 				C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */,
+				26260C95BB498A2DFED925E1 /* BirthdayWheels.swift */,
 				5B9C741008D10D13E76F07D0 /* Clasp.swift */,
 				E2B9055BE62D6166F7331A15 /* Fabric.swift */,
 				29FA62256BD7E4755C13781C /* IntentStyle.swift */,
@@ -154,6 +159,7 @@
 			isa = PBXGroup;
 			children = (
 				3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */,
+				DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */,
 				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
 			);
 			path = ProximeetUITests;
@@ -329,6 +335,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */,
+				5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */,
 				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -343,6 +350,7 @@
 				641107C75798A0F0B3E8C92F /* RootView.swift in Sources */,
 				34447E70E0D3EEC0E10E81C2 /* BandOption.swift in Sources */,
 				44504F04444EE2A7F545AC28 /* BandStage.swift in Sources */,
+				50F8E8CDAA1BC811F6684C0F /* BirthdayWheels.swift in Sources */,
 				BAB64C1831539CBA82403DE2 /* Clasp.swift in Sources */,
 				F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */,
 				3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */,

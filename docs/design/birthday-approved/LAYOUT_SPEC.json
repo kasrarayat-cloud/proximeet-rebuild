@@ -1,0 +1,3141 @@
+{
+  "schema_version": "1.0",
+  "title": "Proximeet \u2014 Birthday",
+  "status": {
+    "visual_direction": "approved",
+    "approval_date": "2026-09-24",
+    "approval_source": "User approval communicated in the current handoff task",
+    "production_implementation": "pending",
+    "production_validation": "pending implementation and testing"
+  },
+  "source": {
+    "file_key": "9ZkCIlu9AqAD1f92UDuMAF",
+    "page": {
+      "id": "16:114",
+      "name": "02 / Birthday"
+    },
+    "review_board_id": "23:195",
+    "url": "https://www.figma.com/design/9ZkCIlu9AqAD1f92UDuMAF?node-id=19-112",
+    "geometry": "Read-only inspection of all descendants of frames 19:111, 19:112 and 19:113.",
+    "rules": "PROXIMEET_BIRTHDAY_NOTES.md and Birthday / Date console component description.",
+    "source_status_note": "The Birthday notes now record the founder approval dated 2026-09-24; the approved layout is unchanged."
+  },
+  "measurement": {
+    "units": "Figma pixels",
+    "bounds_origin": "Top-left of each state frame",
+    "coordinate_precision": 0.001,
+    "color": "Normalized RGB and equivalent rounded 8-bit hex; opacity is separate."
+  },
+  "canvas": {
+    "width": 440,
+    "height": 956,
+    "background": [
+      {
+        "type": "SOLID",
+        "rgb": [
+          0.018,
+          0.022,
+          0.022
+        ],
+        "hex": "#050606"
+      }
+    ],
+    "font_family": "Manrope"
+  },
+  "shared_geometry": {
+    "header": {
+      "x": 24,
+      "y": 64,
+      "width": 320,
+      "height": 44
+    },
+    "back_target": {
+      "x": 24,
+      "y": 64,
+      "width": 44,
+      "height": 44
+    },
+    "headline": {
+      "x": 32,
+      "y": 154,
+      "width": 376,
+      "height": 118
+    },
+    "eligibility": {
+      "x": 32,
+      "y": 288,
+      "width": 376,
+      "height": 48
+    },
+    "date_console": {
+      "x": 32,
+      "y": 378,
+      "width": 376,
+      "height": 288
+    },
+    "decorative_housing": {
+      "x": 32,
+      "y": 378,
+      "width": 376,
+      "height": 266
+    },
+    "selected_lane": {
+      "x": 74,
+      "y": 492,
+      "width": 308,
+      "height": 58,
+      "corner_radius": 8,
+      "opacity": 0.76
+    },
+    "typed_entry_target": {
+      "x": 32,
+      "y": 682,
+      "width": 240,
+      "height": 44
+    },
+    "guidance_or_error": {
+      "x": 32,
+      "y": 739,
+      "width": 376,
+      "height": 48
+    },
+    "continue": {
+      "x": 32,
+      "y": 812,
+      "width": 376,
+      "height": 60,
+      "corner_radius": 18
+    }
+  },
+  "typography": {
+    "type_1": {
+      "family": "Manrope",
+      "style": "Bold",
+      "weight": 700,
+      "size": 22,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "LEFT"
+    },
+    "type_2": {
+      "family": "Manrope",
+      "style": "ExtraBold",
+      "weight": 800,
+      "size": 56,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 59
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": -2.2
+      },
+      "align": "LEFT"
+    },
+    "type_3": {
+      "family": "Manrope",
+      "style": "Regular",
+      "weight": 400,
+      "size": 16,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "LEFT"
+    },
+    "type_4": {
+      "family": "Manrope",
+      "style": "Medium",
+      "weight": 500,
+      "size": 16,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "CENTER"
+    },
+    "type_5": {
+      "family": "Manrope",
+      "style": "Regular",
+      "weight": 400,
+      "size": 26,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 44
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "CENTER"
+    },
+    "type_6": {
+      "family": "Manrope",
+      "style": "SemiBold",
+      "weight": 600,
+      "size": 24,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "CENTER"
+    },
+    "type_7": {
+      "family": "Manrope",
+      "style": "Medium",
+      "weight": 500,
+      "size": 16,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "LEFT"
+    },
+    "type_8": {
+      "family": "Manrope",
+      "style": "SemiBold",
+      "weight": 600,
+      "size": 18,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "CENTER"
+    },
+    "type_9": {
+      "family": "Manrope",
+      "style": "SemiBold",
+      "weight": 600,
+      "size": 30,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 44
+      },
+      "letter_spacing": {
+        "unit": "PERCENT",
+        "value": 0
+      },
+      "align": "CENTER"
+    }
+  },
+  "states": [
+    {
+      "state": "empty",
+      "frame_id": "19:111",
+      "frame_name": "Birthday / Empty",
+      "selected_date": null,
+      "date_display": [
+        "DD",
+        "MMM",
+        "YYYY"
+      ],
+      "continue_enabled": false,
+      "error_visible": false,
+      "back_available": true,
+      "date_console_instance_id": "21:202",
+      "continue_instance_id": "21:229",
+      "elements": [
+        {
+          "id": "19:111",
+          "name": "Birthday / Empty",
+          "type": "FRAME",
+          "parent_id": "16:114",
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 440,
+            "height": 956
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.018,
+                0.022,
+                0.022
+              ],
+              "hex": "#050606"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:194",
+          "name": "Birthday / Header",
+          "type": "INSTANCE",
+          "parent_id": "19:111",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 320,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:194;21:112",
+          "name": "Back / 44 px",
+          "type": "FRAME",
+          "parent_id": "21:194",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 44,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:194;21:113",
+          "name": "Back arrow",
+          "type": "FRAME",
+          "parent_id": "I21:194;21:112",
+          "bounds": {
+            "x": 34,
+            "y": 74,
+            "width": 24,
+            "height": 24
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "visible": false,
+              "hex": "#FFFFFF"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:194;21:114",
+          "name": "Vector",
+          "type": "VECTOR",
+          "parent_id": "I21:194;21:113",
+          "bounds": {
+            "x": 39,
+            "y": 80,
+            "width": 14,
+            "height": 12
+          },
+          "fills": [],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "stroke_width": 1.8,
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:199",
+          "name": "Birthday copy",
+          "type": "FRAME",
+          "parent_id": "19:111",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 182
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:202",
+          "name": "Date console",
+          "type": "INSTANCE",
+          "parent_id": "19:111",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 288
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:122",
+          "name": "Graphite housing / decoration",
+          "type": "RECTANGLE",
+          "parent_id": "21:202",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 266
+          },
+          "fills": [
+            {
+              "type": "IMAGE",
+              "scaleMode": "FIT"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true,
+          "purpose": "Decoration only; not input, labels or values."
+        },
+        {
+          "id": "I21:202;21:123",
+          "name": "Selected date / native lane",
+          "type": "RECTANGLE",
+          "parent_id": "21:202",
+          "bounds": {
+            "x": 74,
+            "y": 492,
+            "width": 308,
+            "height": 58
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.14,
+                0.165,
+                0.17
+              ],
+              "hex": "#242A2B"
+            }
+          ],
+          "corner_radius": 8,
+          "opacity": 0.76,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:124",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:202",
+          "bounds": {
+            "x": 169,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:125",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:202",
+          "bounds": {
+            "x": 279,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:126",
+          "name": "Date columns",
+          "type": "FRAME",
+          "parent_id": "21:202",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 300,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:127",
+          "name": "Day",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:126",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:129",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:127",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:133",
+          "name": "Month",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:126",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:135",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:133",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:139",
+          "name": "Year",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:126",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:141",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:202;21:139",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:226",
+          "name": "Enter date instead / 44 px",
+          "type": "FRAME",
+          "parent_id": "19:111",
+          "bounds": {
+            "x": 32,
+            "y": 682,
+            "width": 240,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:229",
+          "name": "Continue / disabled",
+          "type": "INSTANCE",
+          "parent_id": "19:111",
+          "bounds": {
+            "x": 32,
+            "y": 812,
+            "width": 376,
+            "height": 60
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.12,
+                0.14,
+                0.14
+              ],
+              "hex": "#1F2424"
+            }
+          ],
+          "corner_radius": 18,
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "texts": [
+        {
+          "id": "I21:194;21:115",
+          "name": "Proximeet",
+          "parent_id": "21:194",
+          "content": "Proximeet",
+          "bounds": {
+            "x": 84,
+            "y": 70,
+            "width": 260,
+            "height": 32
+          },
+          "typography": "type_1",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:200",
+          "name": "Headline",
+          "parent_id": "21:199",
+          "content": "First, your\nbirthday.",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 118
+          },
+          "typography": "type_2",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:201",
+          "name": "Eligibility",
+          "parent_id": "21:199",
+          "content": "Proximeet is for adults 18 and over.",
+          "bounds": {
+            "x": 32,
+            "y": 288,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:128",
+          "name": "Label",
+          "parent_id": "I21:202;21:127",
+          "content": "Day",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:130",
+          "name": "Previous",
+          "parent_id": "I21:202;21:129",
+          "content": " ",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:131",
+          "name": "Selected",
+          "parent_id": "I21:202;21:129",
+          "content": "DD",
+          "bounds": {
+            "x": 78,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_6",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:132",
+          "name": "Next",
+          "parent_id": "I21:202;21:129",
+          "content": " ",
+          "bounds": {
+            "x": 78,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:134",
+          "name": "Label",
+          "parent_id": "I21:202;21:133",
+          "content": "Month",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:136",
+          "name": "Previous",
+          "parent_id": "I21:202;21:135",
+          "content": " ",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:137",
+          "name": "Selected",
+          "parent_id": "I21:202;21:135",
+          "content": "MMM",
+          "bounds": {
+            "x": 178,
+            "y": 492,
+            "width": 100,
+            "height": 48
+          },
+          "typography": "type_6",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:138",
+          "name": "Next",
+          "parent_id": "I21:202;21:135",
+          "content": " ",
+          "bounds": {
+            "x": 178,
+            "y": 546,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:140",
+          "name": "Label",
+          "parent_id": "I21:202;21:139",
+          "content": "Year",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:142",
+          "name": "Previous",
+          "parent_id": "I21:202;21:141",
+          "content": " ",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:143",
+          "name": "Selected",
+          "parent_id": "I21:202;21:141",
+          "content": "YYYY",
+          "bounds": {
+            "x": 286,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_6",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:202;21:144",
+          "name": "Next",
+          "parent_id": "I21:202;21:141",
+          "content": " ",
+          "bounds": {
+            "x": 286,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:227",
+          "name": "Text entry alternative",
+          "parent_id": "21:226",
+          "content": "Enter date instead",
+          "bounds": {
+            "x": 32,
+            "y": 692,
+            "width": 240,
+            "height": 24
+          },
+          "typography": "type_7",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:228",
+          "name": "Guidance",
+          "parent_id": "19:111",
+          "content": "Select your day, month and year.",
+          "bounds": {
+            "x": 32,
+            "y": 739,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:229;21:119",
+          "name": "Continue",
+          "parent_id": "21:229",
+          "content": "Continue",
+          "bounds": {
+            "x": 70,
+            "y": 829,
+            "width": 300,
+            "height": 26
+          },
+          "typography": "type_8",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.45,
+                0.49,
+                0.48
+              ],
+              "hex": "#737D7A"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "state": "adult",
+      "frame_id": "19:112",
+      "frame_name": "Birthday / Adult",
+      "selected_date": {
+        "day": 12,
+        "month": 5,
+        "year": 1997
+      },
+      "date_display": [
+        "12",
+        "May",
+        "1997"
+      ],
+      "continue_enabled": true,
+      "error_visible": false,
+      "back_available": true,
+      "date_console_instance_id": "21:239",
+      "continue_instance_id": "21:266",
+      "elements": [
+        {
+          "id": "19:112",
+          "name": "Birthday / Adult",
+          "type": "FRAME",
+          "parent_id": "16:114",
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 440,
+            "height": 956
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.018,
+                0.022,
+                0.022
+              ],
+              "hex": "#050606"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:231",
+          "name": "Birthday / Header",
+          "type": "INSTANCE",
+          "parent_id": "19:112",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 320,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:231;21:112",
+          "name": "Back / 44 px",
+          "type": "FRAME",
+          "parent_id": "21:231",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 44,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:231;21:113",
+          "name": "Back arrow",
+          "type": "FRAME",
+          "parent_id": "I21:231;21:112",
+          "bounds": {
+            "x": 34,
+            "y": 74,
+            "width": 24,
+            "height": 24
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "visible": false,
+              "hex": "#FFFFFF"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:231;21:114",
+          "name": "Vector",
+          "type": "VECTOR",
+          "parent_id": "I21:231;21:113",
+          "bounds": {
+            "x": 39,
+            "y": 80,
+            "width": 14,
+            "height": 12
+          },
+          "fills": [],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "stroke_width": 1.8,
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:236",
+          "name": "Birthday copy",
+          "type": "FRAME",
+          "parent_id": "19:112",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 182
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:239",
+          "name": "Date console",
+          "type": "INSTANCE",
+          "parent_id": "19:112",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 288
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:146",
+          "name": "Graphite housing / decoration",
+          "type": "RECTANGLE",
+          "parent_id": "21:239",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 266
+          },
+          "fills": [
+            {
+              "type": "IMAGE",
+              "scaleMode": "FIT"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true,
+          "purpose": "Decoration only; not input, labels or values."
+        },
+        {
+          "id": "I21:239;21:147",
+          "name": "Selected date / native lane",
+          "type": "RECTANGLE",
+          "parent_id": "21:239",
+          "bounds": {
+            "x": 74,
+            "y": 492,
+            "width": 308,
+            "height": 58
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.14,
+                0.165,
+                0.17
+              ],
+              "hex": "#242A2B"
+            }
+          ],
+          "corner_radius": 8,
+          "opacity": 0.76,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:148",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:239",
+          "bounds": {
+            "x": 169,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:149",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:239",
+          "bounds": {
+            "x": 279,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:150",
+          "name": "Date columns",
+          "type": "FRAME",
+          "parent_id": "21:239",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 300,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:151",
+          "name": "Day",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:150",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:153",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:151",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:157",
+          "name": "Month",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:150",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:159",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:157",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:163",
+          "name": "Year",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:150",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:165",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:239;21:163",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:263",
+          "name": "Enter date instead / 44 px",
+          "type": "FRAME",
+          "parent_id": "19:112",
+          "bounds": {
+            "x": 32,
+            "y": 682,
+            "width": 240,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:266",
+          "name": "Continue / enabled",
+          "type": "INSTANCE",
+          "parent_id": "19:112",
+          "bounds": {
+            "x": 32,
+            "y": 812,
+            "width": 376,
+            "height": 60
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.965,
+                0.969,
+                0.949
+              ],
+              "hex": "#F6F7F2"
+            }
+          ],
+          "corner_radius": 18,
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "texts": [
+        {
+          "id": "I21:231;21:115",
+          "name": "Proximeet",
+          "parent_id": "21:231",
+          "content": "Proximeet",
+          "bounds": {
+            "x": 84,
+            "y": 70,
+            "width": 260,
+            "height": 32
+          },
+          "typography": "type_1",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:237",
+          "name": "Headline",
+          "parent_id": "21:236",
+          "content": "First, your\nbirthday.",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 118
+          },
+          "typography": "type_2",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:238",
+          "name": "Eligibility",
+          "parent_id": "21:236",
+          "content": "Proximeet is for adults 18 and over.",
+          "bounds": {
+            "x": 32,
+            "y": 288,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:152",
+          "name": "Label",
+          "parent_id": "I21:239;21:151",
+          "content": "Day",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:154",
+          "name": "Previous",
+          "parent_id": "I21:239;21:153",
+          "content": "11",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:155",
+          "name": "Selected",
+          "parent_id": "I21:239;21:153",
+          "content": "12",
+          "bounds": {
+            "x": 78,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:156",
+          "name": "Next",
+          "parent_id": "I21:239;21:153",
+          "content": "13",
+          "bounds": {
+            "x": 78,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:158",
+          "name": "Label",
+          "parent_id": "I21:239;21:157",
+          "content": "Month",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:160",
+          "name": "Previous",
+          "parent_id": "I21:239;21:159",
+          "content": "Apr",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:161",
+          "name": "Selected",
+          "parent_id": "I21:239;21:159",
+          "content": "May",
+          "bounds": {
+            "x": 178,
+            "y": 492,
+            "width": 100,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:162",
+          "name": "Next",
+          "parent_id": "I21:239;21:159",
+          "content": "Jun",
+          "bounds": {
+            "x": 178,
+            "y": 546,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:164",
+          "name": "Label",
+          "parent_id": "I21:239;21:163",
+          "content": "Year",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:166",
+          "name": "Previous",
+          "parent_id": "I21:239;21:165",
+          "content": "1996",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:167",
+          "name": "Selected",
+          "parent_id": "I21:239;21:165",
+          "content": "1997",
+          "bounds": {
+            "x": 286,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:239;21:168",
+          "name": "Next",
+          "parent_id": "I21:239;21:165",
+          "content": "1998",
+          "bounds": {
+            "x": 286,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:264",
+          "name": "Text entry alternative",
+          "parent_id": "21:263",
+          "content": "Enter date instead",
+          "bounds": {
+            "x": 32,
+            "y": 692,
+            "width": 240,
+            "height": 24
+          },
+          "typography": "type_7",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:265",
+          "name": "Guidance",
+          "parent_id": "19:112",
+          "content": "Check your date before continuing.",
+          "bounds": {
+            "x": 32,
+            "y": 739,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:266;21:117",
+          "name": "Continue",
+          "parent_id": "21:266",
+          "content": "Continue",
+          "bounds": {
+            "x": 70,
+            "y": 829,
+            "width": 300,
+            "height": 26
+          },
+          "typography": "type_8",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.018,
+                0.022,
+                0.022
+              ],
+              "hex": "#050606"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "state": "under_18",
+      "frame_id": "19:113",
+      "frame_name": "Birthday / Under 18",
+      "selected_date": {
+        "day": 12,
+        "month": 5,
+        "year": 2012
+      },
+      "date_display": [
+        "12",
+        "May",
+        "2012"
+      ],
+      "continue_enabled": false,
+      "error_visible": true,
+      "back_available": true,
+      "date_console_instance_id": "21:276",
+      "continue_instance_id": "21:303",
+      "elements": [
+        {
+          "id": "19:113",
+          "name": "Birthday / Under 18",
+          "type": "FRAME",
+          "parent_id": "16:114",
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 440,
+            "height": 956
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.018,
+                0.022,
+                0.022
+              ],
+              "hex": "#050606"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:268",
+          "name": "Birthday / Header",
+          "type": "INSTANCE",
+          "parent_id": "19:113",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 320,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:268;21:112",
+          "name": "Back / 44 px",
+          "type": "FRAME",
+          "parent_id": "21:268",
+          "bounds": {
+            "x": 24,
+            "y": 64,
+            "width": 44,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:268;21:113",
+          "name": "Back arrow",
+          "type": "FRAME",
+          "parent_id": "I21:268;21:112",
+          "bounds": {
+            "x": 34,
+            "y": 74,
+            "width": 24,
+            "height": 24
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "visible": false,
+              "hex": "#FFFFFF"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:268;21:114",
+          "name": "Vector",
+          "type": "VECTOR",
+          "parent_id": "I21:268;21:113",
+          "bounds": {
+            "x": 39,
+            "y": 80,
+            "width": 14,
+            "height": 12
+          },
+          "fills": [],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "stroke_width": 1.8,
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:273",
+          "name": "Birthday copy",
+          "type": "FRAME",
+          "parent_id": "19:113",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 182
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:276",
+          "name": "Date console",
+          "type": "INSTANCE",
+          "parent_id": "19:113",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 288
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:170",
+          "name": "Graphite housing / decoration",
+          "type": "RECTANGLE",
+          "parent_id": "21:276",
+          "bounds": {
+            "x": 32,
+            "y": 378,
+            "width": 376,
+            "height": 266
+          },
+          "fills": [
+            {
+              "type": "IMAGE",
+              "scaleMode": "FIT"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true,
+          "purpose": "Decoration only; not input, labels or values."
+        },
+        {
+          "id": "I21:276;21:171",
+          "name": "Selected date / native lane",
+          "type": "RECTANGLE",
+          "parent_id": "21:276",
+          "bounds": {
+            "x": 74,
+            "y": 492,
+            "width": 308,
+            "height": 58
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.14,
+                0.165,
+                0.17
+              ],
+              "hex": "#242A2B"
+            }
+          ],
+          "corner_radius": 8,
+          "opacity": 0.76,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:172",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:276",
+          "bounds": {
+            "x": 169,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:173",
+          "name": "Column separator",
+          "type": "RECTANGLE",
+          "parent_id": "21:276",
+          "bounds": {
+            "x": 279,
+            "y": 504,
+            "width": 1,
+            "height": 32
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.5,
+                0.56,
+                0.56
+              ],
+              "opacity": 0.28,
+              "hex": "#808F8F"
+            }
+          ],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:174",
+          "name": "Date columns",
+          "type": "FRAME",
+          "parent_id": "21:276",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 300,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:175",
+          "name": "Day",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:174",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:177",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:175",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:181",
+          "name": "Month",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:174",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:183",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:181",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:187",
+          "name": "Year",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:174",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 190
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:189",
+          "name": "Editable wheel values",
+          "type": "FRAME",
+          "parent_id": "I21:276;21:187",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 150
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:300",
+          "name": "Enter date instead / 44 px",
+          "type": "FRAME",
+          "parent_id": "19:113",
+          "bounds": {
+            "x": 32,
+            "y": 682,
+            "width": 240,
+            "height": 44
+          },
+          "fills": [],
+          "corner_radius": 0,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:303",
+          "name": "Continue / disabled",
+          "type": "INSTANCE",
+          "parent_id": "19:113",
+          "bounds": {
+            "x": 32,
+            "y": 812,
+            "width": 376,
+            "height": 60
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.12,
+                0.14,
+                0.14
+              ],
+              "hex": "#1F2424"
+            }
+          ],
+          "corner_radius": 18,
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "texts": [
+        {
+          "id": "I21:268;21:115",
+          "name": "Proximeet",
+          "parent_id": "21:268",
+          "content": "Proximeet",
+          "bounds": {
+            "x": 84,
+            "y": 70,
+            "width": 260,
+            "height": 32
+          },
+          "typography": "type_1",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:274",
+          "name": "Headline",
+          "parent_id": "21:273",
+          "content": "First, your\nbirthday.",
+          "bounds": {
+            "x": 32,
+            "y": 154,
+            "width": 376,
+            "height": 118
+          },
+          "typography": "type_2",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:275",
+          "name": "Eligibility",
+          "parent_id": "21:273",
+          "content": "Proximeet is for adults 18 and over.",
+          "bounds": {
+            "x": 32,
+            "y": 288,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:176",
+          "name": "Label",
+          "parent_id": "I21:276;21:175",
+          "content": "Day",
+          "bounds": {
+            "x": 78,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:178",
+          "name": "Previous",
+          "parent_id": "I21:276;21:177",
+          "content": "11",
+          "bounds": {
+            "x": 78,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:179",
+          "name": "Selected",
+          "parent_id": "I21:276;21:177",
+          "content": "12",
+          "bounds": {
+            "x": 78,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:180",
+          "name": "Next",
+          "parent_id": "I21:276;21:177",
+          "content": "13",
+          "bounds": {
+            "x": 78,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:182",
+          "name": "Label",
+          "parent_id": "I21:276;21:181",
+          "content": "Month",
+          "bounds": {
+            "x": 178,
+            "y": 410,
+            "width": 100,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:184",
+          "name": "Previous",
+          "parent_id": "I21:276;21:183",
+          "content": "Apr",
+          "bounds": {
+            "x": 178,
+            "y": 446,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:185",
+          "name": "Selected",
+          "parent_id": "I21:276;21:183",
+          "content": "May",
+          "bounds": {
+            "x": 178,
+            "y": 492,
+            "width": 100,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:186",
+          "name": "Next",
+          "parent_id": "I21:276;21:183",
+          "content": "Jun",
+          "bounds": {
+            "x": 178,
+            "y": 546,
+            "width": 100,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:188",
+          "name": "Label",
+          "parent_id": "I21:276;21:187",
+          "content": "Year",
+          "bounds": {
+            "x": 286,
+            "y": 410,
+            "width": 92,
+            "height": 24
+          },
+          "typography": "type_4",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.66,
+                0.69,
+                0.68
+              ],
+              "hex": "#A8B0AD"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:190",
+          "name": "Previous",
+          "parent_id": "I21:276;21:189",
+          "content": "2011",
+          "bounds": {
+            "x": 286,
+            "y": 446,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:191",
+          "name": "Selected",
+          "parent_id": "I21:276;21:189",
+          "content": "2012",
+          "bounds": {
+            "x": 286,
+            "y": 492,
+            "width": 92,
+            "height": 48
+          },
+          "typography": "type_9",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:276;21:192",
+          "name": "Next",
+          "parent_id": "I21:276;21:189",
+          "content": "2013",
+          "bounds": {
+            "x": 286,
+            "y": 546,
+            "width": 92,
+            "height": 40
+          },
+          "typography": "type_5",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.38,
+                0.42,
+                0.43
+              ],
+              "hex": "#616B6E"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:301",
+          "name": "Text entry alternative",
+          "parent_id": "21:300",
+          "content": "Enter date instead",
+          "bounds": {
+            "x": 32,
+            "y": 692,
+            "width": 240,
+            "height": 24
+          },
+          "typography": "type_7",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                1,
+                1
+              ],
+              "hex": "#FFFFFF"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "21:302",
+          "name": "Age eligibility error",
+          "parent_id": "19:113",
+          "content": "You need to be 18 or older\nto join Proximeet.",
+          "bounds": {
+            "x": 32,
+            "y": 739,
+            "width": 376,
+            "height": 48
+          },
+          "typography": "type_3",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                1,
+                0.69,
+                0.53
+              ],
+              "hex": "#FFB087"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        },
+        {
+          "id": "I21:303;21:119",
+          "name": "Continue",
+          "parent_id": "21:303",
+          "content": "Continue",
+          "bounds": {
+            "x": 70,
+            "y": 829,
+            "width": 300,
+            "height": 26
+          },
+          "typography": "type_8",
+          "fills": [
+            {
+              "type": "SOLID",
+              "rgb": [
+                0.45,
+                0.49,
+                0.48
+              ],
+              "hex": "#737D7A"
+            }
+          ],
+          "native_editable": true,
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "native_components": [
+    {
+      "id": "21:193",
+      "name": "Birthday / Date console",
+      "type": "COMPONENT_SET",
+      "description": "Review prototype: tapping the date module cycles example states with a 180 ms dissolve. This is not free date input. Day, month, year remain native text properties over a decoration-only raster housing. Production intent: use an accessible native wheel or typed platform date-entry interface, with persistent labels and announced values. Validate a complete committed calendar date; reject impossible and future dates, handle leap years, and compare against the exact 18th-birthday boundary in the relevant local calendar (never raw year subtraction or UTC instant conversion). Never auto-advance. Under-18 cannot continue. Birthday is self-declared, not age/identity verification. Reduced motion is stationary.",
+      "children": [
+        {
+          "id": "21:121",
+          "name": "State=Empty",
+          "type": "COMPONENT"
+        },
+        {
+          "id": "21:145",
+          "name": "State=Adult",
+          "type": "COMPONENT"
+        },
+        {
+          "id": "21:169",
+          "name": "State=Under 18",
+          "type": "COMPONENT"
+        }
+      ]
+    },
+    {
+      "id": "21:111",
+      "name": "Birthday / Header",
+      "type": "COMPONENT",
+      "description": "Birthday header with 44 \u00d7 44 Back control. Back returns to the approved Welcome.",
+      "children": [
+        {
+          "id": "21:112",
+          "name": "Back / 44 px",
+          "type": "FRAME"
+        },
+        {
+          "id": "21:115",
+          "name": "Proximeet",
+          "type": "TEXT"
+        }
+      ]
+    },
+    {
+      "id": "24:282",
+      "name": "Birthday / Design and interaction notes",
+      "type": "FRAME",
+      "children": [
+        {
+          "id": "24:283",
+          "name": "Heading",
+          "type": "TEXT"
+        },
+        {
+          "id": "24:284",
+          "name": "Sample interaction",
+          "type": "TEXT"
+        },
+        {
+          "id": "24:285",
+          "name": "Entry",
+          "type": "TEXT"
+        },
+        {
+          "id": "24:286",
+          "name": "Validation",
+          "type": "TEXT"
+        },
+        {
+          "id": "24:287",
+          "name": "Limits",
+          "type": "TEXT"
+        }
+      ]
+    }
+  ],
+  "rules": {
+    "scope": "Intended production behavior; not implemented by the three-state design prototype.",
+    "empty": {
+      "unset_placeholders": [
+        "DD",
+        "MMM",
+        "YYYY"
+      ],
+      "continue_enabled": false,
+      "selected_real_date": false
+    },
+    "eligibility": {
+      "minimum_age_years": 18,
+      "birthday_is": "Self-declared information",
+      "verifies_age": false,
+      "verifies_identity": false,
+      "under_18_can_continue": false,
+      "error_text": "You need to be 18 or older\nto join Proximeet.",
+      "back_remains_available": true
+    },
+    "input": {
+      "persistent_labels": [
+        "Day",
+        "Month",
+        "Year"
+      ],
+      "alternative_label": "Enter date instead",
+      "alternative_behavior": "Open the platform's accessible typed date-entry interface with labeled day, month and year fields.",
+      "preserve_date_between_input_modes": true,
+      "support_keyboard": true,
+      "support_assistive_technology": true,
+      "announce_selected_values": true,
+      "announce_errors": true,
+      "gesture_only_entry": false
+    },
+    "validation": {
+      "when": "After a complete date is committed; do not validate intermediate wheel values.",
+      "reject_impossible_dates": true,
+      "reject_future_dates": true,
+      "handle_leap_years": true,
+      "age_comparison": "Compare calendar dates against the exact 18th-birthday boundary in the relevant local calendar.",
+      "raw_year_subtraction": false,
+      "birthday_as_utc_timestamp": false
+    },
+    "navigation": {
+      "automatic_advance": false,
+      "back_destination": "Approved Welcome"
+    },
+    "motion": {
+      "reduced_motion": "Date module remains stationary."
+    },
+    "privacy": {
+      "public_profile_birthday_visibility": "Requires a product decision; no visibility claim is made."
+    }
+  },
+  "review_prototype": {
+    "interaction": "Tapping the date module cycles the three example states.",
+    "transition": "Dissolve",
+    "duration_ms": 180,
+    "unrestricted_date_input": false,
+    "automatic_advance": false,
+    "example_dates_are_user_birthdays": false
+  },
+  "decoration": {
+    "description": "Generated graphite housing with cotton-paper edge and cyan textile tab connects Birthday to Welcome.",
+    "input_semantics": false,
+    "native_overlay": "All day/month/year labels, values, guidance, error copy and controls remain native editable Figma elements.",
+    "source_asset": "assets/birthday-housing.png",
+    "original_pixel_dimensions": [
+      1254,
+      1254
+    ],
+    "transparent_crop_box_xyxy": [
+      25,
+      204,
+      1214,
+      1045
+    ],
+    "delivery_reference": "reference/birthday-housing-delivery.jpg",
+    "implementation_note": "The approved Figma housing was made by trimming only transparent margins and optimizing its delivery image. Use the supplied full-resolution RGBA original with this crop box or equivalent image-view crop, then fit it to the approved housing bounds. Keep date text and controls native; do not distort the housing to compensate for transparent margins.",
+    "crop_provenance": "Confirmed by the Figma author: crop bounds detected using alpha >120 to exclude faint edge artifacts; crop then resized proportionally to 537x380 and composited on RGB(5,6,6) for Figma JPEG delivery.",
+    "approved_display_bounds": {
+      "x": 32,
+      "y": 378,
+      "width": 376,
+      "height": 266
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "purpose": "Decorative date-console housing behind native, editable date fields. Chapter 2 Birthday visual design approved by the founder on 2026-09-24.",
+  "tool": "Built-in image generation",
+  "prompt": "Use case: product-mockup. Asset type: decorative frame behind an editable date picker in a premium iPhone app. Create ONE immaculate, front-on precision graphite date-console housing, isolated on a transparent background. NO typography, NO numbers, NO labels, NO symbols, NO buttons. The live UI text will be placed over this image later.\n\nShape: a beautifully machined dark graphite rectangular enclosure with softly rounded 22px-like corners and wide but restrained bevels; ratio about 1.18 width to 1 height. Camera exactly straight-on orthographic, no perspective tilt, symmetrical horizontal alignment. The inset is one large EMPTY near-black flat rectangular window occupying most of the front, no partitions or raised controls. This dark interior is reserved for editable day/month/year columns. Preserve a large uncluttered center. Along the bottom edge a small unprinted ivory cotton-paper index strip peeks beneath the graphite, like a carefully prepared guest card, subtle thick paper grain and rounded corners, extending only slightly at lower-right. A short vivid cyan woven fabric tab peeks from the LEFT side at center height, very restrained; warm thread detail. Tiny steel corner joining detail on lower-left only, no screws everywhere.\n\nMaterials: understated physically lit matte graphite, exceptionally fine ceramic-like grain, soft polished metal chamfer highlights, deep contact shadows at recessed edge, crisp material boundaries. Broad softkey light upperleft, slightcoolrimright. Frame should feel expensive, precise and approachable, with no gamer/cyberpunk neon or holographic glow. Adult editorial design, material realism as high as premium studio product photography. The center area must be uniform dark charcoal suitable for overlaying white native controls; NO baked-in shadows across center text area. Object fills 88% canvas, all edges intact with transparent margins. Square output. Truly transparent outside object. No floor, background, hands, phone, plants or extra objects.",
+  "source_asset": "exec-6c365340-f3df-49db-b2be-879ff539ae97.png",
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "birthday_page": "16:114",
+  "states": {
+    "empty": "19:111",
+    "adult_example": "19:112",
+    "under_18_example": "19:113"
+  },
+  "review_board": "23:195",
+  "notes": [
+    "Dates and labels are native Figma text and controls, not baked into this illustration.",
+    "The illustration does not represent age or identity verification."
+  ],
+  "approval": {
+    "date": "2026-09-24",
+    "user_message": "approve lets go next perfect",
+    "scope": "Birthday visual design and intended date-entry states. Not age or identity verification."
+  }
+}

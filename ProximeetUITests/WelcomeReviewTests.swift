@@ -75,7 +75,9 @@ final class WelcomeReviewTests: XCTestCase {
         }
     }
 
-    /// Both controls answer with a native notice, change nothing and navigate nowhere.
+    /// "Continue with Apple" answers with a native notice. "More options" offers the demo
+    /// choice ("Continue the demo (no account)" or Cancel), a deliberate change from the
+    /// Welcome chapter's notice. Cancel changes nothing and navigates nowhere.
     func testHonestNotices() throws {
         let launched = Date()
         let app = launch()
@@ -95,12 +97,7 @@ final class WelcomeReviewTests: XCTestCase {
         assertStillOnWelcome(app, welcome)
 
         welcome.moreOptions.tap()
-        assertNotice(
-            app,
-            title: "More options aren’t available",
-            message: "This prototype doesn’t include other sign-in methods yet.",
-            capture: "notice-more-options"
-        )
+        assertDemoChoiceThenCancel(app, capture: "more-options-choice")
         assertStillOnWelcome(app, welcome)
     }
 
@@ -153,8 +150,7 @@ final class WelcomeReviewTests: XCTestCase {
         attachNote("Swipes needed to reach “18+ only”: \(swipes).")
         capture("largest-text-bottom", app)
         welcome.moreOptions.tap()
-        XCTAssertTrue(app.alerts["More options aren’t available"].waitForExistence(timeout: 5))
-        app.alerts.firstMatch.buttons["OK"].tap()
+        assertDemoChoiceThenCancel(app, capture: "largest-text-more-options-choice")
     }
 
     // MARK: - Helpers
@@ -189,6 +185,30 @@ final class WelcomeReviewTests: XCTestCase {
     private func assertStillOnWelcome(_ app: XCUIApplication, _ welcome: WelcomeElements) {
         XCTAssertTrue(welcome.continueWithApple.isHittable, "Welcome is no longer showing.")
         XCTAssertFalse(app.navigationBars.firstMatch.exists, "A notice must not navigate anywhere.")
+        XCTAssertFalse(app.descendants(matching: .any)["birthday.headline"].exists,
+                       "Cancel or a notice must not open Birthday.")
+    }
+
+    /// The More options choice: the demo route and Cancel, with the honest message.
+    private func assertDemoChoiceThenCancel(_ app: XCUIApplication, capture name: String) {
+        let demo = app.buttons.matching(NSPredicate(format: "label == %@", "Continue the demo (no account)")).firstMatch
+        guard demo.waitForExistence(timeout: 5) else {
+            capture(name + "-missing", app)
+            let tree = XCTAttachment(string: app.debugDescription)
+            tree.name = name + "-accessibility-tree"
+            tree.lifetime = .keepAlways
+            add(tree)
+            XCTFail("More options did not offer “Continue the demo (no account)”.")
+            return
+        }
+        XCTAssertTrue(app.staticTexts["This prototype doesn’t include other sign-in methods yet."].exists,
+                      "The choice should keep the honest message.")
+        let cancel = app.buttons.matching(NSPredicate(format: "label == %@", "Cancel")).firstMatch
+        XCTAssertTrue(cancel.exists, "The choice must offer Cancel.")
+        capture(name, app)
+        cancel.tap()
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: demo)
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 5), .completed, "The choice did not dismiss.")
     }
 
     private func assertOrderedWithoutOverlap(_ welcome: WelcomeElements) {

@@ -79,6 +79,38 @@ final class DemoSession {
         resetGeneration += 1
     }
 
+    // MARK: - Approved Birthday
+
+    var birthday: BirthdayEntry { flow.draft.birthdayEntry }
+
+    /// Edits the birthday draft. Any change invalidates the previous check at once.
+    func editBirthday(_ change: (inout BirthdayEntry) -> Void) {
+        flow.updateBirthday(change)
+    }
+
+    /// Checks the draft: called when a wheel settles or typed entry is submitted.
+    func commitBirthday(now: Date = Date()) {
+        let today = Self.civilToday(now: now)
+        flow.updateBirthday { $0.commit(today: today) }
+    }
+
+    /// Re-checks the committed date, e.g. when the app becomes active again.
+    func reevaluateBirthday(now: Date = Date()) {
+        let today = Self.civilToday(now: now)
+        flow.updateBirthday { $0.reevaluate(today: today) }
+    }
+
+    /// Continue on Birthday: re-checks against today and returns the result. The flow never
+    /// advances here, because the next chapter (Pass) is not built yet.
+    func continueFromBirthday(now: Date = Date()) -> BirthdayStatus? {
+        flow.continueFromBirthday(today: Self.civilToday(now: now))
+    }
+
+    /// The device's local calendar day, read as a Gregorian civil date.
+    static func civilToday(now: Date, timeZone: TimeZone = .current) -> CivilDate {
+        CivilDate.day(of: now, in: timeZone)
+    }
+
     // MARK: - Calendar
 
     /// Gregorian calendar in the device's current time zone, shared by the birthday picker

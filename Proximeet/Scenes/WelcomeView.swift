@@ -4,9 +4,8 @@ import SwiftUI
 /// frame 1:35, a 440 × 956 canvas: the iPhone 17 Pro Max screen).
 ///
 /// Native text and controls over the three original hero poses. This prototype has no
-/// account system, so both sign-in controls answer with an honest notice and change no
-/// state. The route from Welcome into Birthday is an open decision and is deliberately not
-/// wired here.
+/// account system: "Continue with Apple" answers with an honest notice, and "More options"
+/// offers "Continue the demo (no account)", the route into the approved Birthday.
 struct WelcomeView: View {
     var body: some View {
         GeometryReader { proxy in
@@ -189,10 +188,12 @@ private struct EligibilityNote: View {
 // MARK: - Actions
 
 /// Neither control signs anybody in: there is no authentication integration in this app.
-/// Each answers with a native notice and changes no state.
+/// "Continue with Apple" answers with a native notice and changes no state. "More options"
+/// offers the demo (no account), which opens Birthday, or Cancel.
 private struct WelcomeActions: View {
+    @Environment(DemoSession.self) private var session
     @State private var isShowingAppleNotice = false
-    @State private var isShowingOptionsNotice = false
+    @State private var isShowingMoreOptions = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -209,13 +210,21 @@ private struct WelcomeActions: View {
                 Text("This prototype doesn’t connect to Apple yet. Nothing was sent or saved.")
             }
 
+            // The demo route into the approved Birthday: an explicit, labelled choice that
+            // creates no account and no signed-in or verified state. An alert, not a
+            // confirmation dialog: on iOS 26 a dialog anchored to its button opens as a popover
+            // and drops its Cancel action, and this choice must always offer Cancel.
             Button("More options") {
-                isShowingOptionsNotice = true
+                isShowingMoreOptions = true
             }
             .buttonStyle(MoreOptionsStyle())
             .accessibilityIdentifier("welcome.moreOptions")
-            .alert("More options aren’t available", isPresented: $isShowingOptionsNotice) {
-                Button("OK", role: .cancel) {}
+            .alert("More options", isPresented: $isShowingMoreOptions) {
+                Button("Continue the demo (no account)") {
+                    session.begin()
+                }
+                .accessibilityIdentifier("welcome.continueDemo")
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This prototype doesn’t include other sign-in methods yet.")
             }
@@ -374,15 +383,18 @@ private enum HeroPose {
 #if DEBUG
 #Preview("Welcome") {
     NavigationStack { WelcomeView() }
+        .environment(DemoSession())
 }
 
 #Preview("Welcome · largest text") {
     NavigationStack { WelcomeView() }
+        .environment(DemoSession())
         .dynamicTypeSize(.accessibility5)
 }
 
 #Preview("Welcome · Reduce Motion") {
     NavigationStack { WelcomeView() }
+        .environment(DemoSession())
         .environment(\.prefersReducedMotionPreview, true)
 }
 #endif
