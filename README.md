@@ -1,6 +1,8 @@
 # Proximeet — Social Objects demo
 
-A fresh SwiftUI iPhone app for the Proximeet entrance flow. It moves from Welcome through Birthday, Demo Pass, Guest List, Band and Signal to Ready for check-in. The design centers on woven intent bands and metal signal tags.
+A fresh SwiftUI iPhone app for the Proximeet entrance flow: Welcome, Birthday, Demo Pass, Guest List, Band and Signal, ending at Ready for check-in. The design centers on woven intent bands and metal signal tags.
+
+Welcome is now the founder-approved chapter 01 design ("A Place Opens"). Its route into Birthday is not wired yet. The direction is More options → "Continue the demo (no account)" → the approved Birthday, and it will be built with that chapter, never by exposing the legacy Birthday screen. Until then the later scenes are reachable only through the DEBUG `-ProximeetFixture` launch arguments. See [the Welcome report](docs/reports/welcome-chapter-01.md) and the prepared [Mac verification](docs/verification/README.md).
 
 This is an offline, in-memory demo. It does not authenticate anyone, verify identity or age, check into a venue, show real people, access location or provide chat. Data disappears when the demo is reset or the app process ends.
 

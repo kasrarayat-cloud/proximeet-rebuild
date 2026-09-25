@@ -29,7 +29,6 @@ final class DemoSession {
 
     var draft: DemoDraft { flow.draft }
     var readiness: ReadyForCheckIn? { flow.readiness }
-    var hasEnteredData: Bool { flow.draft != DemoDraft() }
 
     // MARK: - Transitions
 

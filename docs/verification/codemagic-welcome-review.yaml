@@ -1,0 +1,48 @@
+# PROPOSED — NOT ACTIVE. Codemagic reads codemagic.yaml at the repository root; this file
+# under docs/verification/ is a reviewable proposal and cannot start or configure anything.
+#
+# To use it, the repository lead (never an automated step) copies the workflow below into the
+# root codemagic.yaml under the existing `workflows:` key, commits it on the branch that holds
+# the checkpointed Welcome, and starts one build manually. See welcome-mac-review.md.
+#
+# Deliberately absent: triggering (so no automatic builds), code signing, Apple credentials,
+# environment groups/secrets, integrations, publishing, notifications and caching.
+# Stages are the proven ones from scripts/codemagic_verify.sh plus scripts/welcome_review.sh.
+workflows:
+  proximeet-welcome-review:
+    name: Proximeet Welcome review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Prove the checkout holds the checkpointed Welcome (not the base commit)
+        script: bash scripts/welcome_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (prefers iPhone 17 Pro Max; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Build Proximeet Debug for the simulator (code signing disabled)
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the simulator app (simulator only; not for TestFlight)
+        script: bash scripts/codemagic_verify.sh package
+      - name: Welcome captures (settled, pose-study recording, Reduce Motion preview, large text, smaller iPhone)
+        script: bash scripts/welcome_review.sh captures
+      - name: Welcome XCTest review (geometry, honest notices, Reduce Motion preview, largest text)
+        script: bash scripts/welcome_review.sh ui-review
+    artifacts:
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/welcome/*.png
+      - build/artifacts/welcome/*.mp4
+      - build/artifacts/welcome/*.sha256
+      - build/artifacts/welcome/*.log
+      - build/artifacts/welcome/*.txt
+      - build/artifacts/welcome/*.tsv
+      - build/artifacts/welcome/*.json
+      - build/artifacts/welcome/*.zip
+      - build/artifacts/welcome/attachments/**/*

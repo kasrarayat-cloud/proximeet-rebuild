@@ -1,0 +1,474 @@
+{
+  "schema_version": "1.0",
+  "title": "Proximeet Welcome — approved settled layout",
+  "source": {
+    "file_key": "9ZkCIlu9AqAD1f92UDuMAF",
+    "frame_id": "1:35",
+    "frame_name": "03 · A place opens / resting",
+    "page": {
+      "id": "0:1",
+      "name": "01 / Welcome"
+    },
+    "url": "https://www.figma.com/design/9ZkCIlu9AqAD1f92UDuMAF?node-id=1-35",
+    "extraction": "Read-only inspection of current Figma descendants"
+  },
+  "units": "Figma pixels; all bounds relative to frame 1:35",
+  "canvas": {
+    "width": 440,
+    "height": 956,
+    "background": [
+      {
+        "type": "SOLID",
+        "hex": "#050606",
+        "rgb": {
+          "r": 0.018,
+          "g": 0.022,
+          "b": 0.022
+        },
+        "opacity": 1,
+        "visible": true
+      }
+    ],
+    "corner_radius": 0
+  },
+  "typography_family": "Manrope",
+  "elements": [
+    {
+      "id": "7:2",
+      "name": "Hero / Open",
+      "type": "RECTANGLE",
+      "bounds": {
+        "x": 0,
+        "y": 128,
+        "width": 440,
+        "height": 440
+      },
+      "fills": [
+        {
+          "type": "IMAGE",
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "corner_radius": 0
+    },
+    {
+      "id": "7:3",
+      "name": "Shared interface",
+      "type": "INSTANCE",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 440,
+        "height": 956
+      },
+      "fills": [],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:8",
+      "name": "Brand",
+      "type": "FRAME",
+      "bounds": {
+        "x": 32,
+        "y": 64,
+        "width": 236,
+        "height": 32
+      },
+      "fills": [],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:9",
+      "name": "Cyan presence",
+      "type": "ELLIPSE",
+      "bounds": {
+        "x": 32,
+        "y": 76,
+        "width": 8,
+        "height": 8
+      },
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#38DBE5",
+          "rgb": {
+            "r": 0.22,
+            "g": 0.86,
+            "b": 0.9
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:11",
+      "name": "Welcome copy",
+      "type": "FRAME",
+      "bounds": {
+        "x": 32,
+        "y": 570,
+        "width": 376,
+        "height": 159
+      },
+      "fills": [],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:14",
+      "name": "Sign-in actions",
+      "type": "FRAME",
+      "bounds": {
+        "x": 32,
+        "y": 772,
+        "width": 376,
+        "height": 116
+      },
+      "fills": [],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:15",
+      "name": "Welcome / Continue with Apple",
+      "type": "INSTANCE",
+      "bounds": {
+        "x": 32,
+        "y": 772,
+        "width": 376,
+        "height": 60
+      },
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#F6F7F2",
+          "rgb": {
+            "r": 0.965,
+            "g": 0.969,
+            "b": 0.949
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ],
+      "corner_radius": 18
+    },
+    {
+      "id": "I7:3;2:15;8:19",
+      "name": "Apple mark / vector",
+      "type": "FRAME",
+      "bounds": {
+        "x": 111.5,
+        "y": 789,
+        "width": 22,
+        "height": 26
+      },
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#FFFFFF",
+          "rgb": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1,
+          "visible": false
+        }
+      ],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:18",
+      "name": "Welcome / More options",
+      "type": "INSTANCE",
+      "bounds": {
+        "x": 32,
+        "y": 844,
+        "width": 376,
+        "height": 44
+      },
+      "fills": [],
+      "corner_radius": 0
+    },
+    {
+      "id": "I7:3;2:20",
+      "name": "Eligibility",
+      "type": "FRAME",
+      "bounds": {
+        "x": 32,
+        "y": 913,
+        "width": 376,
+        "height": 16
+      },
+      "fills": [],
+      "corner_radius": 0
+    }
+  ],
+  "texts": [
+    {
+      "id": "I7:3;2:10",
+      "name": "Proximeet",
+      "content": "Proximeet",
+      "bounds": {
+        "x": 48,
+        "y": 64,
+        "width": 220,
+        "height": 32
+      },
+      "font_family": "Manrope",
+      "font_style": "Bold",
+      "font_weight": 700,
+      "font_size": 24,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 32
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": -0.8
+      },
+      "text_align": "LEFT",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#FFFFFF",
+          "rgb": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "I7:3;2:12",
+      "name": "Headline",
+      "content": "Make room\nfor a hello.",
+      "bounds": {
+        "x": 32,
+        "y": 570,
+        "width": 376,
+        "height": 118
+      },
+      "font_family": "Manrope",
+      "font_style": "ExtraBold",
+      "font_weight": 800,
+      "font_size": 56,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 59
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": -2.2
+      },
+      "text_align": "LEFT",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#FFFFFF",
+          "rgb": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "I7:3;2:13",
+      "name": "Supporting line",
+      "content": "Real places. New people. Your way.",
+      "bounds": {
+        "x": 32,
+        "y": 704,
+        "width": 376,
+        "height": 25
+      },
+      "font_family": "Manrope",
+      "font_style": "Regular",
+      "font_weight": 400,
+      "font_size": 17,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 25
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "text_align": "LEFT",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#A8B0AD",
+          "rgb": {
+            "r": 0.66,
+            "g": 0.69,
+            "b": 0.68
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "I7:3;2:15;2:4",
+      "name": "Label",
+      "content": "Continue with Apple",
+      "bounds": {
+        "x": 141.5,
+        "y": 789,
+        "width": 187,
+        "height": 26
+      },
+      "font_family": "Manrope",
+      "font_style": "SemiBold",
+      "font_weight": 600,
+      "font_size": 18,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 24
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "text_align": "LEFT",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#050606",
+          "rgb": {
+            "r": 0.018,
+            "g": 0.022,
+            "b": 0.022
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "I7:3;2:18;2:6",
+      "name": "Label",
+      "content": "More options",
+      "bounds": {
+        "x": 120,
+        "y": 853,
+        "width": 200,
+        "height": 26
+      },
+      "font_family": "Manrope",
+      "font_style": "Regular",
+      "font_weight": 400,
+      "font_size": 17,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 25
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "text_align": "CENTER",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#FFFFFF",
+          "rgb": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "I7:3;2:21",
+      "name": "Age requirement",
+      "content": "18+ only",
+      "bounds": {
+        "x": 32,
+        "y": 913,
+        "width": 376,
+        "height": 16
+      },
+      "font_family": "Manrope",
+      "font_style": "Medium",
+      "font_weight": 500,
+      "font_size": 12,
+      "line_height": {
+        "unit": "PIXELS",
+        "value": 16
+      },
+      "letter_spacing": {
+        "unit": "PIXELS",
+        "value": 0.2
+      },
+      "text_align": "CENTER",
+      "fills": [
+        {
+          "type": "SOLID",
+          "hex": "#A8B0AD",
+          "rgb": {
+            "r": 0.66,
+            "g": 0.69,
+            "b": 0.68
+          },
+          "opacity": 1,
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "reusable_interface": {
+    "component_id": "2:7",
+    "settled_instance_id": "7:3"
+  },
+  "native_motion": {
+    "closed_pose_id": "1:33",
+    "unfolding_pose_id": "1:34",
+    "settled_pose_id": "1:35",
+    "timeline_id": "1:36"
+  },
+  "motion_study": {
+    "duration_seconds": 4,
+    "frame_rate": 30,
+    "format": "2D timing study using pose blends",
+    "phases": [
+      {
+        "start": 0,
+        "end": 0.4,
+        "state": "Closed hold"
+      },
+      {
+        "start": 0.4,
+        "end": 0.85,
+        "state": "Blend closed to unfolding"
+      },
+      {
+        "start": 0.85,
+        "end": 1.4,
+        "state": "Blend unfolding to settled"
+      },
+      {
+        "start": 1.4,
+        "end": 4,
+        "state": "Settled hold"
+      }
+    ]
+  },
+  "notes": [
+    "The current settled hero is an IMAGE fill on rectangle 7:2, at x=0, y=128, 440×440.",
+    "The timeline and pose IDs identify editable Figma sources; the local motion study is not a continuous 3D fold."
+  ]
+}

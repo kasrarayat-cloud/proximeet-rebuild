@@ -67,10 +67,11 @@ enum Motion {
     static let arrivalItem: Double = 0.42
     static let arrivalStagger: Double = 0.08
     static let selection: Double = 0.18
-    /// First welcome appearance: the worlds tableau settles (800–1,100 ms).
-    static let welcomeSettle: Double = 0.9
-    /// Reduce Motion welcome reveal (150–200 ms opacity).
-    static let reducedWelcomeReveal: Double = 0.18
+    /// Welcome pose study (chapter 01 handoff): closed hold, then linear blends to the opening
+    /// and settled poses, ending at 1.4 s. Played once; Reduce Motion shows the settled pose.
+    static let welcomeClosedHold: Double = 0.4
+    static let welcomeToOpening: Double = 0.45
+    static let welcomeToSettled: Double = 0.55
     /// Pass or roster stock settling into place (450–650 ms).
     static let paperSettle: Double = 0.5
 }
@@ -113,15 +114,6 @@ extension AccessibilityContext {
                 insertion: .modifier(active: ArcSeat(progress: 0), identity: ArcSeat(progress: 1)),
                 removal: .opacity
             )
-    }
-
-    /// Welcome tableau: a short settle, an opacity-only reveal under Reduce Motion, and
-    /// nothing at all for VoiceOver.
-    var welcomeAnimation: Animation? {
-        if voiceOverRunning { return nil }
-        return reduceMotion
-            ? .easeOut(duration: Motion.reducedWelcomeReveal)
-            : .timingCurve(0.2, 0.8, 0.2, 1, duration: Motion.welcomeSettle)
     }
 
     var paperSettleAnimation: Animation? {

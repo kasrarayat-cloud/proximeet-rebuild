@@ -6,6 +6,8 @@ struct ProximeetApp: App {
     private let reduceMotionPreview: Bool
 
     init() {
+        let unavailableFonts = Manrope.register()
+        assert(unavailableFonts.isEmpty, "Manrope faces not registered: \(unavailableFonts.map(\.rawValue))")
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         _session = State(initialValue: DebugLaunch.session(arguments: arguments) ?? DemoSession())

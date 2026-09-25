@@ -1,0 +1,3 @@
+# Files the approved Welcome change deletes relative to 7af76fafaaf51b729e008286570649ec3c79d209; the gate confirms they are absent.
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/Contents.json
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/social-worlds-welcome.png

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */; };
 		03567CC08B6EC3A79FE6B942 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AF09BDFAC765B06B25D864 /* Palette.swift */; };
 		0529859D1916D2390BBAF93F /* SignalTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */; };
 		053CA3F24FB96ECE55F240F4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */; };
@@ -23,6 +24,7 @@
 		7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */; };
 		834EF4BBCBA66AE3B1CBF734 /* SignalSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */; };
 		8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBF4AD5F388E4A893AA059C /* GuestListView.swift */; };
+		8F2C1F71C845D1B4CF3503FD /* Manrope.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351651C609FD65199E5C4CA /* Manrope.swift */; };
 		96926943F2EFA30ABE1B1089 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C808A64B77F06AC2C52124A /* Controls.swift */; };
 		A697A2EAD95A7DC28B40A188 /* SignatureStudio.skybox in Resources */ = {isa = PBXBuildFile; fileRef = A0FD7C6FA5E70188F98C8BE0 /* SignatureStudio.skybox */; };
 		A7AAF815BE2863E203C7ECCD /* DemoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56510F116CB0A2C325F396E0 /* DemoSession.swift */; };
@@ -51,6 +53,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeReviewTests.swift; sourceTree = "<group>"; };
 		0603CB7A287A3B2BE60E72CD /* ProfileEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEditorSheet.swift; sourceTree = "<group>"; };
 		0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayView.swift; sourceTree = "<group>"; };
 		29FA62256BD7E4755C13781C /* IntentStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentStyle.swift; sourceTree = "<group>"; };
@@ -74,6 +77,7 @@
 		993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadyForCheckInView.swift; sourceTree = "<group>"; };
 		9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		A0FD7C6FA5E70188F98C8BE0 /* SignatureStudio.skybox */ = {isa = PBXFileReference; lastKnownFileType = file.skybox; path = SignatureStudio.skybox; sourceTree = "<group>"; };
+		A351651C609FD65199E5C4CA /* Manrope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Manrope.swift; sourceTree = "<group>"; };
 		AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adaptations.swift; sourceTree = "<group>"; };
 		BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		BEBF4AD5F388E4A893AA059C /* GuestListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListView.swift; sourceTree = "<group>"; };
@@ -150,6 +154,7 @@
 			isa = PBXGroup;
 			children = (
 				3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */,
+				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
 			);
 			path = ProximeetUITests;
 			sourceTree = "<group>";
@@ -191,6 +196,7 @@
 			children = (
 				AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */,
 				3C808A64B77F06AC2C52124A /* Controls.swift */,
+				A351651C609FD65199E5C4CA /* Manrope.swift */,
 				C97C5C6E00528CFA84E4DB88 /* Materials.swift */,
 				D5AF09BDFAC765B06B25D864 /* Palette.swift */,
 				8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */,
@@ -323,6 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */,
+				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,6 +350,7 @@
 				123C654DBC4670BC5DDD2240 /* SignatureBandHero.swift in Sources */,
 				1EAD9E154C5D4D0623E00902 /* Adaptations.swift in Sources */,
 				96926943F2EFA30ABE1B1089 /* Controls.swift in Sources */,
+				8F2C1F71C845D1B4CF3503FD /* Manrope.swift in Sources */,
 				C059ACDEAEE045DC4E6CC843 /* Materials.swift in Sources */,
 				03567CC08B6EC3A79FE6B942 /* Palette.swift in Sources */,
 				4F339DDF08CFE74EC534483F /* ScreenScaffold.swift in Sources */,

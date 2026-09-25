@@ -1,0 +1,54 @@
+{
+  "source": "https://github.com/google/fonts/tree/main/ofl/manrope",
+  "downloaded_font": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/Manrope%5Bwght%5D.ttf",
+  "license_source": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt",
+  "source_sha256": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6",
+  "generation": "Static weight instances generated with fontTools from the bundled original variable font; original OFL.txt retained.",
+  "fonts": [
+    {
+      "file": "Manrope-Regular.ttf",
+      "weight": 400,
+      "family": "Manrope",
+      "subfamily": "Regular",
+      "postscript_name": "Manrope-Regular",
+      "variable": false,
+      "sha256": "c225354e012a7cc69616e68eb09fa3b7787989ca4ced2702bb0858c075defce5"
+    },
+    {
+      "file": "Manrope-Medium.ttf",
+      "weight": 500,
+      "family": "Manrope Medium",
+      "subfamily": "Regular",
+      "postscript_name": "Manrope-Medium",
+      "variable": false,
+      "sha256": "71e70cf0ff7b5879a4717d7da3f353e722ca8ed7f8d0cdd6e1efffd3ad25c1d7"
+    },
+    {
+      "file": "Manrope-SemiBold.ttf",
+      "weight": 600,
+      "family": "Manrope SemiBold",
+      "subfamily": "Regular",
+      "postscript_name": "Manrope-SemiBold",
+      "variable": false,
+      "sha256": "7d75326f6efa60f2add407a565487d759be426aab7b9cbcb8913f1baca044606"
+    },
+    {
+      "file": "Manrope-Bold.ttf",
+      "weight": 700,
+      "family": "Manrope",
+      "subfamily": "Bold",
+      "postscript_name": "Manrope-Bold",
+      "variable": false,
+      "sha256": "a9b86c3ac3e4bcfb48b9e8cea8afe074c4da04da0351b763f3f74a2e68465668"
+    },
+    {
+      "file": "Manrope-ExtraBold.ttf",
+      "weight": 800,
+      "family": "Manrope ExtraBold",
+      "subfamily": "Regular",
+      "postscript_name": "Manrope-ExtraBold",
+      "variable": false,
+      "sha256": "dc05784c484eb109b50adff2bb4b03c81c305369efc05cda01ee313ed7351332"
+    }
+  ]
+}
