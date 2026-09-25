@@ -38,9 +38,64 @@ final class BirthdayReviewTests: XCTestCase {
         XCTAssertEqual(screen.guidance.label, Self.emptyGuidance)
         capture("birthday-empty", app)
         hold(0.8)
-        assertWheelsVisible(app, neighbours: false, "Empty")
+        softly {
+            assertWheelsVisible(app, neighbours: false, "Empty")
+            assertNeighboursHidden(app, wheels: [0, 1, 2], "Empty")
+            assertWindowEdgesClear(app, "Empty")
+        }
 
+        // One component alone: the other two stay unset in the model, the accessibility tree
+        // and on screen, and Continue stays off.
         screen.wheel(0).adjust(toPickerWheelValue: "12")
+        hold(0.6)
+        XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"], "Choosing a day must leave month and year unset.")
+        XCTAssertFalse(screen.continueButton.isEnabled, "A day alone must not enable Continue.")
+        XCTAssertEqual(screen.guidance.label, Self.emptyGuidance)
+        capture("birthday-day-only", app)
+        softly {
+            assertWheelsVisible(app, neighbours: false, "Day only")
+            assertNeighboursVisible(app, wheels: [0], "Day only")
+            assertNeighboursHidden(app, wheels: [1, 2], "Day only")
+            assertWindowEdgesClear(app, "Day only")
+        }
+        hold(0.8)
+
+        // A real finger drag. adjust(toPickerWheelValue:) turns wheels by accessibility
+        // increments, never by touch, so this is the only step that turns a wheel the way a
+        // finger does: the wheel moves, settles and draws its values, and the untouched wheels
+        // stay unset and undrawn.
+        let lane = screen.wheel(0).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        lane.press(forDuration: 0.1, thenDragTo: lane.withOffset(CGVector(dx: 0, dy: -60)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        hold(1.0)
+        XCTAssertNotEqual(screen.wheelValues[0], "12", "A finger drag should turn the Day wheel.")
+        XCTAssertEqual(Array(screen.wheelValues.dropFirst()), ["Not set", "Not set"], "Turning the day must not set month or year.")
+        XCTAssertFalse(screen.continueButton.isEnabled, "A day alone must not enable Continue.")
+        capture("birthday-after-day-drag", app)
+        softly {
+            assertWheelsVisible(app, neighbours: false, "After a Day drag")
+            assertNeighboursVisible(app, wheels: [0], "After a Day drag")
+            assertNeighboursHidden(app, wheels: [1, 2], "After a Day drag")
+            assertWindowEdgesClear(app, "After a Day drag")
+        }
+        screen.wheel(0).adjust(toPickerWheelValue: "12")
+        hold(0.6)
+        XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"])
+
+        // A finger that turns the unset Month wheel less than half a row and lets go: the wheel
+        // returns to its placeholder, perhaps without didSelectRow, and must again draw the
+        // placeholder alone.
+        let month = screen.wheel(1).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        month.press(forDuration: 0.1, thenDragTo: month.withOffset(CGVector(dx: 0, dy: -20)),
+                    withVelocity: .slow, thenHoldForDuration: 0.3)
+        hold(1.0)
+        capture("birthday-after-month-release", app)
+        softly {
+            XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"], "A short Month drag must return to Not set.")
+            assertNeighboursHidden(app, wheels: [1, 2], "After a Month drag back")
+            assertWindowEdgesClear(app, "After a Month drag back")
+        }
+
         screen.wheel(1).adjust(toPickerWheelValue: "May")
         XCTAssertFalse(screen.continueButton.isEnabled, "A partial date must not enable Continue.")
         screen.wheel(2).adjust(toPickerWheelValue: "1997")
@@ -48,7 +103,11 @@ final class BirthdayReviewTests: XCTestCase {
         XCTAssertEqual(screen.guidance.label, Self.adultGuidance)
         capture("birthday-adult", app)
         hold(0.8)
-        assertWheelsVisible(app, neighbours: true, "12 May 1997")
+        softly {
+            assertWheelsVisible(app, neighbours: true, "12 May 1997")
+            assertWindowEdgesClear(app, "12 May 1997")
+            assertLayoutAnchors(app)
+        }
 
         screen.continueButton.tap()
         let notice = app.alerts["Pass is next."]
@@ -192,31 +251,34 @@ final class BirthdayReviewTests: XCTestCase {
         _ = XCTWaiter.wait(for: [gone], timeout: 5)
     }
 
-    /// Checks the wheels on the screen itself, not only in the accessibility tree: each wheel's
-    /// selected value (or placeholder) must be drawn, and, when asked, its previous value too.
-    /// Counts pixels brighter than the dark console (#1F2022 to #262B2D) in bands of the
-    /// picker's own frame. Measured on build 6ab6d0be's visible wheels: values lit 1,500 to 3,700
-    /// pixels above 100, and its (too faint) previous values 611 to 2,085 pixels above 45. The
-    /// invisible wheels of build 6ab6d70f lit none in either band (their peak was 61).
+    /// Rendered-screen checks record every failure (the test still fails) without stopping the
+    /// walkthrough, so one miscalibrated check cannot cost the later states' evidence.
+    private func softly(_ checks: () -> Void) {
+        continueAfterFailure = true
+        checks()
+        continueAfterFailure = false
+    }
+
+    // MARK: - What is drawn on screen
+    //
+    // Accessibility strings do not prove that text was drawn (build 6ab6d70f passed every
+    // accessibility check with every wheel value invisible), so these read the screenshot.
+    // Thresholds are on each pixel's darkest channel. The console's glass is #1F2022 to
+    // #262B2D, so under 45 is empty glass.
+
+    /// Each wheel's selected value (or placeholder) must be drawn and, when asked, its previous
+    /// value too. In Figma's column bands, build 6ab6df01's wheels lit 2,152 to 4,802 value
+    /// pixels above 100 and 723 to 2,620 previous-value pixels above 45; the invisible wheels of
+    /// build 6ab6d70f lit none in either band (their peak was 61).
     private func assertWheelsVisible(_ app: XCUIApplication, neighbours: Bool, _ state: String) {
-        let identified = app.pickers["birthday.wheels"]
-        let picker = (identified.exists ? identified : app.pickers.firstMatch).frame
-        XCTAssertFalse(picker.isEmpty, "\(state): the wheels have no frame.")
-        guard let image = app.screenshot().image.cgImage, !picker.isEmpty else {
-            XCTFail("\(state): no screenshot to check the wheels against.")
-            return
-        }
-        let scale = CGFloat(image.width) / app.frame.width
+        guard let shot = RenderedScreen(app), let wheels = wheelWindow(app, state) else { return }
         var counts: [String] = []
-        for (index, name) in ["Day", "Month", "Year"].enumerated() {
-            let x = picker.minX + picker.width * CGFloat(index) / 3
-            let selected = CGRect(x: x, y: picker.midY - 20, width: picker.width / 3, height: 28)
-            let value = litPixels(in: selected, image: image, scale: scale, above: 100)
+        for (index, name) in Self.wheelNames.enumerated() {
+            let value = shot.lit(wheels.band(index, from: -20, to: 8), above: 100)
             counts.append("\(name) value \(value)")
             XCTAssertGreaterThan(value, 150, "\(state): the \(name) wheel's value is not visible on screen.")
             if neighbours {
-                let previous = CGRect(x: x, y: picker.midY - 66, width: picker.width / 3, height: 28)
-                let hint = litPixels(in: previous, image: image, scale: scale, above: 45)
+                let hint = shot.lit(wheels.band(index, from: -66, to: -38), above: 45)
                 counts.append("\(name) previous \(hint)")
                 XCTAssertGreaterThan(hint, 60, "\(state): the \(name) wheel's previous value is not visible on screen.")
             }
@@ -224,26 +286,105 @@ final class BirthdayReviewTests: XCTestCase {
         attachNote("\(state): lit pixels per wheel band: " + counts.joined(separator: ", ") + ".")
     }
 
-    /// Pixels in `band` (points) whose red, green and blue all exceed `threshold`.
-    private func litPixels(in band: CGRect, image: CGImage, scale: CGFloat, above threshold: UInt8) -> Int {
-        let rect = CGRect(x: band.minX * scale, y: band.minY * scale, width: band.width * scale, height: band.height * scale).integral
-        guard let crop = image.cropping(to: rect) else { return 0 }
-        let width = crop.width, height = crop.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        pixels.withUnsafeMutableBytes { buffer in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return }
-            context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+    /// A set wheel's previous and next values are drawn.
+    private func assertNeighboursVisible(_ app: XCUIApplication, wheels indices: [Int], _ state: String) {
+        guard let shot = RenderedScreen(app), let wheels = wheelWindow(app, state) else { return }
+        var counts: [String] = []
+        for index in indices {
+            let name = Self.wheelNames[index]
+            let above = shot.lit(wheels.band(index, from: -66, to: -38), above: 45)
+            let below = shot.lit(wheels.band(index, from: 34, to: 62), above: 45)
+            counts.append("\(name) previous \(above), next \(below)")
+            XCTAssertGreaterThan(above, 60, "\(state): the \(name) wheel's previous value is not drawn.")
+            XCTAssertGreaterThan(below, 60, "\(state): the \(name) wheel's next value is not drawn.")
         }
-        var count = 0
-        for index in stride(from: 0, to: pixels.count, by: 4)
-        where pixels[index] > threshold && pixels[index + 1] > threshold && pixels[index + 2] > threshold {
-            count += 1
+        attachNote("\(state): neighbouring values drawn: " + counts.joined(separator: "; ") + ".")
+    }
+
+    /// An unset wheel shows its placeholder alone: nothing is drawn above or below the lane.
+    /// Build 6ab6df01 drew "1 Jan 1900" there, faintly (its darkest channel about 55).
+    private func assertNeighboursHidden(_ app: XCUIApplication, wheels indices: [Int], _ state: String) {
+        guard let shot = RenderedScreen(app), let wheels = wheelWindow(app, state) else { return }
+        var counts: [String] = []
+        for index in indices {
+            let name = Self.wheelNames[index]
+            let above = shot.lit(wheels.band(index, from: -75, to: -29), above: 45)
+            let below = shot.lit(wheels.band(index, from: 29, to: 75), above: 45)
+            counts.append("\(name) above \(above), below \(below)")
+            XCTAssertLessThanOrEqual(above, 30, "\(state): the unset \(name) wheel draws a value above its placeholder.")
+            XCTAssertLessThanOrEqual(below, 30, "\(state): the unset \(name) wheel draws a value below its placeholder.")
         }
-        return count
+        attachNote("\(state): lit pixels around unset placeholders: " + counts.joined(separator: "; ") + ".")
+    }
+
+    /// The date window shows no part-row at its top or bottom edge. Build 6ab6df01 showed the
+    /// tops of the row after next between 595.3 and 596, against the window's bottom at 596.
+    private func assertWindowEdgesClear(_ app: XCUIApplication, _ state: String) {
+        guard let shot = RenderedScreen(app), let wheels = wheelWindow(app, state) else { return }
+        let top = shot.lit(wheels.strip(from: -75, to: -69), above: 45)
+        let bottom = shot.lit(wheels.strip(from: 69, to: 75), above: 45)
+        attachNote("\(state): lit pixels in the window's edge strips: top \(top), bottom \(bottom).")
+        XCTAssertLessThanOrEqual(top, 20, "\(state): a part-row shows at the top edge of the date window.")
+        XCTAssertLessThanOrEqual(bottom, 20, "\(state): a part-row shows at the bottom edge of the date window.")
+    }
+
+    /// Rendered anchors at 440 × 956, in points, for 12 May 1997. Each expected value was
+    /// measured on the approved board (docs/design/birthday-approved/reference/
+    /// birthday-review.png, frames at 0.75 scale, so about ±0.7 pt) with the same threshold.
+    /// For crisp shapes these are the spec's own values (Continue 812-872, Back arrow 80-92).
+    private static let anchors: [Anchor] = [
+        Anchor("Back arrow", box: CGRect(x: 34, y: 55, width: 24, height: 60), threshold: 200, top: 80.0, bottom: 92.0),
+        Anchor("Wordmark", box: CGRect(x: 84, y: 55, width: 116, height: 60), threshold: 200, top: 74.7),
+        Anchor("Headline", box: CGRect(x: 32, y: 130, width: 268, height: 160), threshold: 200, top: 164.0, bottom: 277.3),
+        Anchor("Eligibility", box: CGRect(x: 32, y: 280, width: 268, height: 65), threshold: 120, top: 294.7),
+        // Build 6ab6df01 drew these at 469.7, 517.0 and 565.7: the tolerances catch that.
+        Anchor("Previous day", box: CGRect(x: 80, y: 446, width: 85, height: 46), threshold: 60, centre: 468.7, centreAccuracy: 0.75),
+        Anchor("Selected day", box: CGRect(x: 80, y: 492, width: 85, height: 58), threshold: 60, centre: 516.0, centreAccuracy: 0.75),
+        // The next row alone: the box stops 6 pt above the window's edge, which
+        // assertWindowEdgesClear watches.
+        Anchor("Next day", box: CGRect(x: 80, y: 550, width: 85, height: 40), threshold: 60, centre: 568.7, centreAccuracy: 1.5),
+        Anchor("Enter date instead", box: CGRect(x: 32, y: 670, width: 240, height: 65), threshold: 200, top: 698.7),
+        Anchor("Guidance", box: CGRect(x: 32, y: 735, width: 376, height: 65), threshold: 120, top: 745.3),
+        Anchor("Continue", box: CGRect(x: 200, y: 790, width: 40, height: 100), threshold: 200, top: 812.0, bottom: 872.0),
+    ]
+
+    private func assertLayoutAnchors(_ app: XCUIApplication) {
+        XCTAssertEqual(app.frame.size, CGSize(width: 440, height: 956), "Anchors are measured at 440 × 956.")
+        guard app.frame.size == CGSize(width: 440, height: 956), let shot = RenderedScreen(app) else { return }
+        var lines: [String] = []
+        for anchor in Self.anchors {
+            guard let ink = shot.inkRows(in: anchor.box, above: anchor.threshold) else {
+                XCTFail("\(anchor.name): nothing drawn in \(anchor.box).")
+                continue
+            }
+            lines.append(String(format: "%@ %.1f-%.1f", anchor.name, ink.top, ink.bottom))
+            if let top = anchor.top {
+                XCTAssertEqual(ink.top, top, accuracy: 1.0, "\(anchor.name): top edge drawn at \(ink.top), approved \(top).")
+            }
+            if let bottom = anchor.bottom {
+                XCTAssertEqual(ink.bottom, bottom, accuracy: 1.0, "\(anchor.name): bottom edge drawn at \(ink.bottom), approved \(bottom).")
+            }
+            if let centre = anchor.centre {
+                let drawn = (ink.top + ink.bottom) / 2
+                XCTAssertEqual(drawn, centre, accuracy: anchor.centreAccuracy, "\(anchor.name): centre drawn at \(drawn), approved \(centre).")
+            }
+        }
+        attachNote("Rendered anchors (points): " + lines.joined(separator: "; ") + ".")
+    }
+
+    private static let wheelNames = ["Day", "Month", "Year"]
+
+    /// The date window, from the picker's centre (228, 521 at 440 × 956). XCUITest reports
+    /// UIPickerView's own frame, 320 × 216 at (68, 413), wider than the clipped 308 × 150 window,
+    /// so only its centre is used.
+    private func wheelWindow(_ app: XCUIApplication, _ state: String) -> WheelWindow? {
+        let identified = app.pickers["birthday.wheels"]
+        let frame = (identified.exists ? identified : app.pickers.firstMatch).frame
+        guard !frame.isEmpty else {
+            XCTFail("\(state): the wheels have no frame.")
+            return nil
+        }
+        return WheelWindow(frame: frame)
     }
 
     private func capture(_ name: String, _ app: XCUIApplication) {
@@ -284,5 +425,121 @@ private struct BirthdayElements {
 
     var wheelValues: [String] {
         (0..<3).map { (wheel($0).value as? String) ?? "?" }
+    }
+}
+
+/// The date window, by offsets from the picker's centre (the lane's centre, 228 × 521 at
+/// 440 × 956). Bands follow Figma's "Editable wheel values" columns (Day 78-170, Month 178-278,
+/// Year 286-378), which keeps them off the housing's lit bezel at x 50-73 and 384-407.
+private struct WheelWindow {
+    let frame: CGRect
+    private static let columns: [(from: CGFloat, to: CGFloat)] = [(-150, -58), (-50, 50), (58, 150)]
+
+    /// A band across one wheel's column (Day, Month, Year).
+    func band(_ index: Int, from top: CGFloat, to bottom: CGFloat) -> CGRect {
+        let column = Self.columns[index]
+        return CGRect(x: frame.midX + column.from, y: frame.midY + top,
+                      width: column.to - column.from, height: bottom - top)
+    }
+
+    /// A band across all three columns (x 78-378).
+    func strip(from top: CGFloat, to bottom: CGFloat) -> CGRect {
+        CGRect(x: frame.midX - 150, y: frame.midY + top, width: 300, height: bottom - top)
+    }
+}
+
+private struct Anchor {
+    let name: String
+    let box: CGRect
+    let threshold: UInt8
+    var top: CGFloat?
+    var bottom: CGFloat?
+    var centre: CGFloat?
+    var centreAccuracy: CGFloat
+
+    init(
+        _ name: String, box: CGRect, threshold: UInt8, top: CGFloat? = nil, bottom: CGFloat? = nil,
+        centre: CGFloat? = nil, centreAccuracy: CGFloat = 1.5
+    ) {
+        self.name = name
+        self.box = box
+        self.threshold = threshold
+        self.top = top
+        self.bottom = bottom
+        self.centre = centre
+        self.centreAccuracy = centreAccuracy
+    }
+}
+
+/// One screenshot's pixels, addressed in points.
+@MainActor
+private struct RenderedScreen {
+    private let pixels: [UInt8]
+    private let width: Int
+    private let height: Int
+    private let scale: CGFloat
+
+    init?(_ app: XCUIApplication) {
+        guard let image = app.screenshot().image.cgImage, app.frame.width > 0 else {
+            XCTFail("No screenshot to check what is drawn.")
+            return nil
+        }
+        width = image.width
+        height = image.height
+        scale = CGFloat(image.width) / app.frame.width
+        var buffer = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        let drawn: Bool = buffer.withUnsafeMutableBytes { bytes in
+            guard let context = CGContext(
+                data: bytes.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            return true
+        }
+        guard drawn else {
+            XCTFail("The screenshot could not be read.")
+            return nil
+        }
+        pixels = buffer
+    }
+
+    /// Whether the pixel at (x, y), in pixels from the top left, has every channel above
+    /// `threshold`.
+    private func isLit(_ x: Int, _ y: Int, above threshold: UInt8) -> Bool {
+        let index = (y * width + x) * 4
+        return pixels[index] > threshold && pixels[index + 1] > threshold && pixels[index + 2] > threshold
+    }
+
+    private func pixelRange(_ rect: CGRect) -> (xs: Range<Int>, ys: Range<Int>) {
+        let x0 = max(0, Int((rect.minX * scale).rounded())), x1 = min(width, Int((rect.maxX * scale).rounded()))
+        let y0 = max(0, Int((rect.minY * scale).rounded())), y1 = min(height, Int((rect.maxY * scale).rounded()))
+        return (x0..<max(x0, x1), y0..<max(y0, y1))
+    }
+
+    /// Pixels in `rect` (points) with every channel above `threshold`.
+    func lit(_ rect: CGRect, above threshold: UInt8) -> Int {
+        let range = pixelRange(rect)
+        var count = 0
+        for y in range.ys {
+            for x in range.xs where isLit(x, y, above: threshold) {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    /// The first and last pixel rows in `rect` holding any pixel above `threshold`, in points
+    /// (the bottom is the lower edge of the last row).
+    func inkRows(in rect: CGRect, above threshold: UInt8) -> (top: CGFloat, bottom: CGFloat)? {
+        let range = pixelRange(rect)
+        var first: Int?
+        var last: Int?
+        for y in range.ys where range.xs.contains(where: { isLit($0, y, above: threshold) }) {
+            if first == nil { first = y }
+            last = y
+        }
+        guard let first, let last else { return nil }
+        return (CGFloat(first) / scale, CGFloat(last + 1) / scale)
     }
 }

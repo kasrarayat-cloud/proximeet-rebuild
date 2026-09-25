@@ -60,7 +60,7 @@ route. This is self-declaration, not verification.
 - **Nothing is persisted, sent or logged.** The domain source guard still forbids the clock,
   timers, `Codable` and `UserDefaults` in the package.
 
-Tests: `BirthdayEntryTests`, 27 cases with an injected today of 2026-09-25. They cover:
+Tests: `BirthdayEntryTests`, 28 cases with an injected today of 2026-09-25. They cover:
 
 - the exact eighteenth birthday, and the day before and after;
 - year-only subtraction being wrong;
@@ -68,6 +68,7 @@ Tests: `BirthdayEntryTests`, 27 cases with an injected today of 2026-09-25. They
 - 31 April;
 - 29 February in 2001 (invalid), 2000 and 2024 (valid);
 - two-digit and pre-1900 years;
+- one component chosen: the other two stay unset and nothing is committed;
 - future dates, and today itself;
 - the 1 March policy, in both leap and non-leap years;
 - edits: an eligible date edited to an under-18 date and to an incomplete one;
@@ -78,7 +79,8 @@ Tests: `BirthdayEntryTests`, 27 cases with an injected today of 2026-09-25. They
 
 `BirthdayView` builds the approved composition at 440 × 956, following `LAYOUT_SPEC.json`:
 
-- the header, with Back and the Bold 22 wordmark;
+- the header, with Back and the Bold 22 wordmark. The wordmark is set on Figma's 24 pt line at
+  the top of its box at y = 70, not centred in the 44 pt row;
 - the ExtraBold 56/59 headline, "First, your birthday.";
 - the eligibility line;
 - the graphite console;
@@ -114,15 +116,35 @@ art, as the handoff asks.
   UIKit's own selection bar is hidden, so there is exactly one lane. On iOS 26 that bar is a
   glass capsule drawn above the rows. It is found by its shape (it spans the wheels and is
   shorter than them), never by a private class name.
-- The wheels are clipped to their 150 pt window in SwiftUI, so that only the previous,
-  selected and next rows should show. The picker keeps its own taller height, so the row
-  spacing should stay as approved. Attempt 3 showed that clipping inside UIKit did not work,
-  and the result of this change is reported with its own build. Values sit 4.5 pt above the middle of their row, as on the approved board.
-- UIPickerView fades the rows outside its centre to about 37%. A set wheel's neighbours are
-  therefore drawn in #D2E6EA, which renders as the approved #616B6E. An unset wheel keeps
-  #616B6E, so its next value is only a faint hint. The approved empty state shows no
-  neighbours at all; the faint hint is kept deliberately, because it shows that the control
-  turns.
+- The wheels are clipped to their 150 pt window in SwiftUI. The picker keeps its own taller
+  height, so its row spacing is unchanged.
+- **At rest, a wheel is built to draw only the rows the approved design shows.** This is
+  unverified until the correction build's captures show it.
+  - An unset wheel draws its placeholder alone (DD / MMM / YYYY, as in the approved empty
+    state).
+  - A set wheel draws its previous, selected and next values. Its other rows are drawn clear.
+  - A finger turning a wheel reveals that wheel's rows, in place (a reload would pull the wheel
+    back under the finger), and only that wheel's. It returns to its approved rows when it
+    settles.
+  - While it turns, every row takes the selected lift, so the value that settles does not
+    jump.
+- **The lifts are chosen to put the values where the approved board does.** The row positions come from Figma's text
+  boxes, measured centres (points) on the board:
+
+  | Row | Board centre | Lift |
+  | --- | --- | --- |
+  | Previous | 468.7 | 5.75 pt |
+  | Selected | 516.0 | 5.5 pt |
+  | Next | 568.7 | 0.75 pt |
+
+  The design places the previous value 48 pt above the selected one and the next value 52 pt
+  below it, while UIPickerView spaces its rows symmetrically. So each value is drawn at a lift
+  computed from attempt 4's measurements (section 7, the correction). The selected row's lift
+  corrects its measured offset directly. The neighbours' lifts assume that the wheel's curve
+  moves them by about 0.8 of the lift. Only the next build can show whether they land at 468.7
+  and 568.7.
+- UIPickerView fades the rows outside its centre to about 37%. A neighbour is therefore drawn
+  in #D2E6EA, which renders as the approved #616B6E.
 - Years run from 1900 to the current year.
 
 **Typed entry.** "Enter date instead" switches to three labelled number-pad fields (Day, Month,
@@ -183,7 +205,7 @@ unchanged.
 
 | Command | Result |
 | --- | --- |
-| `swift test --package-path ProximeetDomain` | 80 tests, 0 failures (53 existing + 27 Birthday) |
+| `swift test --package-path ProximeetDomain` | 81 tests, 0 failures (53 existing + 28 Birthday) |
 | `python3 scripts/generate_project.py --check` | up to date (adds `BirthdayWheels.swift` and `BirthdayReviewTests.swift`) |
 | `python3 scripts/validate_project.py --no-plutil` | 13 checks, 0 failed; check 12 resolves `BirthdayHousing` |
 | `swiftc -parse` on the changed Swift files | no syntax errors (**syntax only**) |
@@ -261,6 +283,67 @@ Two changes came from that:
   150 pt frame, so clipping inside UIKit did not reach them. The next commit clips the window
   in SwiftUI instead. Its result is reported with its own build, not in this file.
 
+**Attempt 4:** build `6ab6df017f26dea8bc58699b`, commit `308204cea43735d87eab93ebafc6e266968c310a`,
+10 min 8 s.
+
+- **Automated verdict: PASS**, 6 of 6 UI tests.
+- **Delivered for visual review.** The founder did not approve three deviations:
+  1. the faint "1 Jan 1900" under the empty placeholders;
+  2. a part-row at the date window's bottom edge;
+  3. a vertical shift of 3–4 pt.
+
+### The correction (founder's review of attempt 4)
+
+**Measured first, at 440 × 956.** The screenshots (1320 × 2868 px, scale 3) were compared with
+the approved board (frames at 0.75 scale; its frame top at 123 px is confirmed by Continue at
+732 px and the housing at 407 px). Text was compared by where the glyphs start and end, the
+same way on both.
+
+- **Crisp anchors were already on spec.** In points:
+  - Continue: 812–872;
+  - housing: 378–644;
+  - column separators: 504–536;
+  - Back arrow: 80–92.7 (Figma's vector is 80–92).
+- **Text anchors also matched the board to within 0.7 pt**, including the safe-area-dependent
+  header: headline 164.0–277.3, eligibility line 294.3, "Enter date instead" 698.3, guidance
+  745.3. Welcome's geometry test confirms the top safe-area inset is at most 62 pt.
+- **The one shifted element was the wordmark.** Its capitals started at 78.3 against 74.7 on
+  the board. The cause was a text baseline, not a layout offset. Figma sets Bold 22 on a
+  24 pt line at the top of its box at y = 70, which gives capitals from 74.6. The app centred
+  the word in the 44 pt header row, which gives 78.6. It is now set on Figma's line box. No
+  global offset is applied, and the reference is untouched.
+- **The wheel rows** were within 1 pt at the top and 3 pt high at the bottom. The centres were
+  469.7 / 517.0 / 565.7 against the board's 468.7 / 516.0 / 568.7. The lifts in section 4
+  correct them.
+- **The part-row at the bottom edge** was the tops of the row after next (595.3–596, against
+  the window's edge at 596). At rest those rows are now drawn clear. The next build's
+  captures show whether that removes the part-row.
+- **The faint "1 Jan 1900"** was an unset wheel drawing its next row. At rest an unset wheel's
+  other rows are now drawn clear, which is unverified until the next build. The model was
+  already unset. A new domain test confirms it:
+  a new entry has no day, month or year, choosing a day sets nothing else, and checking fills
+  nothing in.
+
+**New checks on the rendered screen.** Accessibility strings alone do not prove that text was
+drawn:
+
+- the empty state draws nothing around the three placeholders;
+- the day alone draws its neighbours, while month and year stay unset in the model, in the
+  accessibility tree and on screen, and Continue stays off;
+- a real finger drag turns the day without setting or drawing month or year;
+- a short drag on the unset month, released back onto it, leaves the placeholder alone
+  again;
+- the window's top and bottom edge strips are clear;
+- ten rendered anchors match the approved board's measurements.
+
+Each band is measured inside Figma's column boxes. XCUITest reports the picker's own
+320 pt frame, which takes in the housing's lit bezel. Simulated on attempt 4's screenshots,
+the new checks fail on exactly the three reported defects and pass everything else.
+
+The check added after attempt 2, that values are visible, is kept.
+
+The result of the correction build is reported with its own artifacts, not in this file.
+
 ## 8. Decisions and assumptions
 
 1. **Native wheels via `UIPickerView`**, not SwiftUI `Picker(.wheel)`. The UIKit delegate
@@ -275,11 +358,16 @@ Two changes came from that:
 6. **Supplementary fixtures** `birthday-adult` (12 May 1997) and `birthday-under18`
    (12 May 2012) are checked against a fixed today of 2026-09-24. They are DEBUG launch
    arguments and are labelled as fixtures in every capture.
-7. **One edge case with the drag observer.** A wheel that is flung and coasts back to the
+7. **Rows are revealed when a finger starts turning a wheel.** A revealed wheel that comes
+   to rest exactly on its selected row returns to its approved rows, even when UIKit does not
+   report `didSelectRow`. The check runs when the finger lets go and again after each scroll
+   step, observed through the wheels' scroll offsets, until the wheel rests. It uses no
+   timer.
+8. **One edge case with the drag observer.** A wheel that is flung and coasts back to the
    exact row it started on may not report `didSelectRow`. Continue then stays off until any
    wheel moves again. The observer only reads public `UIScrollView.isDecelerating`, and it
    uses no timers.
-8. **A static review before the first build** found these, and they were fixed before
+9. **A static review before the first build** found these, and they were fixed before
    pushing:
    - the More options popover without Cancel;
    - the missing lane in wheel mode;

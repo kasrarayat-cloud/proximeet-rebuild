@@ -7,7 +7,10 @@ import ProximeetDomain
 /// every value is announced.
 ///
 /// Row 0 of each wheel is "not set" (DD / MMM / YYYY), so the screen starts with no date.
-/// A value is reported only when a wheel settles on a row (`didSelectRow`), never while it
+/// At rest a wheel draws exactly the rows the approved design shows: an unset wheel only its
+/// placeholder, a set wheel its previous, selected and next values. Its other rows are drawn
+/// clear, and are drawn normally from the moment a finger starts turning that wheel until
+/// it settles. A value is reported only when a wheel settles on a row (`didSelectRow`), never while it
 /// is still moving; `onMotion(true)` reports a finger turning a wheel, so Continue can wait
 /// for the settled value. Model changes made elsewhere (typed entry) are applied without
 /// animation and without reporting back.
@@ -27,9 +30,22 @@ struct BirthdayWheels: UIViewRepresentable {
 
     /// Figma row pitch: previous, selected and next values 50 pt apart in a 150-pt window.
     static let rowHeight: CGFloat = 50
-    /// Figma sets each value about 4.5 pt above the middle of its row (measured against the
-    /// approved board), so the selected value sits just above the lane's centre.
-    static let textLift: CGFloat = 4.5
+    /// How far each value is drawn above the middle of its picker row. Figma's text boxes
+    /// (446, 492 and 546 in LAYOUT_SPEC.json) put the previous, selected and next glyph
+    /// centres at 468.7, 516.0 and 568.7 on the approved board, 48 pt above and 52 pt below
+    /// the selected one. UIPickerView spaces its rows symmetrically instead. With a single
+    /// 4.5-pt lift, build 6ab6df01 measured 469.7, 517.0 and 565.7. The rows either side sit
+    /// on the wheel's curve at about 0.8 of their height (15.3-pt digits against 18.7), so a
+    /// lift moves them by 0.8 of itself. Hence 5.75 pt above the selection, 5.5 pt for the
+    /// selected row, and 0.75 pt below it, at rest. While a wheel turns under a finger, every
+    /// row takes the selected lift, so the value that settles in the lane does not jump.
+    static let textLiftAbove: CGFloat = 5.75
+    static let textLiftSelected: CGFloat = 5.5
+    static let textLiftBelow: CGFloat = 0.75
+    /// A neighbouring value as seen: UIPickerView fades rows outside its centre to about 37 %,
+    /// so this renders as Figma's #616B6E there (measured on the iOS 26.5 simulator).
+    static let neighbourColor = UIColor(red: 0xD2 / 255, green: 0xE6 / 255, blue: 0xEA / 255, alpha: 1)
+    static let placeholderColor = UIColor(red: 0xA8 / 255, green: 0xB0 / 255, blue: 0xAD / 255, alpha: 1)
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -62,6 +78,14 @@ struct BirthdayWheels: UIViewRepresentable {
         UIGestureRecognizerDelegate {
         var parent: BirthdayWheels
         private var applied: BirthdayComponents?
+        /// Unset wheels a finger has started turning: their rows are drawn from then on.
+        private var revealed: Set<Int> = []
+        /// Every row label handed to the picker, so a wheel's rows can be revealed in place,
+        /// without reloading a wheel that is under a finger.
+        private let rowLabels = NSHashTable<BirthdayRowLabel>.weakObjects()
+        /// While a revealed wheel may still be snapping back, each scroll step re-runs the
+        /// at-rest check (no timer), until every revealed wheel is concealed.
+        private var restWatch: [NSKeyValueObservation] = []
         private let shortMonths: [String]
         private let fullMonths: [String]
 
@@ -83,6 +107,7 @@ struct BirthdayWheels: UIViewRepresentable {
             for column in Column.allCases {
                 let row = self.row(for: value(of: column, in: draft), in: column)
                 if picker.selectedRow(inComponent: column.rawValue) != row {
+                    revealed.remove(column.rawValue)
                     picker.selectRow(row, inComponent: column.rawValue, animated: false)
                     picker.reloadComponent(column.rawValue)
                 }
@@ -172,10 +197,19 @@ struct BirthdayWheels: UIViewRepresentable {
             reusing view: UIView?
         ) -> UIView {
             let label = (view as? BirthdayRowLabel) ?? BirthdayRowLabel()
+            rowLabels.add(label)
             let column = Column(rawValue: component) ?? .day
             let selectedRow = pickerView.selectedRow(inComponent: component)
             let isSelected = selectedRow == row
-            label.lift = BirthdayWheels.textLift * parent.scale
+            label.component = component
+            label.row = row
+            let lift = revealed.contains(component) || row == selectedRow ? BirthdayWheels.textLiftSelected
+                : row < selectedRow ? BirthdayWheels.textLiftAbove : BirthdayWheels.textLiftBelow
+            label.lift = lift * parent.scale
+            // At rest only the approved rows are drawn: the placeholder of an unset wheel, or
+            // a set wheel's previous, selected and next values.
+            let drawnAtRest = selectedRow == 0 ? row == 0 : abs(row - selectedRow) <= 1
+            let hidden = !drawnAtRest && !revealed.contains(component)
             label.textAlignment = .center
             label.adjustsFontSizeToFitWidth = true
             label.minimumScaleFactor = 0.6
@@ -184,26 +218,23 @@ struct BirthdayWheels: UIViewRepresentable {
             if row == 0 {
                 // Figma "Selected" placeholder: SemiBold 24, #A8B0AD.
                 label.font = UIFont(name: Manrope.semiBold.rawValue, size: 24) ?? .systemFont(ofSize: 24, weight: .semibold)
-                label.textColor = UIColor(red: 0xA8 / 255, green: 0xB0 / 255, blue: 0xAD / 255, alpha: 1)
+                label.textColor = hidden ? .clear : BirthdayWheels.placeholderColor
             } else if isSelected {
                 // Figma "Selected" value: SemiBold 30, white.
                 label.font = UIFont(name: Manrope.semiBold.rawValue, size: 30) ?? .systemFont(ofSize: 30, weight: .semibold)
                 label.textColor = .white
             } else {
-                // Figma "Previous" / "Next": Regular 26, #616B6E as seen. UIPickerView fades
-                // rows outside its centre to about 37 %, so a set wheel's neighbours are drawn
-                // in a colour that renders as #616B6E there (measured on the iOS 26.5
-                // simulator). An unset wheel keeps #616B6E, which renders as a faint hint.
+                // Figma "Previous" / "Next": Regular 26, #616B6E as seen.
                 label.font = UIFont(name: Manrope.regular.rawValue, size: 26) ?? .systemFont(ofSize: 26)
-                label.textColor = selectedRow == 0
-                    ? UIColor(red: 0x61 / 255, green: 0x6B / 255, blue: 0x6E / 255, alpha: 1)
-                    : UIColor(red: 0xD2 / 255, green: 0xE6 / 255, blue: 0xEA / 255, alpha: 1)
+                label.textColor = hidden ? .clear : BirthdayWheels.neighbourColor
             }
             return label
         }
 
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
             guard let column = Column(rawValue: component) else { return }
+            revealed.remove(component)
+            stopWatchingIfConcealed()
             pickerView.reloadComponent(component)
             pickerView.setNeedsLayout()
             let settled = value(forRow: row, in: column)
@@ -221,14 +252,104 @@ struct BirthdayWheels: UIViewRepresentable {
             switch recognizer.state {
             case .began:
                 parent.onMotion(true)
+                if let picker = recognizer.view as? UIPickerView {
+                    reveal(wheelAt: recognizer.location(in: picker).x, in: picker)
+                }
             case .ended, .cancelled, .failed:
                 // A wheel still coasting reports through didSelectRow when it stops.
                 if let picker = recognizer.view, !Self.isCoasting(picker) {
                     parent.onMotion(false)
                 }
+                // A wheel that settles back on its own row may not report didSelectRow. Once the
+                // lift-off has been handled (the next main-actor turn), a revealed wheel resting
+                // exactly on its selected row goes back to its approved rows.
+                if let picker = recognizer.view as? UIPickerView {
+                    watchUntilConcealed(picker)
+                    Task { [weak self, weak picker] in
+                        guard let self, let picker else { return }
+                        self.concealWheelsAtRest(in: picker)
+                    }
+                }
             default:
                 break
             }
+        }
+
+        /// Draws every row of the wheel under the finger, in place: a reload would pull the
+        /// wheel back under the finger. A drag that starts in a gap or margin reveals the
+        /// nearest wheel, never the others. Every row of a revealed wheel takes the selected
+        /// lift while it moves.
+        private func reveal(wheelAt x: CGFloat, in picker: UIPickerView) {
+            var nearest: (component: Int, distance: CGFloat)?
+            for component in 0..<picker.numberOfComponents {
+                guard let row = picker.view(forRow: picker.selectedRow(inComponent: component), forComponent: component) else {
+                    continue
+                }
+                let frame = row.convert(row.bounds, to: picker)
+                let distance = max(frame.minX - x, x - frame.maxX, 0)
+                if distance < (nearest?.distance ?? .infinity) {
+                    nearest = (component, distance)
+                }
+            }
+            guard let wheel = nearest?.component else { return }
+            revealed.insert(wheel)
+            let selectedRow = picker.selectedRow(inComponent: wheel)
+            for label in rowLabels.allObjects where label.component == wheel {
+                label.lift = BirthdayWheels.textLiftSelected * parent.scale
+                guard label.row != selectedRow else { continue }
+                label.textColor = label.row == 0 ? BirthdayWheels.placeholderColor : BirthdayWheels.neighbourColor
+            }
+        }
+
+        /// Returns each revealed wheel that rests exactly on its selected row, with nothing
+        /// tracking, dragging or coasting, to its approved rows. A wheel still on its way to a
+        /// row is left alone: it reports through didSelectRow.
+        private func concealWheelsAtRest(in picker: UIPickerView) {
+            defer { stopWatchingIfConcealed() }
+            guard !Self.isMoving(picker) else { return }
+            for component in revealed {
+                guard let row = picker.view(forRow: picker.selectedRow(inComponent: component), forComponent: component) else {
+                    continue
+                }
+                let centre = row.convert(CGPoint(x: row.bounds.midX, y: row.bounds.midY), to: picker).y
+                guard abs(centre - picker.bounds.midY) < 0.5 else { continue }
+                revealed.remove(component)
+                picker.reloadComponent(component)
+            }
+        }
+
+        /// Re-runs the at-rest check one main-actor turn after each scroll step of the wheels
+        /// (so UIKit has finished that step), until every revealed wheel has been concealed.
+        private func watchUntilConcealed(_ picker: UIPickerView) {
+            guard restWatch.isEmpty, !revealed.isEmpty else { return }
+            restWatch = Self.scrollViews(in: picker).map { scroll in
+                scroll.observe(\.contentOffset) { [weak self, weak picker] _, _ in
+                    Task { @MainActor [weak self, weak picker] in
+                        guard let self, let picker else { return }
+                        self.concealWheelsAtRest(in: picker)
+                    }
+                }
+            }
+        }
+
+        private func stopWatchingIfConcealed() {
+            guard revealed.isEmpty, !restWatch.isEmpty else { return }
+            restWatch.forEach { $0.invalidate() }
+            restWatch = []
+        }
+
+        private static func scrollViews(in view: UIView) -> [UIScrollView] {
+            if let scroll = view as? UIScrollView {
+                return [scroll]
+            }
+            return view.subviews.flatMap { scrollViews(in: $0) }
+        }
+
+        private static func isMoving(_ view: UIView) -> Bool {
+            if let scroll = view as? UIScrollView, scroll.isTracking || scroll.isDragging || scroll.isDecelerating {
+                return true
+            }
+            return view.subviews.contains { isMoving($0) }
         }
 
         private static func isCoasting(_ view: UIView) -> Bool {
@@ -298,7 +419,13 @@ final class BirthdayPickerView: UIPickerView {
 
 /// A wheel row's label, drawn `lift` points above the middle of its row.
 final class BirthdayRowLabel: UILabel {
-    var lift: CGFloat = 0
+    var lift: CGFloat = 0 {
+        didSet {
+            if lift != oldValue { setNeedsDisplay() }
+        }
+    }
+    var component = 0
+    var row = 0
 
     override func drawText(in rect: CGRect) {
         super.drawText(in: rect.offsetBy(dx: 0, dy: -lift))

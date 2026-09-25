@@ -151,6 +151,9 @@ workflows:
         script: bash scripts/birthday_review.sh enforce
     artifacts:
       - build/artifacts/Birthday-Review.zip
+      - build/artifacts/Birthday-Review.zip.sha256
+      - build/artifacts/Birthday-Screens.zip
+      - build/artifacts/Birthday-Walkthrough.zip
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*

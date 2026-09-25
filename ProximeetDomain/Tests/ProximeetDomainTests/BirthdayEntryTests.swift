@@ -96,6 +96,21 @@ final class BirthdayEntryTests: XCTestCase {
         XCTAssertFalse(entry.canContinue)
     }
 
+    func testOneComponentLeavesTheOtherTwoUnsetAndNothingCommitted() {
+        var entry = BirthdayEntry()
+        XCTAssertEqual(entry.draft, BirthdayComponents(day: nil, month: nil, year: nil), "a new entry has no date at all")
+        entry.setDay(12)
+        XCTAssertEqual(entry.draft, BirthdayComponents(day: 12, month: nil, year: nil), "choosing the day sets nothing else")
+        XCTAssertNil(entry.committed)
+        XCTAssertEqual(entry.status, .editing)
+        XCTAssertFalse(entry.canContinue)
+        entry.commit(today: today)
+        XCTAssertEqual(entry.draft, BirthdayComponents(day: 12, month: nil, year: nil), "checking fills nothing in")
+        XCTAssertNil(entry.committed)
+        XCTAssertEqual(entry.status, .incomplete)
+        XCTAssertFalse(entry.canContinue)
+    }
+
     func testPartialDatesAreIncompleteAfterCommit() {
         for partial in [entry(12, 5, nil), entry(12, nil, 1997), entry(nil, 5, 1997), entry(12, nil, nil)] {
             XCTAssertEqual(partial.status, .incomplete)

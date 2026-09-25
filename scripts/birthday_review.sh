@@ -871,6 +871,7 @@ are not visual approval: judging the look is the founder's decision. The simulat
 iPhone.</p>
 <h2>Interaction recording: route, wheel entry, Continue, correction, Back</h2><div class="row">%s</div>
 <h2>States beside the approved design</h2>%s
+<h2>One component chosen: the day alone, month and year still unset</h2><div class="row">%s</div>
 <h2>Continue, Back and the kept draft</h2><div class="row">%s%s%s%s</div>
 <h2>Typed entry (Enter date instead)</h2><div class="row">%s%s%s%s</div>
 <h2>Welcome with the new demo choice</h2><div class="row">%s%s</div>
@@ -886,6 +887,7 @@ grow. VoiceOver and system accessibility settings are manual checks.</p>
     ('<figure><video src="%s" controls muted playsinline preload="metadata"></video><figcaption>XCTest walkthrough, '
      'recorded on the simulator</figcaption></figure>' % video) if video else '<p class="missing">Recording not produced.</p>',
     state_rows,
+    shot("birthday-day-only", "This run (XCTest): day set to 12; month and year stay unset, Continue disabled"),
     shot("birthday-pass-notice", "Continue: “Pass is next. This prototype stops here for now.”"),
     shot("back-to-welcome", "Back: settled Welcome"),
     shot("birthday-returned-draft-kept", "Returned: the draft is kept"),
@@ -915,6 +917,43 @@ with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as bundle:
     for name, source in entries:
         bundle.write(source, "Birthday-Review/" + name)
 print("Birthday-Review.zip: %d files%s" % (len(entries) + 1, ("; missing: " + ", ".join(missing)) if missing else ""))
+
+# The archive's checksum (a zip cannot hold its own), and small separate downloads of the three
+# approved states and the walkthrough, so they can be reviewed without the large bundle.
+import hashlib
+artifacts = os.path.dirname(out_zip)
+digest = hashlib.sha256(open(out_zip, "rb").read()).hexdigest()
+open(out_zip + ".sha256", "w").write("%s  %s\n" % (digest, os.path.basename(out_zip)))
+print("Birthday-Review.zip sha256 %s" % digest)
+sources = dict(entries)
+head = next((l.split("=", 1)[1] for l in read(os.path.join(out, "source-checkpoint.txt")).splitlines()
+             if l.startswith("git_head=")), "unknown")
+try:
+    simulator = json.load(open(os.path.join(artifacts, "metadata", "simulator.json")))
+except (OSError, ValueError):
+    simulator = {}
+readme = ("%s\nProximeet Birthday, source %s. Real iOS Simulator captures from the XCTest walkthrough (real taps and "
+          "wheel adjustments, not fixtures) on %s, %s. The approved references and the full verdict "
+          "(results/verdict.txt) are in Birthday-Review.zip. Automated checks are not visual approval.\n"
+          % (headline, head, simulator.get("device_name", "an unrecorded simulator"),
+             simulator.get("runtime_name", "an unrecorded runtime")))
+screens = [("xctest/birthday-empty.png", "Birthday-1-empty-XCTest.png"),
+           ("xctest/birthday-adult.png", "Birthday-2-adult-12-May-1997-XCTest.png"),
+           ("xctest/birthday-under18.png", "Birthday-3-under-18-12-May-2012-XCTest.png")]
+with zipfile.ZipFile(os.path.join(artifacts, "Birthday-Screens.zip"), "w", zipfile.ZIP_STORED) as bundle:
+    bundle.writestr("README.txt", readme)
+    for name, target in screens:
+        if name in sources:
+            bundle.write(sources[name], target)
+        else:
+            bundle.writestr(target + ".MISSING.txt", "Not produced in this run.\n")
+if "captures/birthday-interaction.mp4" in sources:
+    with zipfile.ZipFile(os.path.join(artifacts, "Birthday-Walkthrough.zip"), "w", zipfile.ZIP_STORED) as bundle:
+        bundle.writestr("README.txt", readme.replace("captures from", "screen recording of"))
+        bundle.write(sources["captures/birthday-interaction.mp4"], "Birthday-walkthrough-XCTest.mp4")
+    print("Separate downloads: Birthday-Screens.zip, Birthday-Walkthrough.zip")
+else:
+    print("Separate downloads: Birthday-Screens.zip (Birthday-Walkthrough.zip not produced: no recording)")
 PY
     summary_line "birthday-package" "$(unzip -l "$ARTIFACTS/Birthday-Review.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in Birthday-Review.zip"
 }

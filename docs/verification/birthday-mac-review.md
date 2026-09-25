@@ -57,7 +57,18 @@ The XCTest review runs in this order:
    adult date on the wheels, checks Continue's notice, corrects to an under-18 date, goes Back
    to Welcome and returns to find the draft kept. It also checks the screen's pixels, so it
    fails unless the wheel values are actually drawn, not merely present in the accessibility
-   tree.
+   tree. It checks that:
+   - the empty state draws nothing but the placeholders;
+   - choosing only the day leaves month and year unset;
+   - the window's edges show no part-row;
+   - a real finger drag turns the Day wheel without setting or drawing month or year;
+   - a short drag on the unset Month wheel, released back onto it, leaves "MMM" alone again;
+   - ten rendered anchors (the Back arrow, the wordmark, the headline, the eligibility line,
+     the three day rows, "Enter date instead", the guidance and Continue) sit where the
+     approved board measures them.
+
+   These screen checks record failures without stopping the walkthrough, so every later state
+   is still captured. Any failure still fails the test.
 4. The recorder stops, and its movie is `birthday-interaction.mp4`.
 5. `testTypedEntryPreservesComponentsAndKeyboard` runs, followed by all of
    `WelcomeReviewTests`: Welcome's geometry, the Apple notice, the new More options choice,
@@ -101,6 +112,10 @@ On a Mac with Xcode 26.6, check out the commit and run the table's commands in o
 
 ## 4. Artifacts
 
+- `Birthday-Screens.zip` (the empty, adult and under-18 XCTest screenshots, a few MB) and
+  `Birthday-Walkthrough.zip` (the walkthrough recording, when one was produced) are separate
+  downloads, much smaller than the full review archive.
+  `Birthday-Review.zip.sha256` is the archive's checksum.
 - `Birthday-Review.zip`: open `Birthday-Review/index.html` after unzipping. It works offline
   with relative paths only. It holds:
   - the interaction movie;

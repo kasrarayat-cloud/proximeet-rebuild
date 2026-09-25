@@ -90,9 +90,11 @@ struct BirthdayView: View {
 
     // MARK: - Rows
 
-    /// Back (44 × 44 at 24, 64) and the wordmark (Bold 22/24 at x 84).
+    /// Back (44 × 44 at 24, 64) and the wordmark: Figma's text box at (84, 70), Bold 22 on a
+    /// 24-pt line at the top of the box, so its capitals start at 74.6 (74.7 on the approved
+    /// board). Centred in the 44-pt row instead, they started 4 pt lower, at 78.6.
     private var header: some View {
-        HStack(spacing: 16) {
+        HStack(alignment: .top, spacing: 16) {
             Button {
                 focus = nil
                 session.returnTo(.welcome)
@@ -106,8 +108,9 @@ struct BirthdayView: View {
             .accessibilityLabel("Back")
             .accessibilityIdentifier("birthday.back")
             BirthdayWordmark()
+                .padding(.top, 6)
         }
-        .frame(height: 44)
+        .frame(minHeight: 44, alignment: .topLeading)
         .padding(.leading, 24)
         .padding(.top, 2)
     }
@@ -283,16 +286,17 @@ private struct BirthdayBodyText: View {
     }
 }
 
-/// "Proximeet" Bold 22/24.
+/// "Proximeet" Bold 22 on Figma's 24-pt line (the line box, not the glyphs, is 24 pt tall,
+/// as in Figma, so the glyphs sit where Figma's half-leading puts them).
 private struct BirthdayWordmark: View {
     @ScaledMetric(relativeTo: .title2) private var size: CGFloat = 22
 
     var body: some View {
         Text("Proximeet")
-            .font(Manrope.bold.font(size: size))
-            .foregroundStyle(.white)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .manrope(.bold, size: size, designSize: 22, lineHeight: 24)
+            .foregroundStyle(.white)
     }
 }
 
