@@ -56,7 +56,9 @@ Check out the commit, then run the same steps in order:
     bash scripts/codemagic_verify.sh package || true
     bash scripts/welcome_review.sh captures || true
     bash scripts/welcome_review.sh ui-review || true
-    bash scripts/welcome_review.sh verdict
+    bash scripts/welcome_review.sh verdict || true
+    bash scripts/welcome_review.sh package-review || true
+    bash scripts/welcome_review.sh enforce
 
 The status bar override and the simulator text size are restored at the end. The unsigned
 simulator app is installed into the selected simulators.
@@ -79,7 +81,9 @@ environment groups.
 | 7 | `codemagic_verify.sh package` | continue | the zipped unsigned simulator `.app` | installability on a phone |
 | 8 | `welcome_review.sh captures` | continue | the launch recording (the recorder is confirmed active before a cold launch); the settled screenshot; the Reduce Motion preview; largest text; a smaller iPhone | taste, VoiceOver, performance |
 | 9 | `welcome_review.sh ui-review` | continue | **test-harness compilation** (`build-for-testing`), then **runtime assertions** from `-only-testing:ProximeetUITests/WelcomeReviewTests` with `TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1` [A1] | visual fidelity |
-| 10 | `welcome_review.sh verdict` | fails the build | automated verdict, with manual items listed as outstanding | the founder's approval |
+| 10 | `welcome_review.sh verdict` | continue | automated verdict, with manual items listed as outstanding | the founder's approval |
+| 11 | `welcome_review.sh package-review` | continue | `Welcome-Review.zip`: the real captures, the approved references, the verdict and an offline `index.html` viewer | anything the run did not produce (listed as missing) |
+| 12 | `welcome_review.sh enforce` | fails the build | the build is marked failed unless the verdict is PASS, after everything is packaged | — |
 
 - **Step order.** The smaller-iPhone capture runs after compilation and never fails the
   compile.
@@ -143,6 +147,9 @@ is not runtime evidence.
 
 ## 5. Artifacts (`build/artifacts/`)
 
+- **`Welcome-Review.zip`**: the deliverable. Open `Welcome-Review/index.html` after unzipping
+  to see the settled screenshot beside the approved reference, the launch recording beside the
+  approved motion study, the notices, the other captures and the verdict. It works offline.
 - `summary.txt`: one line per step with its real status.
 - `logs/*.log`: `build.log`, the compiler log for app compilation, plus a log for every other
   step.

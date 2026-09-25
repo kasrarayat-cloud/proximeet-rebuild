@@ -46,8 +46,8 @@ workflows:
   # push, pull request, tag and webhook events start nothing. No code signing, Apple
   # credentials, provisioning, archive/IPA, TestFlight, publishing, notifications or
   # environment groups. Compile-path steps stop the build on failure; evidence steps use
-  # ignore_failure so later evidence is still collected, and the final verdict step fails the
-  # build if a required automated result failed. Optional run input: WELCOME_EXPECTED_COMMIT
+  # ignore_failure so later evidence is still collected; Welcome-Review.zip is packaged, and the
+  # last step fails the build if a required automated result failed. Optional run input: WELCOME_EXPECTED_COMMIT
   # (full commit SHA) pins the exact revision. See docs/verification/welcome-mac-review.md.
   proximeet-welcome-review:
     name: Proximeet Welcome review (manual, unsigned simulator)
@@ -80,7 +80,14 @@ workflows:
         ignore_failure: true
       - name: Verdict - automated results apart from outstanding manual review
         script: bash scripts/welcome_review.sh verdict
+        ignore_failure: true
+      - name: Package Welcome-Review.zip (captures, approved references, verdict, offline viewer)
+        script: bash scripts/welcome_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/welcome_review.sh enforce
     artifacts:
+      - build/artifacts/Welcome-Review.zip
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*

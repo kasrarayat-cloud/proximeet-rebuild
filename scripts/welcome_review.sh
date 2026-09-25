@@ -19,8 +19,11 @@
 #   ui-review     compile the UI test harness, then run only WelcomeReviewTests with the review
 #                 flag set for the test runner; zero executed tests is a failure
 #   verdict       one summary that keeps app compilation, test-harness compilation, runtime
-#                 assertions, captures and outstanding manual checks apart; fails if a required
-#                 automated result failed or never ran
+#                 assertions, captures and outstanding manual checks apart; exits non-zero if a
+#                 required automated result failed or never ran
+#   package-review  build/artifacts/Welcome-Review.zip: the real captures, the approved
+#                 references, the verdict and an offline index.html viewer
+#   enforce       fail the build unless the verdict says PASS (run last, after packaging)
 #
 # Outputs go to build/artifacts/welcome/, logs to build/artifacts/logs/welcome-<stage>.log,
 # and PASS/FAIL lines to build/artifacts/summary.txt. Nothing is signed, uploaded or
@@ -69,9 +72,9 @@ PRIMARY_CAPTURE_FAILED=""
 
 STAGE="${1:-}"
 case "$STAGE" in
-    checkpoint|destinations|captures|ui-review|verdict) ;;
+    checkpoint|destinations|captures|ui-review|verdict|package-review|enforce) ;;
     *)
-        echo "usage: $0 checkpoint|destinations|captures|ui-review|verdict" >&2
+        echo "usage: $0 checkpoint|destinations|captures|ui-review|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -798,10 +801,163 @@ sys.exit(0 if ok else 1)
 PY
 }
 
+# ---------------------------------------------------------------------------------------
+# package-review and enforce
+# ---------------------------------------------------------------------------------------
+
+# One downloadable Welcome-Review.zip with whatever this run produced, the approved
+# references beside it, and an offline viewer. Missing items are listed, never invented.
+stage_package_review() {
+    run python3 - "$ROOT" "$WELCOME" "$ARTIFACTS/Welcome-Review.zip" <<'PY'
+import html
+import json
+import os
+import sys
+import zipfile
+
+root, welcome, out_zip = sys.argv[1:4]
+ref = os.path.join(root, "docs/design/welcome-approved/reference")
+entries, missing = [], []   # (path inside Welcome-Review/, source path)
+
+
+def add(name, source, required=True):
+    if os.path.isfile(source):
+        entries.append((name, source))
+        return name
+    if required:
+        missing.append(name)
+    return None
+
+
+def read(path):
+    return open(path, encoding="utf-8", errors="replace").read() if os.path.isfile(path) else ""
+
+
+shots = {key: add("captures/" + key, os.path.join(welcome, key), required=req) for key, req in (
+    ("01-welcome-settled.png", True), ("02-welcome-preview-flag-settled-layout.png", False),
+    ("03-welcome-largest-text-top.png", False), ("04-welcome-smaller-iphone.png", False))}
+videos = {key: add("captures/" + key, os.path.join(welcome, key), required=req) for key, req in (
+    ("welcome-motion.mp4", True), ("welcome-reduce-motion.mp4", False))}
+refs = {key: add("approved/" + key, os.path.join(ref, key)) for key in (
+    "welcome-settled.png", "welcome-key-poses.png", "welcome-motion-study.mp4")}
+for key in ("verdict.txt", "ui-review-tests.txt", "destination.txt", "source-checkpoint.txt", "captures.tsv"):
+    add("results/" + key, os.path.join(welcome, key), required=key == "verdict.txt")
+
+# XCTest attachments: the export's manifest format is not documented, so search it for any
+# object that names an exported file, and keep images and text by their readable names.
+attachments = []
+attach_dir = os.path.join(welcome, "attachments")
+
+
+def walk(node):
+    if isinstance(node, dict):
+        exported, readable = node.get("exportedFileName"), node.get("suggestedHumanReadableName")
+        if exported and readable:
+            yield str(exported), str(readable)
+        for value in node.values():
+            yield from walk(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from walk(value)
+
+
+try:
+    pairs = list(walk(json.load(open(os.path.join(attach_dir, "manifest.json")))))
+except (OSError, ValueError):
+    pairs = [(n, n) for n in sorted(os.listdir(attach_dir))] if os.path.isdir(attach_dir) else []
+for exported, readable in pairs:
+    source = os.path.join(attach_dir, exported)
+    extension = os.path.splitext(exported)[1].lower()
+    if extension in (".png", ".jpg", ".jpeg", ".txt", ".json") and os.path.isfile(source):
+        safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in readable)
+        if not safe.lower().endswith(extension):
+            safe += extension
+        name = add("xctest/" + safe, source)
+        attachments.append((readable, name, extension))
+
+verdict = read(os.path.join(welcome, "verdict.txt")) or "No verdict was produced in this run."
+headline = next((l for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), "AUTOMATED VERDICT: not produced")
+
+
+def img(name, caption):
+    return ('<figure><img src="%s" alt="%s"><figcaption>%s</figcaption></figure>' % (name, html.escape(caption), html.escape(caption))
+            if name else '<p class="missing">%s: not produced in this run.</p>' % html.escape(caption))
+
+
+def vid(name, caption):
+    return ('<figure><video src="%s" controls muted playsinline preload="metadata"></video><figcaption>%s</figcaption></figure>'
+            % (name, html.escape(caption)) if name else '<p class="missing">%s: not produced in this run.</p>' % html.escape(caption))
+
+
+notices = [(r, n) for r, n, e in attachments if e in (".png", ".jpg", ".jpeg") and r.startswith("notice")]
+other_images = [(r, n) for r, n, e in attachments if e in (".png", ".jpg", ".jpeg") and not r.startswith("notice")]
+texts = [(r, n) for r, n, e in attachments if e in (".txt", ".json")]
+page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Proximeet Welcome review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;background:#111;color:#eee}
+h1{font-size:22px}h2{font-size:17px;margin-top:32px;border-top:1px solid #333;padding-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:20px}figure{margin:0}figcaption{color:#aaa;font-size:13px;max-width:330px}
+img,video{width:330px;max-width:100%%;border:1px solid #333;border-radius:8px;background:#000}
+pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-size:12px}.missing{color:#f99}
+.note{color:#ccc;max-width:760px}</style></head><body>
+<h1>Proximeet Welcome: iOS Simulator review</h1>
+<p><b>%s</b></p>
+<p class="note">Real captures from this Codemagic simulator run, next to the approved design references. Automated
+checks are not visual approval: judging how Welcome looks and moves is the founder's decision. The simulator app is
+not installable on a physical iPhone.</p>
+<h2>Settled Welcome vs approved reference</h2><div class="row">%s%s</div>
+<h2>Launch recording (closed, opening, settled) vs approved motion study</h2><div class="row">%s%s</div>
+<h2>Button notices (XCTest screenshots)</h2><div class="row">%s</div>
+<h2>Other captures</h2><div class="row">%s%s%s%s</div>
+<p class="note">The Reduce Motion recording uses the app's preview flag, not the system setting. The largest-text
+capture uses an undocumented simulator command and is unverified until the text is seen to grow. VoiceOver, the
+system Reduce Motion setting and interruption are manual checks.</p>
+<h2>Other XCTest screenshots</h2><div class="row">%s</div>
+<h2>Result</h2><pre>%s</pre>
+<p>Details: %s</p>
+<p class="missing">%s</p>
+</body></html>""" % (
+    html.escape(headline),
+    img(shots["01-welcome-settled.png"], "This run: settled Welcome"),
+    img(refs["welcome-settled.png"], "Approved reference (Figma 1:35)"),
+    vid(videos["welcome-motion.mp4"], "This run: cold launch into the 2D pose study"),
+    vid(refs["welcome-motion-study.mp4"], "Approved motion study"),
+    "".join(img(n, r) for r, n in notices) or '<p class="missing">No notice screenshots were exported in this run.</p>',
+    vid(videos["welcome-reduce-motion.mp4"], "Reduce Motion preview flag (app override)"),
+    img(shots["02-welcome-preview-flag-settled-layout.png"], "Layout under the preview flag"),
+    img(shots["03-welcome-largest-text-top.png"], "Largest text size (unverified command)"),
+    img(shots["04-welcome-smaller-iphone.png"], "Smaller iPhone"),
+    "".join(img(n, r) for r, n in other_images) or "<p>None.</p>",
+    html.escape(verdict),
+    " | ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries
+               if n.startswith("results/") or n.startswith("xctest/") and n.endswith((".txt", ".json"))),
+    ("Not produced in this run: " + ", ".join(missing)) if missing else "")
+os.makedirs(os.path.dirname(out_zip), exist_ok=True)
+with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as bundle:
+    bundle.writestr("Welcome-Review/index.html", page)
+    for name, source in entries:
+        bundle.write(source, "Welcome-Review/" + name)
+print("Welcome-Review.zip: %d files%s" % (len(entries) + 1, ("; missing: " + ", ".join(missing)) if missing else ""))
+PY
+    summary_line "welcome-package" "$(unzip -l "$ARTIFACTS/Welcome-Review.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in Welcome-Review.zip"
+}
+
+stage_enforce() {
+    run cat "$WELCOME/verdict.txt" || true
+    if grep -q '^AUTOMATED VERDICT: PASS' "$WELCOME/verdict.txt" 2>/dev/null; then
+        note "Automated verdict PASS; manual review remains outstanding."
+    else
+        note "ERROR: the automated verdict is not PASS (or no verdict was produced)."
+        return 1
+    fi
+}
+
 case "$STAGE" in
     checkpoint) stage_checkpoint ;;
     destinations) stage_destinations ;;
     captures) stage_captures ;;
     ui-review) stage_ui_review ;;
     verdict) stage_verdict ;;
+    package-review) stage_package_review ;;
+    enforce) stage_enforce ;;
 esac
