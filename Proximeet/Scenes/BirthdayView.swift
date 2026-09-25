@@ -303,7 +303,11 @@ private struct BirthdayHeadline: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("First, your")
                 .manrope(.extraBold, size: size, designSize: 56, lineHeight: 59, tracking: -2.2)
+            // One word: at the largest text sizes it shrinks to fit rather than breaking
+            // mid-word and leaving the full stop on a line of its own.
             Text("birthday.")
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .manrope(.extraBold, size: size, designSize: 56, lineHeight: 59, tracking: -2.2)
         }
         .foregroundStyle(.white)

@@ -545,7 +545,9 @@ stage_ui_review() {
     summary_line "birthday-ui-build" "PASS (UI test harness compiled)"
 
     # 2. The recorded walkthrough: the recorder is confirmed active before the test starts.
+    #    The app is closed first, so the movie does not open on the last fixture screen.
     run xcrun simctl bootstatus "$SIM_UDID" -b || true
+    run xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" || true
     xcrun simctl io "$SIM_UDID" recordVideo --codec=h264 --force "$movie" > "$movie.log" 2>&1 &
     RECORDER_PID=$!
     while ! grep -q "Recording started" "$movie.log" 2>/dev/null && [ "$waited" -lt 20 ]; do

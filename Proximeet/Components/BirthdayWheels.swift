@@ -27,6 +27,9 @@ struct BirthdayWheels: UIViewRepresentable {
 
     /// Figma row pitch: previous, selected and next values 50 pt apart in a 150-pt window.
     static let rowHeight: CGFloat = 50
+    /// Figma sets each value about 4.5 pt above the middle of its row (measured against the
+    /// approved board), so the selected value sits just above the lane's centre.
+    static let textLift: CGFloat = 4.5
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -35,6 +38,8 @@ struct BirthdayWheels: UIViewRepresentable {
     func makeUIView(context: Context) -> BirthdayPickerView {
         let picker = BirthdayPickerView()
         picker.backgroundColor = .clear
+        // Only the 150-pt window shows rows: previous, selected and next, as in the design.
+        picker.clipsToBounds = true
         picker.dataSource = context.coordinator
         picker.delegate = context.coordinator
         picker.accessibilityIdentifier = "birthday.wheels"
@@ -167,9 +172,11 @@ struct BirthdayWheels: UIViewRepresentable {
             forComponent component: Int,
             reusing view: UIView?
         ) -> UIView {
-            let label = (view as? UILabel) ?? UILabel()
+            let label = (view as? BirthdayRowLabel) ?? BirthdayRowLabel()
             let column = Column(rawValue: component) ?? .day
-            let isSelected = pickerView.selectedRow(inComponent: component) == row
+            let selectedRow = pickerView.selectedRow(inComponent: component)
+            let isSelected = selectedRow == row
+            label.lift = BirthdayWheels.textLift * parent.scale
             label.textAlignment = .center
             label.adjustsFontSizeToFitWidth = true
             label.minimumScaleFactor = 0.6
@@ -184,9 +191,14 @@ struct BirthdayWheels: UIViewRepresentable {
                 label.font = UIFont(name: Manrope.semiBold.rawValue, size: 30) ?? .systemFont(ofSize: 30, weight: .semibold)
                 label.textColor = .white
             } else {
-                // Figma "Previous" / "Next": Regular 26, #616B6E.
+                // Figma "Previous" / "Next": Regular 26, #616B6E as seen. UIPickerView fades
+                // rows outside its centre to about 37 %, so a set wheel's neighbours are drawn
+                // in a colour that renders as #616B6E there (measured on the iOS 26.5
+                // simulator). An unset wheel keeps #616B6E, which renders as a faint hint.
                 label.font = UIFont(name: Manrope.regular.rawValue, size: 26) ?? .systemFont(ofSize: 26)
-                label.textColor = UIColor(red: 0x61 / 255, green: 0x6B / 255, blue: 0x6E / 255, alpha: 1)
+                label.textColor = selectedRow == 0
+                    ? UIColor(red: 0x61 / 255, green: 0x6B / 255, blue: 0x6E / 255, alpha: 1)
+                    : UIColor(red: 0xD2 / 255, green: 0xE6 / 255, blue: 0xEA / 255, alpha: 1)
             }
             return label
         }
@@ -247,15 +259,35 @@ struct BirthdayWheels: UIViewRepresentable {
 }
 
 /// `UIPickerView` without UIKit's own selection bar: the approved lane (#242A2B at 76%,
-/// 308 × 58, radius 8) is drawn behind the wheels instead, so there is exactly one.
+/// 308 × 58, radius 8) is drawn behind the wheels instead, so there is exactly one. On iOS 26
+/// the bar is a glass capsule above the rows, a little taller than a row, spanning every
+/// wheel; it is found by that shape (wide and short), never by a private class name.
 final class BirthdayPickerView: UIPickerView {
     override func layoutSubviews() {
         super.layoutSubviews()
-        guard numberOfComponents > 0 else { return }
-        let rowHeight = rowSize(forComponent: 0).height
-        // The bar is the direct subview one row tall; the wheel columns are the full height.
-        for view in subviews where view.bounds.height > 0 && abs(view.bounds.height - rowHeight) < 2 {
-            view.alpha = 0
+        hideSelectionBar(in: self)
+    }
+
+    /// Wheel columns are full height and a wheel's rows live in scroll views, which are never
+    /// touched; only a view spanning most of the width but at most 60 % of the height is.
+    private func hideSelectionBar(in container: UIView) {
+        for view in container.subviews where !(view is UIScrollView) {
+            let size = view.bounds.size
+            if size.width >= bounds.width * 0.6, size.height > 0, size.height <= bounds.height * 0.6 {
+                view.alpha = 0
+                view.isHidden = true
+            } else if size.height >= bounds.height * 0.9 {
+                hideSelectionBar(in: view)
+            }
         }
+    }
+}
+
+/// A wheel row's label, drawn `lift` points above the middle of its row.
+final class BirthdayRowLabel: UILabel {
+    var lift: CGFloat = 0
+
+    override func drawText(in rect: CGRect) {
+        super.drawText(in: rect.offsetBy(dx: 0, dy: -lift))
     }
 }

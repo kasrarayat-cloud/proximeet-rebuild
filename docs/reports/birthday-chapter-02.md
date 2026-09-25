@@ -111,7 +111,16 @@ art, as the handoff asks.
   wheel settles. A drag observer runs alongside the picker without taking part in its
   gestures.
 - The approved selected lane (#242A2B at 76%, 308 × 58, radius 8) is drawn behind the wheels.
-  UIKit's own selection bar is hidden, so there is exactly one lane.
+  UIKit's own selection bar is hidden, so there is exactly one lane. On iOS 26 that bar is a
+  glass capsule drawn above the rows. It is found by its shape (it spans the wheels and is
+  shorter than them), never by a private class name.
+- The wheels are clipped to their 150 pt window, so only the previous, selected and next
+  rows show. Values sit 4.5 pt above the middle of their row, as on the approved board.
+- UIPickerView fades the rows outside its centre to about 37%. A set wheel's neighbours are
+  therefore drawn in #D2E6EA, which renders as the approved #616B6E. An unset wheel keeps
+  #616B6E, so its next value is only a faint hint. The approved empty state shows no
+  neighbours at all; the faint hint is kept deliberately, because it shows that the control
+  turns.
 - Years run from 1900 to the current year.
 
 **Typed entry.** "Enter date instead" switches to three labelled number-pad fields (Day, Month,
@@ -136,6 +145,7 @@ VoiceOver hears a status change only when a checked result changes. It never hea
 tick or keystroke.
 
 **Larger text.** The headline, eligibility line, guidance and Continue scale with Dynamic Type.
+At the largest sizes, "birthday." shrinks to fit on its line rather than breaking mid-word.
 The console's labels and values are capped at xxxLarge, because a larger wheel row cannot fit
 the approved housing. That is a documented limit, not an oversight. The page scrolls at the
 largest sizes.
@@ -181,7 +191,33 @@ None of these compile SwiftUI or UIKit. Only the macOS run can.
 
 ## 7. macOS results
 
-Filled in from the Codemagic runs, with build IDs and the commit each one built.
+All runs: `proximeet-birthday-review` on mac_mini_m2, Xcode 26.6 (17F113), iPhone 17 Pro Max
+on iOS 26.5 (23F77). Each is pinned with `BIRTHDAY_EXPECTED_COMMIT`, and each build record's
+commit hash was checked against the push.
+
+**Attempt 1:** build `6ab6d0be9e08eb95444d2932`, commit `88f41f8b95ff02e8568e6b7565bfa70580203da7`,
+18 min 43 s.
+
+- **Automated verdict: PASS.** Every step passed. The source gate matched. The app, the test
+  harness and the domain tests compiled and passed on the Mac.
+- **UI tests:** 6 of 6 executed and passed, 0 skipped. These were both Birthday tests and all
+  four Welcome tests.
+- **Recording:** the walkthrough was recorded, 56 s.
+- **Inspected by eye against the approved board:** the route, the notices, Back, the kept
+  draft, typed entry and the guidance were all correct. The console had four fidelity
+  defects:
+  1. iOS 26's glass selection capsule was drawn over the approved lane, dimming the selected
+     value.
+  2. The wheels drew part-rows outside their window, under the labels.
+  3. The values sat about 4.5 pt below the design.
+  4. The neighbouring values rendered at about 37% of #616B6E.
+
+  At the largest text size, the full stop of "birthday." wrapped onto a line of its own.
+
+  These are fixed in code in the commit after `88f41f8`. Only that commit's own simulator
+  captures can show whether the fixes work, and a commit cannot record its own build's result.
+  Attempt 2's build ID, verdict and captures are reported with its artifacts
+  (`Birthday-Review.zip`), not in this file.
 
 ## 8. Decisions and assumptions
 
