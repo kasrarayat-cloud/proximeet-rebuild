@@ -20,6 +20,8 @@ final class WelcomeReviewTests: XCTestCase {
             ProcessInfo.processInfo.environment[Self.reviewFlag] == "1",
             "The Welcome review runs only with TEST_RUNNER_\(Self.reviewFlag)=1."
         )
+        // Evidence for welcome_review.sh that the flag reached this runner process.
+        print("WELCOME_REVIEW_FLAG_SEEN \(name)")
     }
 
     /// Settled layout at the default text size, measured against LAYOUT_SPEC.json on a
@@ -32,6 +34,11 @@ final class WelcomeReviewTests: XCTestCase {
         let geometry = welcome.geometry(scenario: "default")
         attach(geometry, name: "geometry-default")
         capture("welcome-default-settled", app)
+        // The accessibility hierarchy, for the manual VoiceOver-order review.
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = "accessibility-tree-default"
+        tree.lifetime = .keepAlways
+        add(tree)
         assertOrderedWithoutOverlap(welcome)
 
         let window = app.windows.firstMatch.frame

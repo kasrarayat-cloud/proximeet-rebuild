@@ -158,4 +158,4 @@ that the fixtures still reach. That work branches from the lead's Welcome commit
 ## Verification preparation
 
 The macOS/simulator review of this Welcome is prepared in `docs/verification/`: the recipe,
-the runtime checklist and a proposed manual Codemagic workflow. It has not been run.
+the runtime checklist, and the manual unsigned Codemagic workflow `proximeet-welcome-review` in the root `codemagic.yaml`. It has not been run.

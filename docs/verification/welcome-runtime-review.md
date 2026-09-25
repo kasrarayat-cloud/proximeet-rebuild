@@ -2,7 +2,7 @@
 
 What a real macOS build and iOS Simulator run must show before Welcome is called verified.
 The authority is `docs/design/welcome-approved/` (LAYOUT_SPEC.json, the settled reference and
-the motion study). The recipe that produces the evidence is `welcome-mac-review.md`.
+the motion study). The recipe that produces the evidence is `welcome-mac-review.md`; the run's own summary is `welcome/verdict.txt`, which keeps app compilation, test-harness compilation, runtime assertions and outstanding manual review apart.
 
 **Nothing here has been run yet.** Linux checks, a syntax parse, an independent source review
 and the 53 `ProximeetDomain` tests are **not** an iOS compile or runtime result. Those tests
@@ -18,12 +18,12 @@ design is approved; the founder's eyes remain the authority for how it looks.
 
 | # | Check | How | Kind |
 | --- | --- | --- | --- |
-| 1.1 | The checkout is exactly the checkpointed Welcome, not the base `7af76fa` | `welcome_review.sh checkpoint`: every file under the app, UI-test, project, package and scripts roots matches `welcome-review-files.sha256`; no extra file exists there; the deletions are absent. `source-checkpoint.txt` records HEAD, tree and manifest hash; compare them with the lead's plan, since a manifest cannot vouch for itself | A + M |
+| 1.1 | The checkout is exactly the reviewed revision, not the base `7af76fa` | `welcome_review.sh checkpoint`: the frozen Welcome files (`welcome-approved-files.sha256`) and every other tracked file (`welcome-review-files.sha256`) match; no extra file; the deletions are absent; optional `WELCOME_EXPECTED_COMMIT` equals HEAD. Without the pin, compare `git_head` with the reviewed SHA | A + M |
 | 1.2 | Xcode is the pinned 26.6 | `codemagic_verify.sh metadata` fails on any other Xcode | A |
 | 1.3 | The checked-in project is valid and unchanged by generation | `codemagic_verify.sh validate` (13 checks) | A |
 | 1.4 | The app compiles for the simulator, unsigned | `codemagic_verify.sh build`: `BUILD SUCCEEDED`, bundle `com.proximeet.demo` | A |
 | 1.5 | The build log has no new warnings from Welcome files | Search `logs/build.log` for `WelcomeView.swift`, `Manrope.swift`, `Adaptations.swift`, `ProximeetApp.swift` | M |
-| 1.6 | The UI test target compiles with `WelcomeReviewTests` | `welcome_review.sh ui-review` gets past the build phase | A |
+| 1.6 | The UI test harness compiles, separately from the app | `welcome_review.sh ui-review` step 1 (`build-for-testing`), recorded as `welcome-ui-build` | A |
 
 ## 2. Settled screen against the approved reference
 
@@ -117,7 +117,7 @@ Performance, frame rate and memory on a device are **not** measured by any of th
 
 - the logo artwork downloaded from Apple Design Resources ("never create a custom Apple logo"), which an SF Symbol is not;
 - a logo and title that are both black or white, on a black or white button (the approved button is #050606 on #F6F7F2);
-- a title in the system proportion, 43% of the button height (the approved label is 18 pt in a 60 pt button).
+- title and button height in the system's proportions (the HIG gives 43% of the button height as the system-font example, not a universal number for every typeface; the approved label is 18 pt in a 60 pt button).
 
 "Continue with Apple" and a custom font are allowed. That decision belongs to the founder, before real sign-in or an external TestFlight build. See `welcome-mac-review.md` §8.
 

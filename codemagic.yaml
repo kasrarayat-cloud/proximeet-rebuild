@@ -41,3 +41,56 @@ workflows:
       - build/artifacts/interaction/*.log
       - build/artifacts/interaction/*.zip
       - build/artifacts/interaction/attachments/**/*
+
+  # Welcome (chapter 01) runtime review. Manual start only: there is no triggering section, so
+  # push, pull request, tag and webhook events start nothing. No code signing, Apple
+  # credentials, provisioning, archive/IPA, TestFlight, publishing, notifications or
+  # environment groups. Compile-path steps stop the build on failure; evidence steps use
+  # ignore_failure so later evidence is still collected, and the final verdict step fails the
+  # build if a required automated result failed. Optional run input: WELCOME_EXPECTED_COMMIT
+  # (full commit SHA) pins the exact revision. See docs/verification/welcome-mac-review.md.
+  proximeet-welcome-review:
+    name: Proximeet Welcome review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Welcome revision, never its base commit
+        script: bash scripts/welcome_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: List installed destinations and report the iPhone 17 Pro Max target
+        script: bash scripts/welcome_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: Welcome captures - launch recording, settled screen, previews, smaller iPhone
+        script: bash scripts/welcome_review.sh captures
+        ignore_failure: true
+      - name: Welcome XCTest review - harness compilation, then WelcomeReviewTests only
+        script: bash scripts/welcome_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/welcome_review.sh verdict
+    artifacts:
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/welcome/*.png
+      - build/artifacts/welcome/*.mp4
+      - build/artifacts/welcome/*.sha256
+      - build/artifacts/welcome/*.log
+      - build/artifacts/welcome/*.txt
+      - build/artifacts/welcome/*.tsv
+      - build/artifacts/welcome/*.json
+      - build/artifacts/welcome/*.zip
+      - build/artifacts/welcome/attachments/**/*

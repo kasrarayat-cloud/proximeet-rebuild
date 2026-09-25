@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 # Proximeet — runtime review of the approved Welcome (chapter 01) in the iOS Simulator.
-# Manual and unsigned. See docs/verification/welcome-mac-review.md.
+# Manual and unsigned. Codemagic workflow: proximeet-welcome-review (codemagic.yaml).
+# See docs/verification/welcome-mac-review.md.
 #
 #   bash scripts/welcome_review.sh <stage>
 #
 # Stages:
-#   checkpoint  prove this checkout holds exactly the checkpointed Welcome: every file listed in
-#               docs/verification/welcome-review-files.sha256 matches, no other file exists
-#               under the app, test, project, package or scripts roots, and the Welcome
-#               deletions are absent; runs anywhere with git and python3
-#   captures    on a Mac, after `codemagic_verify.sh select-simulator` and `build`, and only
-#               if the checkpoint stage matched: settled screenshot, a launch recording of the
-#               pose study, the Reduce Motion preview recording, the largest text size, and a
-#               smaller installed iPhone if one exists
-#   ui-review   on a Mac, only if the checkpoint stage matched: WelcomeReviewTests (geometry,
-#               both notices, Reduce Motion preview, largest text) with the review flag set,
-#               plus exported attachments; fails unless the review tests actually ran
+#   checkpoint    source gate. The whole checkout must be exactly the reviewed revision:
+#                 the frozen Welcome app, project, package and approved references
+#                 (docs/verification/welcome-approved-files.sha256) plus every other tracked
+#                 file (docs/verification/welcome-review-files.sha256, which excludes only
+#                 itself); no other file; the Welcome deletions absent. Optional run input
+#                 WELCOME_EXPECTED_COMMIT (full 40-hex SHA) pins HEAD as well. Runs anywhere.
+#   destinations  list installed simulator destinations; report whether the primary target,
+#                 iPhone 17 Pro Max, was available and selected
+#   captures      launch recording (the recorder is confirmed active before a cold launch),
+#                 settled screenshot, Reduce Motion preview, largest text, a smaller iPhone
+#   ui-review     compile the UI test harness, then run only WelcomeReviewTests with the review
+#                 flag set for the test runner; zero executed tests is a failure
+#   verdict       one summary that keeps app compilation, test-harness compilation, runtime
+#                 assertions, captures and outstanding manual checks apart; fails if a required
+#                 automated result failed or never ran
 #
 # Outputs go to build/artifacts/welcome/, logs to build/artifacts/logs/welcome-<stage>.log,
 # and PASS/FAIL lines to build/artifacts/summary.txt. Nothing is signed, uploaded or
@@ -35,18 +40,21 @@ SIM_ENV="$META/simulator.env"
 DERIVED_DATA="$ROOT/build/DerivedData"
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Proximeet.app"
 BUNDLE_ID="com.proximeet.demo"
-MANIFEST="docs/verification/welcome-review-files.sha256"
+FROZEN_MANIFEST="docs/verification/welcome-approved-files.sha256"
+REVIEW_MANIFEST="docs/verification/welcome-review-files.sha256"
 DELETIONS="docs/verification/welcome-review-deletions.txt"
 CHECKPOINT_RESULT="$WELCOME/source-checkpoint.txt"
+PRIMARY_TARGET="iPhone 17 Pro Max"
 LARGE_CONTENT_SIZE="accessibility-extra-extra-extra-large"
 # Smaller iPhones to try, in order, on the same runtime as the main simulator. Only
 # already-installed simulators are used. Codemagic's Xcode 26.6 image lists iPhone 17,
 # 17 Pro, 17 Pro Max, 17e and Air (docs.codemagic.io/specs-macos/xcode-26-6, 2026-09-25), so
 # there it is iPhone 17e; a local Mac may also have an iPhone SE.
 SMALLER_IPHONES="iPhone SE (3rd generation)|iPhone 17e|iPhone 16e|iPhone 17|iPhone 16|iPhone 17 Pro|iPhone 16 Pro"
-# WelcomeReviewTests has four tests. Notices and the Reduce Motion preview must pass on any
-# iPhone; geometry is asserted only on the 440 x 956 reference and large text only when the
-# launch argument takes effect, so those two may skip, and the summary says so.
+TEST_SELECTION="ProximeetUITests/WelcomeReviewTests"
+# Notices and the Reduce Motion preview must pass on any iPhone. Geometry is asserted only on
+# the 440 x 956 reference and large text only when its launch argument takes effect; those may
+# skip, and the summary shows every skip. A skip is never a pass.
 REQUIRED_PASSING_TESTS="testHonestNotices testReduceMotionPreviewLaunch"
 WARMUP_SECONDS=15
 RECORD_SECONDS=6
@@ -57,12 +65,13 @@ STATUS_BAR_OVERRIDDEN=""
 RECORDER_PID=""
 SMALL_BOOTED_UDID=""
 LAUNCH_PID=""
+PRIMARY_CAPTURE_FAILED=""
 
 STAGE="${1:-}"
 case "$STAGE" in
-    checkpoint|captures|ui-review) ;;
+    checkpoint|destinations|captures|ui-review|verdict) ;;
     *)
-        echo "usage: $0 checkpoint|captures|ui-review" >&2
+        echo "usage: $0 checkpoint|destinations|captures|ui-review|verdict" >&2
         exit 2
         ;;
 esac
@@ -88,9 +97,20 @@ run() {
     return "$command_status"
 }
 
+# simctl finalises the movie on SIGINT (Xcode 12.3 notes). Bounded: if the recorder has not
+# exited within 15 s it is terminated, so a stuck recorder cannot hang the build.
 stop_recorder() {
+    local waited=0
     if [ -n "$RECORDER_PID" ]; then
         kill -INT "$RECORDER_PID" 2>/dev/null || true
+        while kill -0 "$RECORDER_PID" 2>/dev/null && [ "$waited" -lt 30 ]; do
+            sleep 0.5
+            waited=$((waited + 1))
+        done
+        if kill -0 "$RECORDER_PID" 2>/dev/null; then
+            note "WARNING: the recorder ignored SIGINT for 15 s; terminating it (the movie may be incomplete)."
+            kill -TERM "$RECORDER_PID" 2>/dev/null || true
+        fi
         wait "$RECORDER_PID" 2>/dev/null || true
         RECORDER_PID=""
     fi
@@ -120,6 +140,9 @@ finish() {
     exit "$status"
 }
 trap finish EXIT
+# A stage stopped by a signal (e.g. the build's time limit) must be recorded as failed.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 load_simulator() {
     if [ ! -f "$SIM_ENV" ]; then
@@ -138,7 +161,7 @@ check_app() {
     fi
 }
 
-# Captures and the XCTest review describe the checkpointed Welcome only.
+# Captures and the XCTest review describe the reviewed revision only.
 require_checkpoint_match() {
     if ! grep -qx 'result=MATCH' "$CHECKPOINT_RESULT" 2>/dev/null; then
         note "ERROR: $CHECKPOINT_RESULT does not say result=MATCH; run 'bash scripts/welcome_review.sh checkpoint' on this checkout first. Nothing is captured for an unverified source."
@@ -152,17 +175,17 @@ require_checkpoint_match() {
 
 stage_checkpoint() {
     rm -f "$CHECKPOINT_RESULT"
-    run python3 - "$MANIFEST" "$DELETIONS" "$CHECKPOINT_RESULT" <<'PY'
+    run python3 - "$FROZEN_MANIFEST" "$REVIEW_MANIFEST" "$DELETIONS" "$CHECKPOINT_RESULT" <<'PY'
 import hashlib
 import os
+import re
 import subprocess
 import sys
 
-manifest, deletions, out_path = sys.argv[1:4]
-# Everything that can change what is built or how it is checked must be exactly the
-# checkpointed file set; docs outside the manifest and codemagic.yaml are recorded, not gated
-# (the lead may add the proposed manual workflow to codemagic.yaml).
-STRICT_ROOTS = ("Proximeet/", "ProximeetUITests/", "Proximeet.xcodeproj/", "ProximeetDomain/", "scripts/")
+frozen_path, review_path, deletions, out_path = sys.argv[1:5]
+# The approved application, project, package and design references: frozen since the
+# Welcome commit. Every file under these roots must be listed in the frozen manifest.
+FROZEN_ROOTS = ("Proximeet/", "Proximeet.xcodeproj/", "ProximeetDomain/", "docs/design/welcome-approved/")
 
 
 def git(*args):
@@ -175,49 +198,75 @@ def sha256(path):
         return hashlib.sha256(data.read()).hexdigest()
 
 
-expected, problems = {}, []
-with open(manifest) as handle:
-    for line in handle:
-        line = line.rstrip("\n")
-        if not line or line.startswith("#"):
-            continue
-        digest, path = line.split("  ", 1)
-        expected[path] = digest
-for path, digest in sorted(expected.items()):
-    if not os.path.isfile(path):
-        problems.append("missing   " + path)
-    elif sha256(path) != digest:
-        problems.append("differs   " + path)
+def load(path):
+    entries = {}
+    with open(path) as handle:
+        for line in handle:
+            line = line.rstrip("\n")
+            if line and not line.startswith("#"):
+                digest, name = line.split("  ", 1)
+                entries[name] = digest
+    return entries
+
+
+problems = []
+frozen, review = load(frozen_path), load(review_path)
+for name in sorted(set(frozen) & set(review)):
+    problems.append("listed twice   " + name)
+for name in sorted(frozen):
+    if not name.startswith(FROZEN_ROOTS):
+        problems.append("frozen entry outside the frozen roots   " + name)
+for name in sorted(review):
+    if name.startswith(FROZEN_ROOTS):
+        problems.append("frozen-root file in the review manifest   " + name)
+expected = dict(review, **frozen)
+for name, digest in sorted(expected.items()):
+    if not os.path.isfile(name):
+        problems.append("missing        " + name)
+    elif sha256(name) != digest:
+        problems.append(("changed (frozen Welcome file)  " if name in frozen else "differs        ") + name)
 
 listed = git("ls-files", "--cached", "--others", "--exclude-standard")
 if listed is None:
-    problems.append("git unavailable: cannot list the checkout, so extra files cannot be ruled out")
+    problems.append("git unavailable: the checkout cannot be listed, so extra files cannot be ruled out")
     present = []
 else:
     present = [p for p in listed.splitlines() if p and os.path.lexists(p)]
-extra = sorted(p for p in present if p.startswith(STRICT_ROOTS) and p not in expected)
-problems += ["unexpected " + p for p in extra]
+for name in sorted(present):
+    if name != review_path and name not in expected:
+        problems.append("unexpected     " + name)
 
 absent = 0
 with open(deletions) as handle:
-    for path in (line.strip() for line in handle):
-        if path and not path.startswith("#"):
-            if os.path.lexists(path):
-                problems.append("present   " + path + " (the Welcome change deletes it)")
+    for name in (line.strip() for line in handle):
+        if name and not name.startswith("#"):
+            if os.path.lexists(name):
+                problems.append("present        " + name + " (the Welcome change deletes it)")
             else:
                 absent += 1
 
+head = git("rev-parse", "HEAD") or "unavailable"
+pin = os.environ.get("WELCOME_EXPECTED_COMMIT", "").strip()
+if pin:
+    if not re.fullmatch(r"[0-9a-f]{40}", pin):
+        problems.append("WELCOME_EXPECTED_COMMIT is not a full 40-hex SHA")
+    elif head != pin:
+        problems.append("HEAD is %s, but WELCOME_EXPECTED_COMMIT is %s" % (head, pin))
+
 status = git("status", "--porcelain") or ""
 lines = [
-    "git_head=" + (git("rev-parse", "HEAD") or "unavailable"),
+    "git_head=" + head,
     "git_tree=" + (git("rev-parse", "HEAD^{tree}") or "unavailable"),
     "git_branch=" + (git("rev-parse", "--abbrev-ref", "HEAD") or "unavailable"),
+    "codemagic_commit=" + os.environ.get("CM_COMMIT", "unset"),
+    "commit_pin=" + (("WELCOME_EXPECTED_COMMIT=" + pin) if pin else "none (compare git_head with the reviewed SHA)"),
     "git_status_porcelain_lines=%d" % len([l for l in status.splitlines() if l]),
-    "manifest=" + manifest,
-    "manifest_sha256=" + sha256(manifest),
+    "frozen_manifest_sha256=" + sha256(frozen_path),
+    "review_manifest_sha256=" + sha256(review_path),
     "codemagic_yaml_sha256=" + (sha256("codemagic.yaml") if os.path.isfile("codemagic.yaml") else "absent"),
-    "strict_roots=" + " ".join(STRICT_ROOTS),
-    "files_checked=%d" % len(expected),
+    "frozen_files_checked=%d" % len(frozen),
+    "other_files_checked=%d" % len(review),
+    "files_present=%d" % len(present),
     "deletions_confirmed=%d" % absent,
     "result=" + ("MATCH" if not problems else "MISMATCH"),
 ]
@@ -226,10 +275,53 @@ with open(out_path, "w") as out:
     out.write("\n".join(lines) + "\n")
 print("\n".join(lines))
 if problems:
-    print("This checkout is not the checkpointed Welcome. Do not review it as such.")
+    print("This checkout is not the reviewed Welcome revision. Do not review it as such.")
     sys.exit(1)
 PY
-    summary_line "welcome-source" "$(grep '^result=' "$CHECKPOINT_RESULT") $(grep '^files_checked=' "$CHECKPOINT_RESULT") $(grep '^git_tree=' "$CHECKPOINT_RESULT")"
+    summary_line "welcome-source" "$(grep '^result=' "$CHECKPOINT_RESULT") $(grep '^git_head=' "$CHECKPOINT_RESULT") $(grep '^commit_pin=' "$CHECKPOINT_RESULT" | cut -c1-60)"
+}
+
+# ---------------------------------------------------------------------------------------
+# destinations
+# ---------------------------------------------------------------------------------------
+
+stage_destinations() {
+    load_simulator
+    run xcrun simctl list devices available
+    xcrun simctl list -j devices available > "$META/welcome-devices-available.json"
+    xcrun simctl list -j runtimes available > "$META/welcome-runtimes-available.json"
+    run xcodebuild -showdestinations -project Proximeet.xcodeproj -scheme Proximeet \
+        || note "NOTE: xcodebuild -showdestinations failed; the simctl list above still stands."
+    run python3 - "$META/welcome-devices-available.json" "$META/welcome-runtimes-available.json" \
+        "$SIM_UDID" "$PRIMARY_TARGET" "$WELCOME/destination.txt" <<'PY'
+import json
+import sys
+
+devices_path, runtimes_path, selected_udid, primary, out_path = sys.argv[1:6]
+devices = json.load(open(devices_path)).get("devices", {})
+runtimes = {r.get("identifier"): r for r in json.load(open(runtimes_path)).get("runtimes", [])}
+iphones, selected, primary_available = [], None, []
+for runtime_id, entries in sorted(devices.items()):
+    runtime = runtimes.get(runtime_id, {})
+    label = "%s (%s)" % (runtime.get("name", runtime_id), runtime.get("buildversion", "?"))
+    for device in entries:
+        if device.get("isAvailable") is not True or not device.get("name", "").startswith("iPhone"):
+            continue
+        iphones.append("%s | %s | %s" % (device["name"], label, device["udid"]))
+        if device["udid"] == selected_udid:
+            selected = (device["name"], label)
+        if device["name"] == primary:
+            primary_available.append(label)
+lines = ["primary_target=" + primary,
+         "primary_target_installed=" + ("yes on " + ", ".join(primary_available) if primary_available else "NO"),
+         "selected=" + ("%s on %s" % selected if selected else "unknown UDID " + selected_udid),
+         "primary_target_selected=" + ("yes" if selected and selected[0] == primary else "NO"),
+         "installed_iphones=%d" % len(iphones)]
+lines += ["iphone=" + entry for entry in iphones]
+open(out_path, "w").write("\n".join(lines) + "\n")
+print("\n".join(lines))
+sys.exit(0 if selected and selected[0] == primary else 1)
+PY
 }
 
 # ---------------------------------------------------------------------------------------
@@ -265,12 +357,12 @@ require_alive() {
     fi
 }
 
-# screenshot <udid> <file name> <note>
+# screenshot <udid> <file name> <note>. Explicit returns throughout: the capture functions run
+# where errexit is off (each capture is guarded so one failure does not stop the others).
 screenshot() {
     local udid="$1" name="$2" label="$3" png width height digest
     png="$WELCOME/$name"
     rm -f "$png"
-    # Explicit returns: this also runs where errexit is off (the optional smaller iPhone).
     require_alive || return 1
     run xcrun simctl io "$udid" screenshot --type=png "$png" || return 1
     require_alive || return 1
@@ -285,9 +377,9 @@ screenshot() {
         "$label" >> "$WELCOME/captures.tsv"
 }
 
-# record_launch <file name> <seconds> <launch arguments...>: the previous app instance is
-# terminated first, so the recording opens on the home screen, then shows the launch and the
-# whole pose study from the first app frame.
+# record_launch <file name> <seconds> <launch arguments...>: terminate any running instance,
+# start the recorder, wait until simctl confirms it is recording, then cold-launch the app, so
+# the recording holds the home screen, the launch and the whole pose study.
 record_launch() {
     local name="$1" seconds="$2" movie waited=0
     shift 2
@@ -300,7 +392,7 @@ record_launch() {
     # simctl reports "Recording started" once the first frame is queued (Xcode 12.3 notes).
     while ! grep -q "Recording started" "$movie.log" 2>/dev/null && [ "$waited" -lt 20 ]; do
         if ! kill -0 "$RECORDER_PID" 2>/dev/null; then
-            note "ERROR: the simulator recorder exited early; see $movie.log."
+            note "ERROR: the simulator recorder exited before recording; see $movie.log."
             RECORDER_PID=""
             return 1
         fi
@@ -308,7 +400,10 @@ record_launch() {
         waited=$((waited + 1))
     done
     if ! grep -q "Recording started" "$movie.log" 2>/dev/null; then
-        note "NOTE: no 'Recording started' line after 10 s; continuing (see $movie.log)."
+        note "ERROR: simctl never confirmed 'Recording started' within 10 s; not launching into an unconfirmed recording."
+        stop_recorder
+        rm -f "$movie"
+        return 1
     fi
     sleep 1
     launch "$SIM_UDID" ${1+"$@"} || return 1
@@ -321,7 +416,8 @@ record_launch() {
     fi
     shasum -a 256 "$movie" > "$movie.sha256"
     printf '%s\t%s\t%s\t\t\t%s\t%s\n' "$name" "$SIM_UDID" "$(utc_now)" \
-        "$(awk '{ print $1 }' "$movie.sha256")" "recording: $* (${seconds}s after launch)" >> "$WELCOME/captures.tsv"
+        "$(awk '{ print $1 }' "$movie.sha256")" "recording confirmed active before cold launch: $* (${seconds}s after launch)" \
+        >> "$WELCOME/captures.tsv"
 }
 
 read_content_size() {
@@ -365,10 +461,43 @@ for name in preferences.split("|"):
 PY
 }
 
-# capture_smaller <udid> <name>: optional; every failure returns non-zero to the caller, which
-# records it without failing the stage. A simulator booted here is shut down again.
+capture_motion() {
+    record_launch welcome-motion.mp4 "$RECORD_SECONDS" -ProximeetFixture welcome || return 1
+    screenshot "$SIM_UDID" 01-welcome-settled.png "settled, ${RECORD_SECONDS}s after launch"
+}
+
+# App-level Reduce Motion preview only; the system setting is a manual check. The movie is the
+# evidence; the screenshot, taken seconds later, only shows the settled layout.
+capture_reduce_motion_preview() {
+    record_launch welcome-reduce-motion.mp4 4 -ProximeetFixture welcome -ProximeetReduceMotionPreview YES || return 1
+    screenshot "$SIM_UDID" 02-welcome-preview-flag-settled-layout.png \
+        "-ProximeetReduceMotionPreview YES, 4 s after launch; layout only, not Reduce Motion evidence"
+}
+
+# Uses the undocumented `simctl ui content_size`; the result is unverified until a person
+# checks that the screenshot's text actually grew.
+capture_large_text() {
+    local original
+    original="$(read_content_size)" || { note "simctl could not report the current text size; not changed."; return 2; }
+    RESTORE_CONTENT_SIZE="$original"
+    run xcrun simctl ui "$SIM_UDID" content_size "$LARGE_CONTENT_SIZE" || return 1
+    launch "$SIM_UDID" -ProximeetFixture welcome || return 1
+    sleep "$SETTLE_SECONDS"
+    screenshot "$SIM_UDID" 03-welcome-largest-text-top.png \
+        "simctl content_size $LARGE_CONTENT_SIZE (undocumented command; unverified until the text is seen to grow)" || return 1
+    restore_content_size
+}
+
 capture_smaller() {
-    local udid="$1" name="$2"
+    local smaller udid name
+    smaller="$(smaller_iphone)"
+    if [ -z "$smaller" ]; then
+        note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
+        return 2
+    fi
+    udid="$(printf '%s' "$smaller" | cut -f1)"
+    name="$(printf '%s' "$smaller" | cut -f2)"
+    note "Smaller iPhone: $name ($udid)."
     if ! xcrun simctl list devices booted | grep -q "$udid"; then
         run xcrun simctl boot "$udid" || return 1
         SMALL_BOOTED_UDID="$udid"
@@ -386,12 +515,32 @@ capture_smaller() {
     fi
 }
 
+# guarded <summary label> <function>: run one capture; record PASS, FAIL or SKIPPED (exit 2).
+guarded() {
+    local label="$1" status
+    shift
+    if "$@"; then
+        status=0
+    else
+        status=$?
+    fi
+    case "$status" in
+        0) summary_line "$label" "PASS" ;;
+        2) summary_line "$label" "SKIPPED" ;;
+        *) summary_line "$label" "FAIL, see $LOG"
+           [ "$label" != welcome-cap-motion ] || PRIMARY_CAPTURE_FAILED="yes" ;;
+    esac
+    return 0
+}
+
 stage_captures() {
     require_checkpoint_match
     load_simulator
     check_app
     run xcrun simctl bootstatus "$SIM_UDID" -b
     run xcrun simctl install "$SIM_UDID" "$APP_PATH"
+    # Never let a file from an earlier run stand in for this run's evidence.
+    rm -f "$WELCOME"/0*-welcome-*.png "$WELCOME"/welcome-motion.mp4* "$WELCOME"/welcome-reduce-motion.mp4*
     printf 'file\tsimulator\tcaptured_utc\tpixel_width\tpixel_height\tsha256\tnote\n' > "$WELCOME/captures.tsv"
     # Same status bar in every capture, so screenshots are comparable. Optional. Flags as
     # documented in Apple's Xcode 11 notes and WWDC20 session 10647.
@@ -405,48 +554,13 @@ stage_captures() {
     launch "$SIM_UDID" -ProximeetFixture welcome
     sleep "$WARMUP_SECONDS"
 
-    # 1. The pose study from launch, then the settled screen of that same process.
-    record_launch welcome-motion.mp4 "$RECORD_SECONDS" -ProximeetFixture welcome
-    screenshot "$SIM_UDID" 01-welcome-settled.png "settled, ${RECORD_SECONDS}s after launch"
-
-    # 2. App-level Reduce Motion preview (the system setting is a manual check). The movie is
-    #    the evidence; the screenshot, taken seconds later, only shows the settled layout.
-    record_launch welcome-reduce-motion.mp4 4 -ProximeetFixture welcome -ProximeetReduceMotionPreview YES
-    screenshot "$SIM_UDID" 02-welcome-preview-flag-settled-layout.png \
-        "-ProximeetReduceMotionPreview YES, 4 s after launch; layout only, not Reduce Motion evidence"
-
-    # 3. Largest accessibility text size, restored afterwards.
-    local original
-    if original="$(read_content_size)"; then
-        RESTORE_CONTENT_SIZE="$original"
-        run xcrun simctl ui "$SIM_UDID" content_size "$LARGE_CONTENT_SIZE"
-        launch "$SIM_UDID" -ProximeetFixture welcome
-        sleep "$SETTLE_SECONDS"
-        screenshot "$SIM_UDID" 03-welcome-largest-text-top.png "simctl content_size $LARGE_CONTENT_SIZE; top of page"
-        restore_content_size
-    else
-        note "SKIPPED large text: simctl could not report the current text size, so it was not changed."
-        summary_line "welcome-largetext" "SKIPPED (content_size unreadable)"
-    fi
-
-    # 4. A smaller installed iPhone, if any (no device is created, nothing is downloaded).
-    local smaller small_udid small_name
-    smaller="$(smaller_iphone)"
-    if [ -z "$smaller" ]; then
-        note "SKIPPED smaller iPhone: none of '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
-        summary_line "welcome-smaller" "SKIPPED (no smaller iPhone installed)"
-    else
-        small_udid="$(printf '%s' "$smaller" | cut -f1)"
-        small_name="$(printf '%s' "$smaller" | cut -f2)"
-        note "Smaller iPhone: $small_name ($small_udid)."
-        if capture_smaller "$small_udid" "$small_name"; then
-            summary_line "welcome-smaller" "captured on $small_name"
-        else
-            note "WARNING: the optional smaller-iPhone capture failed; see this log."
-            summary_line "welcome-smaller" "FAILED on $small_name (optional; other captures stand)"
-        fi
-    fi
+    guarded welcome-cap-motion capture_motion
+    guarded welcome-cap-reduce capture_reduce_motion_preview
+    guarded welcome-cap-largetext capture_large_text
+    guarded welcome-cap-smaller capture_smaller
     run cat "$WELCOME/captures.tsv"
+    # The primary evidence is the launch recording and the settled screenshot of this run.
+    [ -z "$PRIMARY_CAPTURE_FAILED" ]
 }
 
 # ---------------------------------------------------------------------------------------
@@ -456,23 +570,41 @@ stage_captures() {
 stage_ui_review() {
     require_checkpoint_match
     load_simulator
-    local result="$WELCOME/WelcomeReview.xcresult" status counts
+    local result="$WELCOME/WelcomeReview.xcresult" build_status run_status verdict
     rm -rf "$result"
     export NSUnbufferedIO=YES
-    # The prefix makes xcodebuild pass PROXIMEET_WELCOME_REVIEW=1 to the test runner only.
-    # Collect evidence even when an assertion fails; the verdict is decided below.
+    # 1. Test-harness compilation (the app and ProximeetUITests), recorded on its own.
+    if run xcodebuild \
+        -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
+        -destination "platform=iOS Simulator,id=$SIM_UDID" \
+        -derivedDataPath "$DERIVED_DATA" \
+        -only-testing:"$TEST_SELECTION" \
+        CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+        build-for-testing; then
+        build_status=0
+    else
+        build_status=$?
+    fi
+    if [ "$build_status" -ne 0 ]; then
+        summary_line "welcome-ui-build" "FAIL (xcodebuild build-for-testing exit $build_status)"
+        return 1
+    fi
+    summary_line "welcome-ui-build" "PASS (UI test harness compiled)"
+
+    # 2. Only WelcomeReviewTests, with the review flag for the test runner. xcodebuild passes
+    #    TEST_RUNNER_-prefixed variables to the runner without the prefix (Xcode 13 notes).
     if run env TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1 xcodebuild \
         -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
         -destination "platform=iOS Simulator,id=$SIM_UDID" \
         -derivedDataPath "$DERIVED_DATA" \
-        -only-testing:ProximeetUITests/WelcomeReviewTests \
+        -only-testing:"$TEST_SELECTION" \
         -parallel-testing-enabled NO \
         -resultBundlePath "$result" \
         CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-        test; then
-        status=0
+        test-without-building; then
+        run_status=0
     else
-        status=$?
+        run_status=$?
     fi
     if [ -d "$result" ]; then
         ditto -c -k --sequesterRsrc --keepParent "$result" "$WELCOME/WelcomeReview.xcresult.zip" || true
@@ -522,43 +654,154 @@ for line in open(log, encoding="utf-8", errors="replace"):
             found.add(key)
 print("geometry files: " + (", ".join(sorted(found)) or "none"))
 PY
-    # Verdict from xcodebuild's own per-test lines: a skip is never a pass. (Output goes to a
-    # file, not a command substitution: bash 3.2 misparses heredocs inside $( ).)
-    python3 - "$LOG" "$REQUIRED_PASSING_TESTS" "$WELCOME/ui-review-tests.txt" > "$WELCOME/ui-review-counts.txt" <<'PY'
+    # 3. What actually ran, from xcodebuild's per-test lines. (Written to a file, not a command
+    #    substitution: bash 3.2 misparses heredocs inside $( ).)
+    python3 - "$LOG" "$REQUIRED_PASSING_TESTS" "$WELCOME/ui-review-tests.txt" "$run_status" \
+        > "$WELCOME/ui-review-counts.txt" <<'PY'
 import re
 import sys
 
-log, required, out_path = sys.argv[1], sys.argv[2].split(), sys.argv[3]
+log, required, out_path, xcodebuild_exit = sys.argv[1], sys.argv[2].split(), sys.argv[3], int(sys.argv[4])
 outcome = {}
 # Both xcodebuild styles: "Test Case '-[Module.WelcomeReviewTests testX]' passed (…)" and
 # "Test case 'WelcomeReviewTests.testX()' passed on '…' (…)".
 pattern = re.compile(r"Test [Cc]ase '(?:-\[)?(?:[\w.]*\.)?WelcomeReviewTests[ ./](test\w+)(?:\(\))?\]?' (passed|failed|skipped)")
+flag_seen = False
 for line in open(log, encoding="utf-8", errors="replace"):
     match = pattern.search(line)
     if match:
         outcome[match.group(1)] = match.group(2)
-lines = ["%s=%s" % item for item in sorted(outcome.items())]
-missing = [name for name in required if outcome.get(name) != "passed"]
-lines.append("required_passed=" + ("yes" if not missing else "no (" + ", ".join(missing) + ")"))
-open(out_path, "w").write("\n".join(lines) + "\n")
+    if "WELCOME_REVIEW_FLAG_SEEN" in line:
+        flag_seen = True
 counts = {k: sum(1 for v in outcome.values() if v == k) for k in ("passed", "failed", "skipped")}
-print("passed %(passed)d, failed %(failed)d, skipped %(skipped)d" % counts
-      + ("" if not missing else "; required not passed: " + ", ".join(missing)))
+executed = counts["passed"] + counts["failed"]
+missing = [name for name in required if outcome.get(name) != "passed"]
+ok = xcodebuild_exit == 0 and executed > 0 and counts["failed"] == 0 and not missing
+lines = ["%s=%s" % item for item in sorted(outcome.items())]
+lines += ["discovered=%d" % len(outcome), "executed=%d" % executed,
+          "passed=%(passed)d" % counts, "failed=%(failed)d" % counts, "skipped=%(skipped)d" % counts,
+          "required_passed=" + ("yes" if not missing else "no (" + ", ".join(missing) + ")"),
+          # Tests skip in setUp without the flag, so an executed test proves it reached the runner.
+          "flag_reached_runner=" + ("yes" if executed > 0 else "no evidence")
+          + ("; marker in log" if flag_seen else "; marker not in log"),
+          "xcodebuild_exit=%d" % xcodebuild_exit, "result=" + ("PASS" if ok else "FAIL")]
+open(out_path, "w").write("\n".join(lines) + "\n")
+print("executed %d of %d discovered (passed %d, failed %d, skipped %d); required passed: %s; xcodebuild exit %d; %s"
+      % (executed, len(outcome), counts["passed"], counts["failed"], counts["skipped"],
+         "yes" if not missing else "no", xcodebuild_exit, "PASS" if ok else "FAIL"))
 PY
-    counts="$(cat "$WELCOME/ui-review-counts.txt")"
     run cat "$WELCOME/ui-review-tests.txt"
-    printf 'xcodebuild_exit=%s\nsimulator=%s (%s)\ntests=%s\n' "$status" "$SIM_NAME" "$SIM_UDID" "$counts" \
-        > "$WELCOME/ui-review-result.txt"
-    summary_line "welcome-ui" "xcodebuild exit $status; $counts"
-    if [ "$status" -eq 0 ] && ! grep -qx 'required_passed=yes' "$WELCOME/ui-review-tests.txt"; then
-        note "ERROR: xcodebuild succeeded but the required Welcome review tests did not pass (skipped or not run): the review measured nothing."
-        status=1
-    fi
-    return "$status"
+    verdict="$(cat "$WELCOME/ui-review-counts.txt")"
+    summary_line "welcome-ui-run" "$verdict"
+    grep -qx 'result=PASS' "$WELCOME/ui-review-tests.txt"
+}
+
+# ---------------------------------------------------------------------------------------
+# verdict
+# ---------------------------------------------------------------------------------------
+
+stage_verdict() {
+    run python3 - "$SUMMARY" "$META" "$WELCOME" <<'PY'
+import json
+import os
+import sys
+
+summary_path, meta, welcome = sys.argv[1:4]
+last = {}
+for line in open(summary_path, encoding="utf-8", errors="replace") if os.path.isfile(summary_path) else []:
+    parts = line.rstrip("\n").split(None, 2)
+    if len(parts) >= 2:
+        last[parts[1]] = parts[2] if len(parts) > 2 else ""
+
+
+def status(label):
+    text = last.get(label)
+    return "NOT RUN" if text is None else text
+
+
+def passed(label):
+    return last.get(label, "").startswith("PASS")
+
+
+def kv(path):
+    out = {}
+    if os.path.isfile(path):
+        for line in open(path):
+            key, sep, value = line.rstrip("\n").partition("=")
+            if sep:
+                out.setdefault(key, value)
+    return out
+
+
+tools, source = kv(os.path.join(meta, "tools.txt")), kv(os.path.join(welcome, "source-checkpoint.txt"))
+destination, tests = kv(os.path.join(welcome, "destination.txt")), kv(os.path.join(welcome, "ui-review-tests.txt"))
+simulator = {}
+if os.path.isfile(os.path.join(meta, "simulator.json")):
+    simulator = json.load(open(os.path.join(meta, "simulator.json")))
+dims = []
+if os.path.isfile(os.path.join(welcome, "captures.tsv")):
+    for row in list(open(os.path.join(welcome, "captures.tsv")))[1:]:
+        cells = row.rstrip("\n").split("\t")
+        if len(cells) > 4 and cells[3]:
+            dims.append("%s %sx%s" % (cells[0], cells[3], cells[4]))
+
+required = {
+    "source gate (exact reviewed revision)": source.get("result") == "MATCH",
+    "primary target iPhone 17 Pro Max selected": destination.get("primary_target_selected") == "yes",
+    "app compilation (xcodebuild build, unsigned)": passed("build"),
+    "test-harness compilation (build-for-testing)": last.get("welcome-ui-build", "").startswith("PASS"),
+    "runtime assertions (WelcomeReviewTests executed and passed)": tests.get("result") == "PASS",
+    "launch recording confirmed and settled screenshot": passed("welcome-cap-motion"),
+}
+lines = [
+    "Welcome review verdict (automated results only; manual review is listed separately)",
+    "",
+    "Source      git_head=%s  commit_pin=%s" % (source.get("git_head", "?"), source.get("commit_pin", "?")),
+    "Toolchain   %s, %s; iphonesimulator SDK %s" % (tools.get("xcode", "?"), tools.get("xcode_build", "?"),
+                                                   tools.get("iphonesimulator_sdk", "?")),
+    "Simulator   %s, %s (%s)" % (simulator.get("device_name", "?"), simulator.get("runtime_name", "?"),
+                                 simulator.get("runtime_build", "?")),
+    "Target      primary %s installed: %s; selected: %s" % (destination.get("primary_target", "?"),
+                                                            destination.get("primary_target_installed", "?"),
+                                                            destination.get("selected", "?")),
+    "Images      " + ("; ".join(dims) if dims else "none recorded"),
+    "",
+    "Required automated results:",
+]
+lines += ["  %-62s %s" % (name, "PASS" if ok else "FAIL / NOT RUN") for name, ok in required.items()]
+lines += [
+    "  %-62s %s" % ("  XCTest detail", "executed %s, passed %s, failed %s, skipped %s, flag: %s" % (
+        tests.get("executed", "?"), tests.get("passed", "?"), tests.get("failed", "?"),
+        tests.get("skipped", "?"), tests.get("flag_reached_runner", "?"))),
+    "",
+    "Other captures (reported, not required):",
+    "  Reduce Motion preview recording (app override, NOT the system setting): " + status("welcome-cap-reduce"),
+    "  Largest text via simctl content_size (undocumented; UNVERIFIED until seen): " + status("welcome-cap-largetext"),
+    "  Smaller iPhone (optional): " + status("welcome-cap-smaller"),
+    "  Unsigned simulator app zip: " + status("package"),
+    "",
+    "Pending off-machine: analyze_welcome_review.py on the VPS (motion timing relative to visible app",
+    "content, Reduce Motion frames, reference comparison). Its synthetic self-test is not runtime evidence.",
+    "",
+    "OUTSTANDING manual review (automation cannot establish these):",
+    "  visual approval against docs/design/welcome-approved/reference (the founder decides)",
+    "  VoiceOver reading order and announcements",
+    "  system Settings > Accessibility > Reduce Motion",
+    "  a tap during the first second of the pose study, and interruption (backgrounding mid-motion)",
+    "  Apple branding correction before sign-in or distribution (HIG artwork and black/white rules)",
+]
+ok = all(required.values())
+lines += ["", "AUTOMATED VERDICT: " + ("PASS (manual review still outstanding)" if ok else "FAIL")]
+open(os.path.join(welcome, "verdict.txt"), "w").write("\n".join(lines) + "\n")
+print("\n".join(lines))
+sys.exit(0 if ok else 1)
+PY
 }
 
 case "$STAGE" in
     checkpoint) stage_checkpoint ;;
+    destinations) stage_destinations ;;
     captures) stage_captures ;;
     ui-review) stage_ui_review ;;
+    verdict) stage_verdict ;;
 esac

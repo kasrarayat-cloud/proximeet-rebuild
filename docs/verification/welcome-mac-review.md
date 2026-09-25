@@ -1,266 +1,233 @@
-# Welcome — manual macOS verification run (proposed)
+# Welcome — manual macOS verification run
 
-Status: **prepared, not run.** Nothing here has been dispatched, and no build of this Welcome
-exists yet. This is the recipe for one manual, unsigned iOS Simulator build of the
-checkpointed Welcome, plus its captures, a short motion recording and an XCTest review. The
-checks it feeds are in `welcome-runtime-review.md`.
+**Status: configured, not run.** The workflow `proximeet-welcome-review` is in the root
+`codemagic.yaml`. Nothing has been pushed or started, and no macOS build of this Welcome exists
+yet. The checks the run feeds are listed in `welcome-runtime-review.md`.
 
-## 1. What is being verified
+## 1. What is being verified, and how the run proves it
 
-**Source.** The approved Welcome (chapter 01), implemented on branch
-`welcome/approved-20260925T081446Z`, based on `7af76fafaaf51b729e008286570649ec3c79d209`. At
-preparation time the implementation was **uncommitted**. Two private checkpoints on the VPS
-hold it:
+**The source** is the approved Welcome (chapter 01) on branch
+`welcome/approved-20260925T081446Z`, plus this review harness. The run must build **exactly**
+the reviewed revision, never the base `7af76fa`.
 
-- **Checkpoint A**, `/home/proximeet/proximeet-welcome-checkpoint-A-20260925T143256Z`: the
-  Welcome implementation alone, before this verification harness existed. It cannot run the
-  review, because it has no harness.
-- **Checkpoint B**, `/home/proximeet/proximeet-welcome-checkpoint-B-20260925T152758Z`: the same
-  Welcome plus this harness and these documents. This is the source to review.
+**The source gate** is `bash scripts/welcome_review.sh checkpoint`, the second step. It fails
+the build unless the whole checkout is exactly that revision:
 
-The lead's commit plan, kept with checkpoint B and outside the repository, turns B into a commit.
+- **Frozen Welcome.** `welcome-approved-files.sha256` lists every file under `Proximeet/`,
+  `Proximeet.xcodeproj/`, `ProximeetDomain/` and `docs/design/welcome-approved/`: the app, art,
+  fonts, licence, generated project, package and approved references. These are unchanged since
+  the Welcome commit, and every one must match.
+- **Everything else.** `welcome-review-files.sha256` lists every other tracked file (harness,
+  workflow, docs, root files) except itself. Every one must match.
+- **Nothing extra, nothing restored.** No other file may exist outside git's ignore rules, and
+  the files the Welcome change deleted must be absent.
+- **Optional pin.** The run input `WELCOME_EXPECTED_COMMIT=<full 40-hex SHA>` must also equal
+  HEAD when it is given.
 
-**The run must contain the checkpointed Welcome, never just the base commit.** The first
-Welcome-specific stage enforces this:
+A manifest cannot vouch for the tree it lives in, and no commit or tree hash is stored inside
+the tree. The external identity is the full commit SHA reviewed by the lead. Pass it as
+`WELCOME_EXPECTED_COMMIT` when starting through the Codemagic API, which accepts variables
+[C3]. The web UI's Start new build popup has no documented variable field, so without the pin,
+compare `git_head` in `welcome/source-checkpoint.txt` (and `metadata/source.txt`) with the
+reviewed SHA after the run.
 
-- `bash scripts/welcome_review.sh checkpoint` checks that every file in
-  `welcome-review-files.sha256` matches its SHA-256. That list covers every file under
-  `Proximeet/`, `ProximeetUITests/`, `Proximeet.xcodeproj/`, `ProximeetDomain/` and `scripts/`,
-  plus the changed documents.
-- It also checks that **no other file** exists under those roots, and that the files in
-  `welcome-review-deletions.txt` are absent.
-- On any mismatch it fails, and the `captures` and `ui-review` stages then refuse to run.
-- It writes `build/artifacts/welcome/source-checkpoint.txt` with the actual HEAD, tree, the
-  manifest hash and the `codemagic.yaml` hash. `codemagic.yaml` is recorded rather than gated,
-  because activating the proposed workflow changes it.
-- The lead's plan also records the git tree the commit must have, so a reviewer can match
-  `git_tree` too.
-- The manifest cannot vouch for itself. If someone regenerates it after editing the app, the
-  gate passes, but `manifest_sha256` and `git_tree` then differ from the plan. Compare both.
+## 2. Running it
 
-## 2. Two ways to run it
+### A. Codemagic (the founder has no Mac)
 
-### A. Codemagic, the existing path (the founder has no Mac)
+Codemagic builds a branch that exists on GitHub [C1], so the lead pushes the branch first. Then
+someone clicks **Start new build**, selects the branch and `proximeet-welcome-review` [C3],
+downloads the artifacts, and runs this on the VPS:
 
-Codemagic builds a branch that exists in the connected GitHub repository, so the source must
-be pushed first. That is the lead's decision and action, not this preparation's.
+    python3 scripts/analyze_welcome_review.py <artifacts>/welcome
 
-1. **Commit (lead).** Follow the lead commit plan: explicit paths only, no blanket staging.
-2. **Activate the workflow (lead, optional commit).** Copy `proximeet-welcome-review` from
-   `docs/verification/codemagic-welcome-review.yaml` into the root `codemagic.yaml` under
-   `workflows:`, on the same branch. It has no `triggering` section, so it starts only by hand.
-3. **Push the branch (lead).** Confirm it with `git ls-remote origin <branch>`; a local
-   `origin/*` ref is only a cache.
-4. **Start one build by hand (founder or lead, in the Codemagic web UI).** Click **Start new
-   build**, then choose the pushed Welcome branch and the workflow `proximeet-welcome-review` in
-   the **Specify build configuration** popup [C3]. Codemagic reads `codemagic.yaml` from the root
-   of the branch being built [C1], so the workflow must be on that branch. Nothing in this
-   repository starts it.
-5. **Download the artifacts** (see §5) and put them on the VPS. Then run
-   `python3 scripts/analyze_welcome_review.py <artifacts>/welcome`.
+That needs ffmpeg, which is on the VPS but not on the Codemagic image [C5].
 
-### B. Any Mac with Xcode 26.6, no push needed
+### B. A Mac with Xcode 26.6, no push needed
 
-Check out the lead's commit. Or restore **checkpoint B** with the git route in its
-`RESTORE.md`: clone `base.bundle`, check out the base commit, then apply the patches. A bare tar
-extraction is not enough, because the `metadata` and `package` stages need a git checkout.
-Checkpoint A has no harness. Then run the same stages, stopping at the first failure:
+Check out the commit, then run the same steps in order:
 
-    set -e
     bash scripts/codemagic_verify.sh metadata          # fails unless Xcode 26.6
-    bash scripts/welcome_review.sh checkpoint          # exactly the checkpointed Welcome, or stop
+    bash scripts/welcome_review.sh checkpoint          # exactly the reviewed revision, or stop
     bash scripts/codemagic_verify.sh validate
     bash scripts/codemagic_verify.sh select-simulator  # prefers iPhone 17 Pro Max; never downloads
-    bash scripts/codemagic_verify.sh build             # Debug, iphonesimulator, signing disabled
-    bash scripts/codemagic_verify.sh package
-    bash scripts/welcome_review.sh captures            # refuses to run unless checkpoint said MATCH
-    bash scripts/welcome_review.sh ui-review           # likewise; fails if the review tests did not run
-    python3 scripts/analyze_welcome_review.py build/artifacts/welcome   # needs ffmpeg; or run it on the VPS
+    bash scripts/welcome_review.sh destinations || true
+    bash scripts/codemagic_verify.sh build             # app compilation, unsigned
+    bash scripts/codemagic_verify.sh package || true
+    bash scripts/welcome_review.sh captures || true
+    bash scripts/welcome_review.sh ui-review || true
+    bash scripts/welcome_review.sh verdict
 
-A local Mac run changes the simulator's status bar override (restored at the end) and its text
-size (read, then restored). It installs the unsigned simulator app into the selected simulators.
+The status bar override and the simulator text size are restored at the end. The unsigned
+simulator app is installed into the selected simulators.
 
-## 3. The stages and what each proves
+## 3. The workflow
 
-| Stage | Command | Proves | Does not prove |
-| --- | --- | --- | --- |
-| metadata | `codemagic_verify.sh metadata` | HEAD, branch, Xcode 26.6, SDK, host | — |
-| checkpoint | `welcome_review.sh checkpoint` | the Welcome files are the checkpointed ones | that they compile |
-| validate | `codemagic_verify.sh validate` | the project file, resources and guardrails | compilation |
-| select-simulator | `codemagic_verify.sh select-simulator` | an installed iPhone (iPhone 17 Pro Max preferred) is used; nothing is downloaded | — |
-| build | `codemagic_verify.sh build` | **the SwiftUI app compiles** for the simulator, unsigned | device behaviour |
-| package | `codemagic_verify.sh package` | a zipped simulator `.app` with its checksum | installability on a phone |
-| captures | `welcome_review.sh captures` | what the screen showed: settled screen, pose-study recording, Reduce Motion preview, largest text, a smaller iPhone | taste, VoiceOver, performance |
-| ui-review | `welcome_review.sh ui-review` | measured geometry, both notices, no navigation, large-text reachability (`WelcomeReviewTests`). It fails unless the notices and Reduce Motion preview tests actually **passed**. Geometry skips on a screen other than 440 × 956, and large text skips if its launch argument has no effect. Each skip appears in the summary line and never counts as a pass | visual fidelity (see captures) |
-| analysis (off-machine) | `analyze_welcome_review.py` | motion timing and linearity, Reduce Motion settled from the first frame, pixel and ink closeness to the reference | the founder's approval |
+`proximeet-welcome-review` runs on `mac_mini_m2` with Xcode `"26.6"`, for at most **30
+minutes**. It has no `triggering` section, so it starts manually only [C2]. It has no signing,
+Apple credentials, provisioning, archive or IPA, TestFlight, publishing, notifications or
+environment groups.
 
-The Welcome review deliberately leaves out the domain tests. They do not test Welcome, and
-the existing workflow already runs them. It also leaves out the Band/Signal interaction stage,
-and every fixture after Welcome: the **legacy Birthday is not captured or exposed**.
+| # | Step | On failure | Proves | Does not prove |
+| --- | --- | --- | --- | --- |
+| 1 | `codemagic_verify.sh metadata` | stop | HEAD, Xcode 26.6 (build), SDK, host | — |
+| 2 | `welcome_review.sh checkpoint` | stop | the checkout is exactly the reviewed revision | compilation |
+| 3 | `codemagic_verify.sh validate` | stop | project file, resources, guardrails | compilation |
+| 4 | `codemagic_verify.sh select-simulator` | stop | an installed iPhone was chosen (iPhone 17 Pro Max first), nothing downloaded | — |
+| 5 | `welcome_review.sh destinations` | continue | installed destinations; whether **iPhone 17 Pro Max** was installed and selected. If it was not, the report says so plainly, and the verdict fails | — |
+| 6 | `codemagic_verify.sh build` | stop | **app compilation**: the SwiftUI app compiles for the simulator, unsigned | device behaviour |
+| 7 | `codemagic_verify.sh package` | continue | the zipped unsigned simulator `.app` | installability on a phone |
+| 8 | `welcome_review.sh captures` | continue | the launch recording (the recorder is confirmed active before a cold launch); the settled screenshot; the Reduce Motion preview; largest text; a smaller iPhone | taste, VoiceOver, performance |
+| 9 | `welcome_review.sh ui-review` | continue | **test-harness compilation** (`build-for-testing`), then **runtime assertions** from `-only-testing:ProximeetUITests/WelcomeReviewTests` with `TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1` [A1] | visual fidelity |
+| 10 | `welcome_review.sh verdict` | fails the build | automated verdict, with manual items listed as outstanding | the founder's approval |
 
-**The UI test is gated.** `WelcomeReviewTests` skips itself unless the runner has
-`PROXIMEET_WELCOME_REVIEW=1`. The `ui-review` stage sets `TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1`
-in xcodebuild's environment, which passes it to the test runner without the prefix. So the
-existing `interaction` stage, which runs the whole UI test target while recording the
-Band/Signal reel, is unchanged: the Welcome tests skip there.
+- **Step order.** The smaller-iPhone capture runs after compilation and never fails the
+  compile.
+- **Evidence steps continue on failure.** Codemagic's `ignore_failure: true` lets the workflow
+  continue past a failed script [C8], so later evidence is still collected.
+- **Artifacts from failed builds.** The docs do not say whether a failed build still publishes
+  artifacts. In this account's failed build 3, it did: its full artifact archive was delivered
+  (`docs/reports/native-3d-verification.md`).
 
-## 4. Launch steps used
+**Only this step enables the Welcome tests.** `WelcomeReviewTests` skips itself unless
+`PROXIMEET_WELCOME_REVIEW=1` reaches the test runner. The step selects only that class and sets
+the flag for that one `xcodebuild`, so the existing workflow's interaction run is unchanged.
 
-All launches go through `xcrun simctl launch --terminate-running-process <udid> com.proximeet.demo <args>`:
+The step then counts xcodebuild's per-test lines and requires all of:
+- a **non-zero executed count** (passed + failed), and **no failure**;
+- `testHonestNotices` and `testReduceMotionPreviewLaunch` **passed**.
 
-| Capture | Launch arguments | Timing |
+An executed test also proves the flag reached the runner, because the tests skip without it;
+each one also logs a `WELCOME_REVIEW_FLAG_SEEN` marker. So a disabled, skipped or undiscovered
+suite **fails**. Geometry skips on a window other than 440 × 956, and large text skips if its
+launch argument has no effect. Each skip is shown in the counts and never counts as a pass.
+
+**The verdict** (`welcome/verdict.txt`) keeps these apart:
+- source;
+- toolchain, simulator model and runtime;
+- the primary target;
+- image dimensions;
+- app compilation;
+- test-harness compilation;
+- runtime assertions;
+- the other captures;
+- the off-machine analysis still pending;
+- the **manual review still outstanding**: visual approval, VoiceOver, the system Reduce Motion
+  setting, a tap during the motion and interruption, and Apple branding.
+
+The verdict never presents a Linux check as an iOS compile.
+
+## 4. Launches and captures
+
+Every launch runs `xcrun simctl launch --terminate-running-process <udid> com.proximeet.demo <args>`.
+Every capture checks that the app process is alive before and after.
+
+| Capture | Launch arguments | How |
 | --- | --- | --- |
-| warmup (not captured) | `-ProximeetFixture welcome` | 15 s, so first-run system prompts settle |
-| `welcome-motion.mp4` | `-ProximeetFixture welcome` | the previous instance is terminated first. Recording starts on the home screen, and the app launches 1 s after simctl reports "Recording started". The recording runs 6 s after launch, and the app must still be running at the end |
-| `01-welcome-settled.png` | (same process) | taken after that recording, well past 1.4 s |
-| `welcome-reduce-motion.mp4` | `-ProximeetFixture welcome -ProximeetReduceMotionPreview YES` | same pattern, 4 s. **This recording is the Reduce Motion evidence** |
-| `02-welcome-preview-flag-settled-layout.png` | (same process) | taken 4 s after launch, when even normal motion has settled. It is a **layout check only, not Reduce Motion evidence** |
-| `03-welcome-largest-text-top.png` | `-ProximeetFixture welcome`, with simulator text size `accessibility-extra-extra-extra-large` | 5 s; the size is restored afterwards |
-| `04-welcome-smaller-iphone.png` | `-ProximeetFixture welcome` on the first installed of: iPhone SE (3rd generation), iPhone 17e, iPhone 16e, iPhone 17, iPhone 16, iPhone 17 Pro, iPhone 16 Pro. On Codemagic's Xcode 26.6 image that is **iPhone 17e**, since the image lists iPhone 17, 17 Pro, 17 Pro Max, 17e and Air [C5]. Its screen size is recorded from the capture, not assumed | 15 s warmup, relaunch, 5 s; skipped if none is installed |
+| warmup (not captured) | `-ProximeetFixture welcome` | 15 s, so first-run prompts settle |
+| `welcome-motion.mp4` | `-ProximeetFixture welcome` | Terminate the app and start recording. Wait until simctl prints "Recording started" [A2], then 1 s more, then cold-launch. If recording is not confirmed within 10 s, the app is not launched and the capture fails. Runs 6 s after launch |
+| `01-welcome-settled.png` | (same process) | after the recording |
+| `welcome-reduce-motion.mp4` | `… -ProximeetReduceMotionPreview YES` | same pattern, 4 s. This is the app-level preview, **not** the system setting |
+| `02-welcome-preview-flag-settled-layout.png` | (same process) | a layout check only |
+| `03-welcome-largest-text-top.png` | `-ProximeetFixture welcome`, with simulator text size `accessibility-extra-extra-extra-large` | `simctl ui content_size` is undocumented [A4], so this stays **unverified** until the screenshot shows larger text. Skipped if the size cannot be read; restored afterwards |
+| `04-welcome-smaller-iphone.png` | `-ProximeetFixture welcome` | Optional. The first installed of iPhone SE (3rd generation), 17e, 16e, 17, 16, 17 Pro, 16 Pro. On Codemagic's image that is iPhone 17e [C5] |
 
-`-ProximeetFixture welcome` is the existing DEBUG launch argument. It starts a fresh demo
-session on Welcome, which is also the app's normal entry screen. `-ProximeetReduceMotionPreview
-YES` is the app-level Reduce Motion override, not the system setting; the system setting is a
-manual check, and no documented simctl switch exists for it [A4].
+**Status bar.** It is overridden to 9:41, a charged battery and four cellular bars, with
+documented flags only [A3], and cleared at the end.
 
-**Status bar and recording.** The status bar is overridden to 9:41, with a charged battery and
-four cellular bars, using only documented flags [A3], and cleared at the end. If the override
-fails, the captures show the live status bar. Recordings are H.264 and are stopped with SIGINT
-[A2]. The script waits for simctl's "Recording started" line before launching the app.
+**Motion timing.** It is measured off-machine by `analyze_welcome_review.py`, relative to the
+first frame in which the app's content is visible. The recording opens on the home screen. The
+closed hold may be partly hidden by the iOS launch animation, so the verdict checks blend
+durations, linearity, monotonic order and "no regression". The analyser's synthetic self-test
+is not runtime evidence.
 
-**Undocumented but used.** `simctl ui … content_size` has no official Apple documentation. It
-worked in Codemagic build 2 (`docs/reports/visual-mac-verification.md`), and the stage skips
-large text if it cannot read the current size. `-UIPreferredContentSizeCategoryName`, used by
-the XCTest large-text case, is also undocumented [A6]. That test **skips**, and never passes, if
-the text did not actually grow.
+## 5. Artifacts (`build/artifacts/`)
 
-## 5. Artifact paths
-
-Everything lands under `build/artifacts/` (DerivedData stays in `build/DerivedData`, never an artifact):
-
-| Path | Content |
-| --- | --- |
-| `summary.txt` | one PASS/FAIL line per stage, with real exit status |
-| `logs/*.log` | full log per stage (`welcome-checkpoint.log`, `welcome-captures.log`, `welcome-ui-review.log`, …) |
-| `metadata/source.txt`, `tools.txt`, `simulator.json`, `app.txt` | source, tools, chosen simulator, built app |
-| `app/Proximeet-Debug-iphonesimulator-<sha>.zip` (+ `.sha256`) | the unsigned simulator app |
-| `welcome/source-checkpoint.txt` | checkpoint gate result, HEAD, tree, manifest hash |
-| `welcome/captures.tsv` | every screenshot and recording, with its simulator, time, size and SHA-256 |
-| `welcome/01-welcome-settled.png` | settled Welcome |
-| `welcome/02-welcome-preview-flag-settled-layout.png` | settled layout under the Reduce Motion preview flag (layout only) |
-| `welcome/03-welcome-largest-text-top.png` | largest text size, top of page |
-| `welcome/04-welcome-smaller-iphone.png` | smaller iPhone, if installed |
-| `welcome/welcome-motion.mp4` (+ `.sha256`, `.log`) | launch and pose study, 6 s |
-| `welcome/welcome-reduce-motion.mp4` (+ `.sha256`, `.log`) | Reduce Motion launch, 4 s |
-| `welcome/WelcomeReview.xcresult.zip` | the XCTest result bundle |
-| `welcome/attachments/` | exported XCTest screenshots, notes and geometry JSON |
-| `welcome/geometry-*.json` | geometry per scenario (from attachments, or from the test log) |
-| `welcome/test-summary.json`, `ui-review-result.txt`, `ui-review-tests.txt` | xcresult summary, exit status, and each test's outcome (passed/failed/skipped) from xcodebuild's log |
-| `welcome/welcome-review-analysis.{json,txt}` | written later by `analyze_welcome_review.py` |
+- `summary.txt`: one line per step with its real status.
+- `logs/*.log`: `build.log`, the compiler log for app compilation, plus a log for every other
+  step.
+- `metadata/`:
+  - `source.txt`: HEAD and `CM_COMMIT`;
+  - `tools.txt`: Xcode version and build, SDK;
+  - `simulator.json`: model, runtime, UDID;
+  - `welcome-devices-available.json` and `welcome-runtimes-available.json`.
+- `app/Proximeet-Debug-iphonesimulator-<sha>.zip` (+ `.sha256`): the unsigned simulator app.
+- `welcome/source-checkpoint.txt`: the gate result, HEAD, tree, pin and both manifest hashes.
+- `welcome/destination.txt`: installed iPhones, the primary-target status, the selection.
+- `welcome/captures.tsv`: every capture, with its simulator, time, **pixel dimensions** and
+  SHA-256.
+- `welcome/01…04-*.png`, `welcome-motion.mp4`, `welcome-reduce-motion.mp4` (+ `.sha256`,
+  `.log`): the captures.
+- `welcome/WelcomeReview.xcresult.zip`: the test result bundle.
+- `welcome/attachments/`: XCTest screenshots, notes, geometry, and the accessibility tree
+  `accessibility-tree-default`.
+- `welcome/geometry-*.json`, `test-summary.json`, `ui-review-tests.txt`,
+  `ui-review-counts.txt`: per-test outcomes, counts and flag evidence.
+- `welcome/verdict.txt`: the separated verdict.
+- `welcome/welcome-review-analysis.{json,txt}`: written later, on the VPS.
 
 ## 6. Prerequisites
 
-**Tools.**
-- *Codemagic path:* nothing to install; the machine image provides Xcode, simulators and Python.
-- *Mac path:* Xcode 26.6 with an iOS 26.x simulator runtime already installed, and python3.
-- *Analysis:* python3 and ffmpeg/ffprobe (present on the VPS).
+- **Codemagic.** The personal account with the app `proximeet-rebuild`
+  (github.com/kasrarayat-cloud/proximeet-rebuild) connected. During the lead's review it showed
+  **40 / 500** free macOS minutes used, no subscription and no billing transactions. The
+  pricing page states 500 free M2 minutes a month, then $0.095 a minute [C6]. Check usage again
+  before starting.
+- **Source upload.** The lead pushes the branch to `origin`. The local Mac path needs none.
+- **Tools.** Nothing to install on Codemagic. A local Mac needs Xcode 26.6 with an iOS 26
+  simulator runtime. The VPS needs python3 and ffmpeg for the analysis.
+- **No Apple account, certificate, profile, App Store Connect or TestFlight access is needed.**
 
-**Account.**
-- The existing Codemagic account, with the `kasrarayat-cloud/proximeet-rebuild` repository connected (see `docs/reports/codemagic-setup.md`), for the founder or lead.
-- No Apple account, certificates, profiles, App Store Connect or TestFlight access is needed.
+## 7. What else could start a build
 
-**Source upload.** For Codemagic, the lead commits the plan's files and pushes the Welcome
-branch to `origin`. The local Mac path needs no upload.
+The lead checked these dashboards during this review; nothing was changed.
 
-**Budget.** The workflow allows up to 45 minutes (the platform maximum is 120) [C4]. The
-previous full workflow, which included the heavier interaction stage, took 16 m 27 s (build 4).
-
-Codemagic's pricing page today (2026-09-25) states:
-- 500 free macOS M2 minutes a month for the individual plan, one parallel build [C6];
-- after that, $0.095 a minute on Mac mini M2;
-- artifacts kept 30 days on the free plan.
-
-The account's actual remaining minutes and billing state are **unknown from here**. The only
-recorded figure is 10 of 500 used after build 2 (`docs/reports/visual-mac-verification.md`).
-Builds 3 (13 m 31 s) and 4 (16 m 27 s) ran afterwards, with no recorded figure. Whether a run past
-the free minutes would be billed or refused depends on the account's billing setting, which is
-also unknown. Check the Codemagic billing page before starting.
-
-## 7. Potential external build triggers
-
-| System | What could start a build | Known state |
+| Route | Observed | Still open |
 | --- | --- | --- |
-| Codemagic, push/PR/tag | Only events declared under `triggering` in the branch's `codemagic.yaml`: "If no events are defined, you can start builds only manually" [C2]. For `codemagic.yaml` apps, webhooks are set up by hand [C2]. Neither the existing workflow nor this proposal declares events | Verified in the repo |
-| Codemagic, scheduled builds | A schedule added in the app's **Scheduled builds** tab (branch, workflow, days, time) starts builds with no `triggering` section [C7] | **Unknown**: check that tab before pushing |
-| Codemagic, REST API | Any `POST /builds` call with the account's API token starts a build [C3] | **Unknown** who holds a token; nothing here uses one |
-| GitHub Actions | Nothing: the repository has no workflow directory, and the validator fails if one appears | Verified in the repo |
-| Xcode Cloud | A push matching a workflow's **Branch Changes** start condition starts a build, if an Xcode Cloud workflow is connected to this repository [A9] | **Unknown**: not checkable from here. The repo's own report says Xcode Cloud "is not used" for this project; the legacy app's Xcode Cloud history belongs to a different repository |
-| Other webhooks | Whatever is configured in GitHub › Settings › Webhooks for the repository | **Unknown**: check before pushing |
+| Codemagic push/PR/tag | Neither workflow declares `triggering`, so manual only [C2]. No webhook deliveries | — |
+| Codemagic schedule | "No builds scheduled" | A schedule added later would start builds [C7] |
+| Codemagic REST API | — | Anyone holding an API token can start a build [C3]; not inspectable here |
+| GitHub | The Webhooks page lists no hooks. Installed apps: Claude, Codemagic CI/CD, Google Labs Jules. The repository has no Actions workflow directory | The installed apps' own automation is not inspected |
+| Xcode Cloud | No Xcode Cloud app is listed on GitHub | Apple-side Xcode Cloud settings not inspected [A9] |
 
-## 8. Notes that the run will not settle
+These observations reduce the unknowns; they do not prove that no external trigger can exist.
 
-- **The Apple logo and the custom button do not follow Apple's custom-button rules.** This is
-  a design and compliance decision, not a runtime defect. The run confirms that the build
-  matches the approved design, not that the design meets Apple's guidelines.
+## 8. Tracked, not changed in this run
 
-  For custom Sign in with Apple buttons, Apple's Human Interface Guidelines say [A7]:
-  - "Use only the logo artwork downloaded from Apple Design Resources; never create a custom
-    Apple logo." The approved build uses the SF Symbol `apple.logo` instead. SF Symbols that
-    depict Apple products may be displayed but not customized; their per-symbol restrictions
-    are shown only in the SF Symbols app [A8].
-  - The logo and title must both be **black or white** on a black or white button. The approved
-    button uses #050606 on #F6F7F2.
-  - The title size must keep the system proportion: 43% of button height with the system font.
-    The approved button has an 18 pt label in a 60 pt button.
-  - "Continue with Apple" is an allowed title, and other fonts are allowed.
+- **Apple branding.** The approved prototype button stays as designed for this first simulator
+  review. Before any sign-in or distribution work it needs correcting to Apple's HIG for custom
+  Sign in with Apple buttons [A7]:
+  - use Apple's supplied logo artwork, not the SF Symbol `apple.logo`;
+  - make the logo and title black or white;
+  - match the system's title-to-height proportions (the HIG quotes 43% of the button height as
+    the system-font example, not as a universal number for every typeface).
 
-  Apple's guidelines also say App Review evaluates custom buttons, and TestFlight beta builds
-  should comply with the App Review Guidelines [A7, A10]. The founder should decide, before real
-  sign-in or any external TestFlight build, whether to swap in Apple's artwork and colours.
-  Nothing in this preparation changes the approved button.
-- **Birthday.** The later route is More options → "Continue the demo (no account)" → the
-  approved Birthday, with Back returning to a settled Welcome and the Birthday draft kept in
-  memory, creating no authentication or verification state. It is **not** part of this
-  preparation or run. Its branch must be created from the lead's Welcome commit, **never from
-  `7af76fa`**, which does not contain Welcome.
+  A pixel comparison of the button is not compliance approval, and no authentication is
+  connected.
+- **Birthday** is not implemented. It branches from the final Welcome commit, never from
+  `7af76fa`, with the agreed route: More options → "Continue the demo (no account)" → the
+  approved Birthday, Back to a settled Welcome, the draft kept in memory, and no authentication
+  or verification state.
 
-## 9. Remaining blockers before a verdict exists
-
-1. **Nothing is committed or pushed.** The lead must commit checkpoint B's change set with the
-   plan's explicit paths, then push the branch, for Codemagic to see it.
-2. **The workflow is not active.** It exists only as a proposal under `docs/verification/`.
-   The lead must add it to the root `codemagic.yaml`, manual and without triggers, or use a Mac.
-3. **External state is unknown.** Codemagic minutes and billing, scheduled builds, API
-   tokens, Xcode Cloud workflows and repository webhooks all need checking before a push (§7).
-4. **The first native compile of Welcome has not happened.** Every result so far is Linux
-   source checks, a syntax parse, and review; none of them is an iOS compile.
-5. **The Apple button needs a design decision** (§8) before real sign-in or an external
-   TestFlight build.
-6. **Manual checks remain** (VoiceOver, system Reduce Motion, visual approval). They need a
-   person with the running app or its artifacts; the founder's eyes decide what it looks like.
-
-## 10. Sources checked (official documentation, 2026-09-25)
-
-Each item was looked up on the official page and then independently re-checked.
-"Unconfirmed" means no official page answered it.
+## 9. Sources (official documentation, 2026-09-25)
 
 | Ref | Fact | Source |
 | --- | --- | --- |
-| C1 | `codemagic.yaml` must be in the repository root and is read per branch (a file under `docs/` is inert) | https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/ |
-| C2 | No `triggering` events → manual starts only; `codemagic.yaml` webhooks are set up manually | https://docs.codemagic.io/yaml-running-builds/starting-builds-automatically/ |
-| C3 | Manual start: Start new build → Specify build configuration; REST `POST /builds` can also start builds with variables | yaml-getting-started (above); https://docs.codemagic.io/rest-api/builds/ |
-| C4 | `mac_mini_m2` is valid; `max_build_duration` 1–120 min; `xcode` accepts a version such as "26.6" | yaml-getting-started (above) |
-| C5 | Xcode 26.6 image: Xcode 26.6 (17F113), macOS 26.5.1, iOS 26.5 runtime; iPhone 17, 17 Pro, 17 Pro Max, 17e, Air; python3 3.12.7; **no ffmpeg** | https://docs.codemagic.io/specs-macos/xcode-26-6/ |
-| C6 | 500 free macOS M2 minutes a month (individual); then $0.095/min; 30-day artifact retention | https://codemagic.io/pricing/ |
-| C7 | Scheduled builds tab starts builds on a schedule | https://docs.codemagic.io/yaml-running-builds/scheduling/ |
-| A1 | `TEST_RUNNER_`-prefixed variables reach the test runner without the prefix (not the launched app) | Xcode 13 release notes, developer.apple.com |
-| A2 | `simctl io recordVideo --codec h264 --force`; recording ends on SIGINT; "Recording started" is printed | WWDC20 session 10647; Xcode 12.3 release notes |
-| A3 | `simctl status_bar override --time --batteryState --batteryLevel --cellularBars`; `clear` | Xcode 11 release notes; WWDC20 10647 (`--wifiBars` unconfirmed, so not used) |
-| A4 | No documented simctl switch for Reduce Motion or Increase Contrast; `simctl ui content_size` undocumented | Unconfirmed (only `simctl ui appearance` is documented, Xcode 11.4) |
-| A5 | `xcresulttool export attachments` exists since Xcode 16 | Xcode 16.3 release notes; the manifest format is unconfirmed (`xcresulttool help` on the Mac) |
-| A6 | `-UIPreferredContentSizeCategoryName` launch argument | Unconfirmed: community sources only |
-| A7 | Sign in with Apple custom-button rules (logo artwork, black/white, proportions, titles, App Review evaluates) | https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple |
-| A8 | SF Symbols depicting Apple products: display only, no customization; restrictions in the SF Symbols app | https://developer.apple.com/design/human-interface-guidelines/sf-symbols |
+| C1 | `codemagic.yaml` must be at the repository root and is read per branch | https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/ |
+| C2 | No `triggering` events means manual starts only; `codemagic.yaml` webhooks are set up by hand | https://docs.codemagic.io/yaml-running-builds/starting-builds-automatically/ |
+| C3 | Manual start via Start new build → Specify build configuration; REST `POST /builds` can pass environment variables | yaml-getting-started; https://docs.codemagic.io/rest-api/builds/ |
+| C4 | `mac_mini_m2` is valid; `max_build_duration` is 1–120 min; `xcode` accepts "26.6" | yaml-getting-started |
+| C5 | The Xcode 26.6 image: Xcode 26.6 (17F113), macOS 26.5.1, iOS 26.5 runtime; iPhone 17, 17 Pro, 17 Pro Max, 17e, Air; python3 3.12.7; **no ffmpeg** | https://docs.codemagic.io/specs-macos/xcode-26-6/ |
+| C6 | 500 free macOS M2 minutes a month (individual), then $0.095/min; 30-day artifact retention | https://codemagic.io/pricing/ |
+| C7 | The Scheduled builds tab starts builds on a schedule | https://docs.codemagic.io/yaml-running-builds/scheduling/ |
+| C8 | "When you set `ignore_failure` to `true`, the workflow will continue to run even if the script fails." Whether a failed build publishes artifacts is not stated (observed in build 3) | yaml-getting-started |
+| A1 | `TEST_RUNNER_`-prefixed variables reach the test runner without the prefix | Xcode 13 release notes |
+| A2 | `simctl io recordVideo --codec h264 --force`; stopped by SIGINT; prints "Recording started" | WWDC20 session 10647; Xcode 12.3 release notes |
+| A3 | `simctl status_bar override --time --batteryState --batteryLevel --cellularBars`; `clear` | Xcode 11 release notes; WWDC20 10647 |
+| A4 | No documented simctl switch for Reduce Motion; `simctl ui content_size` undocumented | unconfirmed (only `simctl ui appearance` is documented) |
+| A5 | `xcresulttool export attachments` exists since Xcode 16; its manifest format is not documented on the web | Xcode 16.3 release notes |
+| A6 | `-UIPreferredContentSizeCategoryName` launch argument | unconfirmed: community sources only |
+| A7 | Custom Sign in with Apple buttons: Apple logo artwork, black or white, system proportions, allowed titles | https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple |
+| A8 | SF Symbols depicting Apple products: display only, not customizable | https://developer.apple.com/design/human-interface-guidelines/sf-symbols |
 | A9 | Xcode Cloud start conditions include Branch Changes | https://developer.apple.com/documentation/xcode/configuring-start-conditions |
-| A10 | TestFlight builds should comply with the App Review Guidelines | https://developer.apple.com/app-store/review/guidelines/ |
-| A11 | iPhone 17 Pro Max: 2868 × 1320 px, 460 ppi, Dynamic Island. No current official page gives 440 × 956 pt or the safe-area insets, so both are measured at runtime | https://support.apple.com/en-us/125091 |
+| A10 | iPhone 17 Pro Max: 2868 × 1320 px; no official page gives 440 × 956 pt or the insets, so both are measured at runtime | https://support.apple.com/en-us/125091 |
