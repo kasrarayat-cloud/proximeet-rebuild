@@ -487,8 +487,8 @@ stage_captures() {
     # The six entrance scenes in flow order, then selections and Ready.
     capture 01-welcome "" \
         -ProximeetFixture welcome
-    capture 02-birthday-fixture-date \
-        "Birthday scene after returning from the pass, so the wheel shows the fixture date (17 May 1995)" \
+    capture 02-birthday-fresh \
+        "Fresh Birthday scene: the approved console with no date set (DD / MMM / YYYY)" \
         -ProximeetFixture birthday
     capture 03-demo-pass "" \
         -ProximeetFixture pass

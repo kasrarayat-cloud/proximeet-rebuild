@@ -101,3 +101,65 @@ workflows:
       - build/artifacts/welcome/*.json
       - build/artifacts/welcome/*.zip
       - build/artifacts/welcome/attachments/**/*
+
+  # Birthday (chapter 02) runtime review. Manual start only, exactly like the Welcome review:
+  # no triggering section, no code signing, Apple credentials, provisioning, archive/IPA,
+  # TestFlight, publishing, notifications or environment groups. Compile-path steps stop the
+  # build on failure; evidence steps use ignore_failure so later evidence is still collected;
+  # Birthday-Review.zip is packaged, and the last step fails the build unless every required
+  # automated result passed. Optional run input: BIRTHDAY_EXPECTED_COMMIT (full commit SHA)
+  # pins the exact revision. See docs/verification/birthday-mac-review.md.
+  proximeet-birthday-review:
+    name: Proximeet Birthday review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Birthday revision and its approved assets
+        script: bash scripts/birthday_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: List installed destinations and report the iPhone 17 Pro Max target
+        script: bash scripts/birthday_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Birthday rules included)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: Birthday fixture captures - empty, adult, under 18, largest text, smaller iPhone
+        script: bash scripts/birthday_review.sh captures
+        ignore_failure: true
+      - name: Birthday XCTest review - recorded walkthrough, typed entry, Welcome regression
+        script: bash scripts/birthday_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/birthday_review.sh verdict
+        ignore_failure: true
+      - name: Package Birthday-Review.zip (captures, approved references, results, app, offline viewer)
+        script: bash scripts/birthday_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/birthday_review.sh enforce
+    artifacts:
+      - build/artifacts/Birthday-Review.zip
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/birthday/*.png
+      - build/artifacts/birthday/*.mp4
+      - build/artifacts/birthday/*.sha256
+      - build/artifacts/birthday/*.log
+      - build/artifacts/birthday/*.txt
+      - build/artifacts/birthday/*.tsv
+      - build/artifacts/birthday/*.json
+      - build/artifacts/birthday/*.zip
