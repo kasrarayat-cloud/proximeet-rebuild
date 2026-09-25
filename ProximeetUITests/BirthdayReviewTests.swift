@@ -195,8 +195,9 @@ final class BirthdayReviewTests: XCTestCase {
     /// Checks the wheels on the screen itself, not only in the accessibility tree: each wheel's
     /// selected value (or placeholder) must be drawn, and, when asked, its previous value too.
     /// Counts pixels brighter than the dark console (#1F2022 to #262B2D) in bands of the
-    /// picker's own frame. Measured on build 6ab6d0be: visible values light 1,500 to 3,700
-    /// pixels above 100; the invisible wheels of build 6ab6d70f lit none (their peak was 61).
+    /// picker's own frame. Measured on build 6ab6d0be's visible wheels: values lit 1,500 to 3,700
+    /// pixels above 100, and its (too faint) previous values 611 to 2,085 pixels above 45. The
+    /// invisible wheels of build 6ab6d70f lit none in either band (their peak was 61).
     private func assertWheelsVisible(_ app: XCUIApplication, neighbours: Bool, _ state: String) {
         let identified = app.pickers["birthday.wheels"]
         let picker = (identified.exists ? identified : app.pickers.firstMatch).frame

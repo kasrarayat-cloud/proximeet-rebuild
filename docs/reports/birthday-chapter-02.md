@@ -232,8 +232,17 @@ Two changes came from that:
   layout pass. The intent is that a wrong call cannot stick; only the next build's captures
   can show whether that holds.
 - The walkthrough now checks the pixels on screen. It fails unless each wheel's value, and in
-  the adult state its previous value, is drawn visibly. The thresholds come from these two
-  builds: visible values light 1,500 to 3,700 pixels, and the invisible wheels lit none.
+  the adult state its previous value, is drawn visibly. The thresholds were measured on these
+  two builds' captures:
+
+  | What | Attempt 1 (visible) | Attempt 2 (invisible) |
+  | --- | --- | --- |
+  | Values, pixels above 100 | 1,500–3,700 | 0 |
+  | Previous values, pixels above 45 | 611–2,085 (these were attempt 1's dimmest, the defective ones) | 0 |
+
+  The test requires more than 150 value pixels and more than 60 previous-value pixels. The
+  result of the next build is not recorded here, because a commit cannot contain its own
+  build's result.
 
 ## 8. Decisions and assumptions
 
