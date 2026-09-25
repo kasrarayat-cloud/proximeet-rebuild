@@ -29,7 +29,7 @@ design is approved; the founder's eyes remain the authority for how it looks.
 
 | # | Check | How | Kind |
 | --- | --- | --- | --- |
-| 2.1 | Rows at the approved positions on the 440 × 956 point screen: button 32,772 376×60; More options 32,844 376×44; headline top 570, height 118; supporting line centre 716.5; "18+ only" centre 220,921; wordmark x 48 (±1.5 pt) | `WelcomeReviewTests.testDefaultGeometry`, and `geometry-default.json`. On any other window size the test **skips**, which is not a pass | A |
+| 2.1 | Rows at the approved positions on the 440 × 956 point screen: button 32,772 376×60; More options 32,844 376×44; headline line boxes 570–688 (centre 629; its accessibility frame is the glyph extent, 561.25 high and 135.5 tall, because the glyphs overflow the tight 59 pt lines); supporting line centre 716.5; "18+ only" centre 220,921; wordmark x 48 (±1.5 pt) | `WelcomeReviewTests.testDefaultGeometry`, and `geometry-default.json`. On any other window size the test **skips**, which is not a pass | A |
 | 2.2 | Elements are in approved order and never overlap | same test, `assertOrderedWithoutOverlap` | A |
 | 2.3 | Each region's pixels are close to `reference/welcome-settled.png` (mean grey difference ≤ 10), and the page, button and cyan dot colours are within 12 per channel | `analyze_welcome_review.py` on `01-welcome-settled.png` | A (heuristic) |
 | 2.4 | Side-by-side visual match: hierarchy, hero placement and silhouette (not cropped or stretched), spacing, colours | Compare `01-welcome-settled.png` with the reference at the same size | M |

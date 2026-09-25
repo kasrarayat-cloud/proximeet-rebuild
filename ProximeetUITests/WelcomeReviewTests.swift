@@ -50,9 +50,17 @@ final class WelcomeReviewTests: XCTestCase {
         // each Figma line box, so a text's midpoint is the box's midpoint.
         assertNear(welcome.continueWithApple.frame, CGRect(x: 32, y: 772, width: 376, height: 60), "Continue with Apple")
         assertNear(welcome.moreOptions.frame, CGRect(x: 32, y: 844, width: 376, height: 44), "More options")
+        // The headline's two 59 pt line boxes span 570–688 (centre 629). Its accessibility frame is
+        // the union of the glyph frames, which overflow the tight line boxes by half of (Manrope's
+        // natural line − 59 pt) at the top and bottom: 1.366 em at 56 pt, from the font's hhea
+        // metrics (ascender 2132 + descender 600 over 2000 units). The test runner cannot load the
+        // app's fonts, so the metric is written here. Measured on iPhone 17 Pro Max in Codemagic
+        // build 6ab6ad8cd78992b5db88f79d: minY 561.17, height 135.67.
+        let overflow: CGFloat = (1.366 * 56 - 59) / 2
         assertNear(welcome.headline.frame.minX, 32, "headline x")
-        assertNear(welcome.headline.frame.minY, 570, "headline top")
-        assertNear(welcome.headline.frame.height, 118, "headline height (2 × 59)")
+        assertNear(welcome.headline.frame.midY, 629, "headline centre (570 + 118 / 2)")
+        assertNear(welcome.headline.frame.minY, 570 - overflow, "headline glyph top (570 − overflow)")
+        assertNear(welcome.headline.frame.height, 118 + 2 * overflow, "headline glyph extent (2 × 59 + overflow)")
         assertNear(welcome.supporting.frame.minX, 32, "supporting line x")
         assertNear(welcome.supporting.frame.midY, 716.5, "supporting line centre (704 + 25 / 2)")
         assertNear(welcome.eligibility.frame.midX, 220, "18+ only centre x")
