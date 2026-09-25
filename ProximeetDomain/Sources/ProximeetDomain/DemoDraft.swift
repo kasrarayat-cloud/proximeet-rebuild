@@ -7,6 +7,9 @@ import Foundation
 public struct DemoDraft: Equatable, Sendable {
     /// Stored only after an eligible birthday check; cleared by any later rejected check.
     public internal(set) var dateOfBirth: Date?
+    /// The approved Birthday screen's entry: the day/month/year draft and its last check.
+    /// Kept when going Back to Welcome, so returning within the same demo run shows it again.
+    public internal(set) var birthdayEntry = BirthdayEntry()
     public internal(set) var profile: GuestProfile?
     public internal(set) var band: BandIntent?
     public internal(set) var signal: ApproachSignal?

@@ -67,6 +67,25 @@ public struct DemoFlow: Equatable, Sendable {
         return check
     }
 
+    /// Applies one edit or check to the approved Birthday screen's entry. Only available on
+    /// the birthday scene; nothing here navigates.
+    @discardableResult
+    public mutating func updateBirthday(_ change: (inout BirthdayEntry) -> Void) -> Bool {
+        guard currentScene == .birthday else { return false }
+        change(&draft.birthdayEntry)
+        return true
+    }
+
+    /// Continue on the approved Birthday screen. The committed date is re-checked against
+    /// `today` first. The next chapter (Pass) is not built, so an eligible result is returned
+    /// for the screen to say so and the flow does not advance. Returns `nil` off the
+    /// birthday scene.
+    public mutating func continueFromBirthday(today: CivilDate) -> BirthdayStatus? {
+        guard currentScene == .birthday else { return nil }
+        draft.birthdayEntry.reevaluate(today: today)
+        return draft.birthdayEntry.status
+    }
+
     // MARK: - Demo pass
 
     @discardableResult
