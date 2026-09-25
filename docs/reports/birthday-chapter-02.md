@@ -214,10 +214,26 @@ commit hash was checked against the push.
 
   At the largest text size, the full stop of "birthday." wrapped onto a line of its own.
 
-  These are fixed in code in the commit after `88f41f8`. Only that commit's own simulator
-  captures can show whether the fixes work, and a commit cannot record its own build's result.
-  Attempt 2's build ID, verdict and captures are reported with its artifacts
-  (`Birthday-Review.zip`), not in this file.
+  Fixes were made in code for attempt 2. Only its captures could show whether they worked.
+
+**Attempt 2:** build `6ab6d70fd87c7a5efac39927`, commit `5daa98a1ff451fb5d78ce61654fbf7661360dcf2`,
+10 min 57 s.
+
+- **Automated verdict: PASS**, 6 of 6 UI tests.
+- **The fixes that worked:** the capsule was gone, the lane was right, and "birthday." stayed
+  whole at the largest size.
+- **A regression the tests could not see:** every wheel value was invisible. The shape rule
+  for the selection bar had also hidden the views that hold the rows on iOS 26. The wheels
+  were still in the accessibility tree, so every test passed.
+
+Two changes came from that:
+
+- The bar is now hidden only when it holds no rows, and that decision is re-made on every
+  layout pass. The intent is that a wrong call cannot stick; only the next build's captures
+  can show whether that holds.
+- The walkthrough now checks the pixels on screen. It fails unless each wheel's value, and in
+  the adult state its previous value, is drawn visibly. The thresholds come from these two
+  builds: visible values light 1,500 to 3,700 pixels, and the invisible wheels lit none.
 
 ## 8. Decisions and assumptions
 

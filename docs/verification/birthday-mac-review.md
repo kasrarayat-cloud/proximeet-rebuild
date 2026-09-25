@@ -55,7 +55,9 @@ The XCTest review runs in this order:
 2. The simulator recorder starts and must print "Recording started" before anything runs.
 3. `BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack` runs alone. It enters an
    adult date on the wheels, checks Continue's notice, corrects to an under-18 date, goes Back
-   to Welcome and returns to find the draft kept.
+   to Welcome and returns to find the draft kept. It also checks the screen's pixels, so it
+   fails unless the wheel values are actually drawn, not merely present in the accessibility
+   tree.
 4. The recorder stops, and its movie is `birthday-interaction.mp4`.
 5. `testTypedEntryPreservesComponentsAndKeyboard` runs, followed by all of
    `WelcomeReviewTests`: Welcome's geometry, the Apple notice, the new More options choice,

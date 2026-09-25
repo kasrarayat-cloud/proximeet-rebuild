@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 /// Runtime review of the approved Birthday (chapter 02), driven through the real route:
@@ -37,6 +38,7 @@ final class BirthdayReviewTests: XCTestCase {
         XCTAssertEqual(screen.guidance.label, Self.emptyGuidance)
         capture("birthday-empty", app)
         hold(0.8)
+        assertWheelsVisible(app, neighbours: false, "Empty")
 
         screen.wheel(0).adjust(toPickerWheelValue: "12")
         screen.wheel(1).adjust(toPickerWheelValue: "May")
@@ -46,6 +48,7 @@ final class BirthdayReviewTests: XCTestCase {
         XCTAssertEqual(screen.guidance.label, Self.adultGuidance)
         capture("birthday-adult", app)
         hold(0.8)
+        assertWheelsVisible(app, neighbours: true, "12 May 1997")
 
         screen.continueButton.tap()
         let notice = app.alerts["Pass is next."]
@@ -187,6 +190,59 @@ final class BirthdayReviewTests: XCTestCase {
     private func waitForAbsence(_ element: XCUIElement) {
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
         _ = XCTWaiter.wait(for: [gone], timeout: 5)
+    }
+
+    /// Checks the wheels on the screen itself, not only in the accessibility tree: each wheel's
+    /// selected value (or placeholder) must be drawn, and, when asked, its previous value too.
+    /// Counts pixels brighter than the dark console (#1F2022 to #262B2D) in bands of the
+    /// picker's own frame. Measured on build 6ab6d0be: visible values light 1,500 to 3,700
+    /// pixels above 100; the invisible wheels of build 6ab6d70f lit none (their peak was 61).
+    private func assertWheelsVisible(_ app: XCUIApplication, neighbours: Bool, _ state: String) {
+        let identified = app.pickers["birthday.wheels"]
+        let picker = (identified.exists ? identified : app.pickers.firstMatch).frame
+        XCTAssertFalse(picker.isEmpty, "\(state): the wheels have no frame.")
+        guard let image = app.screenshot().image.cgImage, !picker.isEmpty else {
+            XCTFail("\(state): no screenshot to check the wheels against.")
+            return
+        }
+        let scale = CGFloat(image.width) / app.frame.width
+        var counts: [String] = []
+        for (index, name) in ["Day", "Month", "Year"].enumerated() {
+            let x = picker.minX + picker.width * CGFloat(index) / 3
+            let selected = CGRect(x: x, y: picker.midY - 20, width: picker.width / 3, height: 28)
+            let value = litPixels(in: selected, image: image, scale: scale, above: 100)
+            counts.append("\(name) value \(value)")
+            XCTAssertGreaterThan(value, 150, "\(state): the \(name) wheel's value is not visible on screen.")
+            if neighbours {
+                let previous = CGRect(x: x, y: picker.midY - 66, width: picker.width / 3, height: 28)
+                let hint = litPixels(in: previous, image: image, scale: scale, above: 45)
+                counts.append("\(name) previous \(hint)")
+                XCTAssertGreaterThan(hint, 60, "\(state): the \(name) wheel's previous value is not visible on screen.")
+            }
+        }
+        attachNote("\(state): lit pixels per wheel band: " + counts.joined(separator: ", ") + ".")
+    }
+
+    /// Pixels in `band` (points) whose red, green and blue all exceed `threshold`.
+    private func litPixels(in band: CGRect, image: CGImage, scale: CGFloat, above threshold: UInt8) -> Int {
+        let rect = CGRect(x: band.minX * scale, y: band.minY * scale, width: band.width * scale, height: band.height * scale).integral
+        guard let crop = image.cropping(to: rect) else { return 0 }
+        let width = crop.width, height = crop.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return }
+            context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+        }
+        var count = 0
+        for index in stride(from: 0, to: pixels.count, by: 4)
+        where pixels[index] > threshold && pixels[index + 1] > threshold && pixels[index + 2] > threshold {
+            count += 1
+        }
+        return count
     }
 
     private func capture(_ name: String, _ app: XCUIApplication) {

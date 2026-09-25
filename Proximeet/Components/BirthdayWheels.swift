@@ -81,6 +81,7 @@ struct BirthdayWheels: UIViewRepresentable {
         func apply(_ draft: BirthdayComponents, to picker: UIPickerView) {
             guard draft != applied else { return }
             applied = draft
+            picker.setNeedsLayout()
             for column in Column.allCases {
                 let row = self.row(for: value(of: column, in: draft), in: column)
                 if picker.selectedRow(inComponent: column.rawValue) != row {
@@ -206,6 +207,7 @@ struct BirthdayWheels: UIViewRepresentable {
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
             guard let column = Column(rawValue: component) else { return }
             pickerView.reloadComponent(component)
+            pickerView.setNeedsLayout()
             let settled = value(forRow: row, in: column)
             switch column {
             case .day: applied?.day = settled
@@ -261,25 +263,38 @@ struct BirthdayWheels: UIViewRepresentable {
 /// `UIPickerView` without UIKit's own selection bar: the approved lane (#242A2B at 76%,
 /// 308 × 58, radius 8) is drawn behind the wheels instead, so there is exactly one. On iOS 26
 /// the bar is a glass capsule above the rows, a little taller than a row, spanning every
-/// wheel; it is found by that shape (wide and short), never by a private class name.
+/// wheel. It is found by shape and content, never by a private class name: a view that spans
+/// most of the width, is at most 60 % of the height, and holds no rows (no scroll view, label
+/// or image anywhere inside it). The choice is undone and made again on every layout pass, so a
+/// view judged too early (before its rows loaded) is shown again as soon as it holds rows.
 final class BirthdayPickerView: UIPickerView {
+    private let hiddenBars = NSHashTable<UIView>.weakObjects()
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        for view in hiddenBars.allObjects {
+            view.alpha = 1
+        }
+        hiddenBars.removeAllObjects()
         hideSelectionBar(in: self)
     }
 
-    /// Wheel columns are full height and a wheel's rows live in scroll views, which are never
-    /// touched; only a view spanning most of the width but at most 60 % of the height is.
     private func hideSelectionBar(in container: UIView) {
-        for view in container.subviews where !(view is UIScrollView) {
+        for view in container.subviews where !(view is UIScrollView) && !(view is UILabel) {
             let size = view.bounds.size
-            if size.width >= bounds.width * 0.6, size.height > 0, size.height <= bounds.height * 0.6 {
+            guard size.width >= bounds.width * 0.6, size.height > 0 else { continue }
+            if size.height <= bounds.height * 0.6, !Self.holdsRows(view) {
                 view.alpha = 0
-                view.isHidden = true
-            } else if size.height >= bounds.height * 0.9 {
+                hiddenBars.add(view)
+            } else {
                 hideSelectionBar(in: view)
             }
         }
+    }
+
+    /// Wheel rows live in scroll views and are drawn as labels (or shown as images of them).
+    private static func holdsRows(_ view: UIView) -> Bool {
+        view.subviews.contains { $0 is UIScrollView || $0 is UILabel || $0 is UIImageView || holdsRows($0) }
     }
 }
 
