@@ -38,8 +38,6 @@ struct BirthdayWheels: UIViewRepresentable {
     func makeUIView(context: Context) -> BirthdayPickerView {
         let picker = BirthdayPickerView()
         picker.backgroundColor = .clear
-        // Only the 150-pt window shows rows: previous, selected and next, as in the design.
-        picker.clipsToBounds = true
         picker.dataSource = context.coordinator
         picker.delegate = context.coordinator
         picker.accessibilityIdentifier = "birthday.wheels"

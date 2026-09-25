@@ -368,8 +368,11 @@ private struct DateConsole: View {
             }
             switch mode {
             case .wheels:
+                // The picker keeps its own (taller) height, so its rows keep the approved
+                // spacing; only the 150-pt window shows them: previous, selected and next.
                 BirthdayWheels(draft: draft, years: years, scale: s, onSettle: onWheelSettle, onMotion: onWheelMotion)
                     .frame(width: 308 * s, height: 150 * s)
+                    .clipped()
                     .padding(.leading, 42 * s)
                     .padding(.top, 68 * s)
             case .typed:

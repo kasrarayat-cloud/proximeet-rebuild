@@ -114,8 +114,10 @@ art, as the handoff asks.
   UIKit's own selection bar is hidden, so there is exactly one lane. On iOS 26 that bar is a
   glass capsule drawn above the rows. It is found by its shape (it spans the wheels and is
   shorter than them), never by a private class name.
-- The wheels are clipped to their 150 pt window, so only the previous, selected and next
-  rows show. Values sit 4.5 pt above the middle of their row, as on the approved board.
+- The wheels are clipped to their 150 pt window in SwiftUI, so that only the previous,
+  selected and next rows should show. The picker keeps its own taller height, so the row
+  spacing should stay as approved. Attempt 3 showed that clipping inside UIKit did not work,
+  and the result of this change is reported with its own build. Values sit 4.5 pt above the middle of their row, as on the approved board.
 - UIPickerView fades the rows outside its centre to about 37%. A set wheel's neighbours are
   therefore drawn in #D2E6EA, which renders as the approved #616B6E. An unset wheel keeps
   #616B6E, so its next value is only a faint hint. The approved empty state shows no
@@ -243,6 +245,21 @@ Two changes came from that:
   The test requires more than 150 value pixels and more than 60 previous-value pixels. The
   result of the next build is not recorded here, because a commit cannot contain its own
   build's result.
+
+**Attempt 3:** build `6ab6db53d7b32e57ee0d9a2b`, commit `a2cf63cdf6cf311fc70108b1efc939a3d8add5ce`,
+11 min 15 s.
+
+- **Automated verdict: PASS**, 6 of 6 UI tests, including the new on-screen visibility check.
+  Lit pixels per wheel: values 2,410–4,991, previous values 1,765–3,461.
+- **Inspected by eye:**
+  - the capsule was gone, and the approved lane showed once;
+  - the values were drawn in white, on the reference's baseline;
+  - the neighbours were close to the reference's brightness;
+  - "birthday." stayed whole at the largest text size.
+- **One deviation left:** part-rows (for example "10 Mar 1995") showed at the window's top and
+  bottom edges, most visibly on the smaller iPhone. UIPickerView sizes itself taller than its
+  150 pt frame, so clipping inside UIKit did not reach them. The next commit clips the window
+  in SwiftUI instead. Its result is reported with its own build, not in this file.
 
 ## 8. Decisions and assumptions
 
