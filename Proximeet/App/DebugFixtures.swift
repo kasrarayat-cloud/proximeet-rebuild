@@ -6,7 +6,8 @@ import ProximeetDomain
 ///
 ///     -ProximeetFixture welcome | birthday | birthday-adult | birthday-under18 | pass |
 ///                       guest-list | guest-list-filled | guest-list-card | guest-list-name-only |
-///                       band | band-selected | signal | signal-selected | ready
+///                       wristband | wristband-social | wristband-dating | wristband-business |
+///                       wristband-activity | band | band-selected | signal | signal-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
 ///     -ProximeetFixtureSignal comeSayHi | chatFirst | withMyCrew | justLooking
 ///     -ProximeetReduceMotionPreview YES
@@ -58,6 +59,13 @@ enum PreviewFixtures {
         case guestListCard = "guest-list-card"
         /// The personal card with only the fictional name: no opener, no interests.
         case guestListNameOnly = "guest-list-name-only"
+        /// The approved Wristband, unselected, opened from the fictional example's card.
+        case wristband
+        /// The approved Wristband with one intent chosen.
+        case wristbandSocial = "wristband-social"
+        case wristbandDating = "wristband-dating"
+        case wristbandBusiness = "wristband-business"
+        case wristbandActivity = "wristband-activity"
         case band
         case bandSelected = "band-selected"
         case signal
@@ -82,7 +90,9 @@ enum PreviewFixtures {
         signal: ApproachSignal = .chatFirst
     ) -> DemoSession {
         let session = DemoSession(flow: flow(at: stage, band: band, signal: signal))
-        session.fixtureOpensGuestListCard = stage == .guestListCard || stage == .guestListNameOnly
+        // The Guest List below a Wristband fixture shows its card too, as on the real route.
+        session.fixtureOpensGuestListCard = [.guestListCard, .guestListNameOnly, .wristband, .wristbandSocial,
+                                             .wristbandDating, .wristbandBusiness, .wristbandActivity].contains(stage)
         return session
     }
 
@@ -102,7 +112,8 @@ enum PreviewFixtures {
         switch stage {
         case .birthday:
             return flow
-        case .birthdayAdult, .birthdayUnder18, .pass, .guestList, .guestListFilled, .guestListCard, .guestListNameOnly:
+        case .birthdayAdult, .birthdayUnder18, .pass, .guestList, .guestListFilled, .guestListCard, .guestListNameOnly,
+             .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity:
             // The approved Figma example dates, entered and checked through the domain.
             let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
             flow.updateBirthday { entry in
@@ -126,6 +137,17 @@ enum PreviewFixtures {
                 flow.editIntroduction { $0 = exampleIntroduction }
             case .guestListNameOnly:
                 flow.editIntroduction { $0.name = exampleIntroduction.name }
+            case .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity:
+                // Through the card's Continue preview, as a guest would reach it.
+                flow.editIntroduction { $0 = exampleIntroduction }
+                var card = GuestListDemo()
+                card.preview(flow.draft.introduction)
+                flow.continueFromGuestListCard(card)
+                let intents: [Stage: BandIntent] = [.wristbandSocial: .social, .wristbandDating: .dating,
+                                                    .wristbandBusiness: .business, .wristbandActivity: .activity]
+                if let intent = intents[stage] {
+                    flow.chooseIntent(intent)
+                }
             default:
                 break
             }

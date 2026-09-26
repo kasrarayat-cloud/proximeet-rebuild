@@ -32,7 +32,7 @@ private struct SceneDestination: View {
         case .guestList:
             GuestListView()
         case .band:
-            BandSelectionView()
+            WristbandView()
         case .signal:
             SignalSelectionView()
         case .readyForCheckIn:

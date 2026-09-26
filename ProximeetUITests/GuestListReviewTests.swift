@@ -31,7 +31,8 @@ final class GuestListReviewTests: XCTestCase {
     /// Into the Guest List from a completed Pass; the empty editor; typing the name, Return to
     /// the opener, typing it, Done; the three interests; Preview my card; Back and Edit
     /// introduction to the editor with everything kept; Back to the complete Pass; re-entry with
-    /// the draft; and Continue preview's "End of this preview." on the card.
+    /// the draft; and Continue preview on the card opening the Wristband (chapter 05), whose Back
+    /// returns to the card.
     func testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint() throws {
         print("GUEST_LIST_WALKTHROUGH_START \(Date().timeIntervalSince1970)")
         let app = launchWelcome()
@@ -114,15 +115,15 @@ final class GuestListReviewTests: XCTestCase {
         guest.primary.tap()
         waitForHeadline(guest, "Your first hello.")
         hold(1.0)
+        // Continue preview now opens the Wristband (chapter 05); its Back returns to this card.
         guest.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5), "Continue preview shows the end-of-preview message.")
-        XCTAssertTrue(end.buttons["OK"].exists)
+        let wristband = app.descendants(matching: .any).matching(identifier: "wristband.headline").firstMatch
+        XCTAssertTrue(wristband.waitForExistence(timeout: 5), "Continue preview on the card opens the Wristband.")
+        XCTAssertEqual(app.alerts.count, 0, "No end-of-preview message on the card any more.")
         hold(0.8)
-        capture("guest-list-endpoint", app)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
-        XCTAssertEqual(guest.headline.label, "Your first hello.", "The message stays on the card; no later chapter.")
+        capture("guest-list-continue-wristband", app)
+        app.buttons["wristband.back"].tap()
+        waitForHeadline(guest, "Your first hello.")
         assertCard(guest, label: Self.alexCard)
         hold(1.2)
     }
@@ -354,6 +355,65 @@ final class GuestListReviewTests: XCTestCase {
         capture("guest-list-keyboard-dismissed", app)
     }
 
+    /// Starts from the DEBUG fixture `guest-list-filled`. With the keyboard open, the floating Done
+    /// and the editor's Back are separate targets. On build 6ab75905 (iPhone 17 Pro Max) Done lay
+    /// at y 569–605 over the bottom-right corner of Back's 376 × 44 target (545–589). Here, for
+    /// each field: Done's frame meets neither action, both actions keep their size above the
+    /// keyboard, and Done closes the keyboard and stays on the editor with the draft. Then, with
+    /// the keyboard open, a tap 3 pt inside the bottom-right corner of Back's target goes back to
+    /// the Pass. Run on the iPhone 17 Pro Max and on the smaller iPhone.
+    func testKeyboardDoneAndBackStayIndependent() throws {
+        let app = launch(fixture: "guest-list-filled")
+        let guest = GuestListElements(app: app)
+        waitForHeadline(guest, "A little about you.")
+        let width = Int(app.frame.width.rounded())
+        for field in [guest.name, guest.opener] {
+            field.tap()
+            XCTAssertTrue(waitForKeyboard(app), "The keyboard opens for \(field.identifier).")
+            XCTAssertTrue(waitForFocus(field))
+            hold(0.8)
+            let done = keyboardDoneButton(app)
+            XCTAssertTrue(done.waitForExistence(timeout: 5), "Done is offered above the keyboard.")
+            let doneFrame = done.frame, back = guest.secondary.frame, primary = guest.primary.frame
+            let keyboard = app.keyboards.firstMatch.frame
+            attachNote("Keyboard open (\(field.identifier), \(width) pt wide): Done \(NSCoder.string(for: doneFrame)); "
+                + "Back \(NSCoder.string(for: back)); Preview my card \(NSCoder.string(for: primary)); "
+                + "keyboard \(NSCoder.string(for: keyboard)); field \(NSCoder.string(for: field.frame)).")
+            capture("guest-list-keyboard-done-back-\(field.identifier == "guestList.name" ? "name" : "opener")-\(width)pt", app)
+            XCTAssertFalse(doneFrame.intersects(back), "Done does not overlap Back's target.")
+            XCTAssertFalse(doneFrame.intersects(primary), "Done does not overlap Preview my card.")
+            XCTAssertGreaterThanOrEqual(back.height, 44)
+            XCTAssertGreaterThanOrEqual(back.width, 44)
+            XCTAssertGreaterThanOrEqual(primary.height, 60)
+            XCTAssertLessThanOrEqual(back.maxY, keyboard.minY + 1, "The actions stay above the keyboard.")
+            XCTAssertTrue(field.isHittable, "\(field.identifier) is visible while focused.")
+            XCTAssertLessThanOrEqual(field.frame.maxY, primary.minY, "\(field.identifier) is not behind the actions.")
+            done.tap()
+            XCTAssertTrue(waitForNoKeyboard(app), "Done closes the keyboard.")
+            hold(0.6)
+            XCTAssertEqual(guest.headline.label, "A little about you.", "Done does not also go back.")
+            XCTAssertEqual(fieldText(guest.name, placeholder: "What should we call you?"), "Alex", "Done keeps the draft.")
+            XCTAssertEqual(fieldText(guest.opener, placeholder: "A good hello starts with…"), Self.opener)
+        }
+
+        guest.opener.tap()
+        XCTAssertTrue(waitForKeyboard(app))
+        hold(0.8)
+        let back = guest.secondary.frame
+        let done = keyboardDoneButton(app)
+        let corner = CGPoint(x: back.maxX - 3, y: back.maxY - 3)
+        attachNote("Tap at Back's bottom-right corner \(String(format: "{%.2f, %.2f}", corner.x, corner.y)) with the keyboard open; "
+            + "Done \(NSCoder.string(for: done.exists ? done.frame : .null)).")
+        XCTAssertFalse(done.exists && done.frame.contains(corner), "Back's corner is not under Done.")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: corner.x, dy: corner.y)).tap()
+        let pass = PassElements(app: app)
+        XCTAssertTrue(pass.headline.waitForExistence(timeout: 5), "A tap at Back's bottom-right corner goes back to the Pass.")
+        waitForAbsence(guest.headline)
+        XCTAssertFalse(guest.headline.exists, "The editor has closed.")
+        hold(0.6)
+        capture("guest-list-keyboard-back-corner-\(width)pt", app)
+    }
+
     /// Starts from the DEBUG fixture `guest-list`. A hardware keyboard: Tab moves from the name to
     /// the introduction, Shift-Tab back, and Tab in the introduction leaves it; no tab character
     /// is typed into either field. Runs in its own xcodebuild pass with the other tests that send
@@ -411,7 +471,8 @@ final class GuestListReviewTests: XCTestCase {
         guest.primary.doubleTap()
         waitForHeadline(guest, "Your first hello.")
         hold(1.0)
-        XCTAssertEqual(app.alerts.count, 0, "A double tap on Preview my card does not also end the preview.")
+        XCTAssertFalse(app.descendants(matching: .any)["wristband.headline"].exists, "A double tap on Preview my card does not also open the Wristband.")
+        XCTAssertEqual(app.alerts.count, 0)
         XCTAssertEqual(guest.headline.label, "Your first hello.")
 
         guest.secondary.doubleTap()
@@ -447,7 +508,8 @@ final class GuestListReviewTests: XCTestCase {
 
     /// The draft lasts for the run and no longer: a relaunch through the real route finds the
     /// editor empty. Nothing on any Guest List screen claims verification, visibility, presence
-    /// or a later chapter, and no permission is asked.
+    /// or a later chapter, and no permission is asked. The card's Continue preview opens the
+    /// Wristband and its Back returns to the same card.
     func testRelaunchResetsTheDraftAndNothingIsConferred() throws {
         var app = launch(fixture: "guest-list-card")
         var guest = GuestListElements(app: app)
@@ -455,11 +517,11 @@ final class GuestListReviewTests: XCTestCase {
         assertCard(guest, label: Self.alexCard)
         assertNothingConferred(app)
         guest.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5))
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
-        XCTAssertEqual(guest.headline.label, "Your first hello.", "No later chapter: the card stays.")
+        let wristband = app.descendants(matching: .any).matching(identifier: "wristband.headline").firstMatch
+        XCTAssertTrue(wristband.waitForExistence(timeout: 5), "Continue preview on the card opens the Wristband.")
+        app.buttons["wristband.back"].tap()
+        waitForHeadline(guest, "Your first hello.")
+        assertCard(guest, label: Self.alexCard)
         guest.secondary.tap()
         waitForHeadline(guest, "A little about you.")
         assertEditor(guest, name: "Alex", opener: Self.opener, selected: [true, true, true])
@@ -677,7 +739,8 @@ final class GuestListReviewTests: XCTestCase {
         let predicate = NSPredicate(format: words.map { _ in "label CONTAINS[c] %@" }.joined(separator: " OR "), argumentArray: words)
         XCTAssertEqual(app.descendants(matching: .any).matching(predicate).count, 0, "No verified, visible, present or member wording.")
         XCTAssertEqual(app.alerts.count, 0, "No permission or provider prompt appeared.")
-        XCTAssertFalse(app.descendants(matching: .any)["band.headline"].exists, "No later chapter is reached.")
+        XCTAssertFalse(app.descendants(matching: .any)["wristband.headline"].exists, "No Wristband over the Guest List.")
+        XCTAssertFalse(app.descendants(matching: .any)["signal.confirm"].exists, "No later chapter is reached.")
     }
 
     /// The focused field, both actions and Back are visible and hittable with the keyboard open.
@@ -848,10 +911,15 @@ final class GuestListReviewTests: XCTestCase {
         add(attachment)
     }
 
+    /// With `PROXIMEET_SHORT_HOLDS=1` (the Wristband review, which records none of these tests) a
+    /// hold is at most 0.6 s: long enough for every 220 ms change to settle, without the pauses
+    /// that only a recording needs.
     private func hold(_ seconds: TimeInterval) {
+        let short = ProcessInfo.processInfo.environment["PROXIMEET_SHORT_HOLDS"] == "1"
+        let duration = short ? min(seconds, 0.6) : seconds
         let done = expectation(description: "Hold so the recording shows this state")
-        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { done.fulfill() }
-        wait(for: [done], timeout: seconds + 1)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { done.fulfill() }
+        wait(for: [done], timeout: duration + 1)
     }
 
     /// Rendered-screen checks record every failure (the test still fails) without stopping the

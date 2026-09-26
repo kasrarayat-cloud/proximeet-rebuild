@@ -15,8 +15,8 @@ import ProximeetDomain
 /// Two stages (`GuestListDemo`), each changed only by the guest: Preview my card (editor →
 /// card) and Edit introduction or Back (card → editor), with a 220 ms ease-out dissolve. The
 /// card settles into place in 450 ms, art and text together. Back on the editor returns to the
-/// Pass, still complete below this screen. Continue preview on the card only shows "End of this
-/// preview." and stays: no later chapter exists.
+/// Pass, still complete below this screen. Continue preview on the card opens the approved
+/// Wristband (chapter 05); its Back returns to this card, which stays below it.
 ///
 /// The cotton paper, clip, woven tab and holder are the approved raster decoration
 /// (`GuestListCardArt`, the original 1457 × 1079 artwork cropped to its silhouette); every word,
@@ -25,7 +25,6 @@ struct GuestListView: View {
     @Environment(DemoSession.self) private var session
     @Adaptive private var adaptive
     @State private var demo = GuestListDemo()
-    @State private var isShowingEndOfPreview = false
     /// Gentle validation: the name's help appears only once the name has been edited or left.
     @State private var nameTouched = false
     @FocusState private var focus: GuestListField?
@@ -101,9 +100,6 @@ struct GuestListView: View {
                 }
                 .accessibilityIdentifier("guestList.keyboardDone")
             }
-        }
-        .alert("End of this preview.", isPresented: $isShowingEndOfPreview) {
-            Button("OK", role: .cancel) {}
         }
         .onChange(of: session.introduction.name) {
             nameTouched = true
@@ -266,6 +262,12 @@ struct GuestListView: View {
 
     // MARK: - Actions
 
+    /// iOS 26 floats the keyboard toolbar's Done above the keyboard's safe area: on build
+    /// 6ab75905 (iPhone 17 Pro Max) Done lay at y 569–605 against a safe-area edge at 597, over
+    /// the bottom-right corner of Back's 376 × 44 target. While a field is focused the actions
+    /// keep this much more room, so Done never lies over Back or the primary action.
+    private static let keyboardDoneClearance: CGFloat = 36
+
     /// 376 × 60 at y 812 and 376 × 44 at y 880, kept above the keyboard (safe-area inset). At
     /// rest the pair ends 32 pt above the screen's bottom edge, as in Figma.
     private func actions(bottomInset: CGFloat) -> some View {
@@ -287,9 +289,9 @@ struct GuestListView: View {
         .padding(.horizontal, 32)
         .padding(.top, 25)
         // At rest (no field focused, no keyboard), 32 pt above the screen edge, which may reach
-        // 2 pt into the home indicator area. While editing, or while a keyboard or its bar is
-        // still on screen, 8 pt above whatever is below.
-        .padding(.bottom, focus == nil && bottomInset < 60 ? 32 - bottomInset : 8)
+        // 2 pt into the home indicator area. While a field is focused, clear of the keyboard's
+        // floating Done; while a keyboard is still leaving, 8 pt above it.
+        .padding(.bottom, focus != nil ? 8 + Self.keyboardDoneClearance : (bottomInset < 60 ? 32 - bottomInset : 8))
         .background(GuestListStyle.ground.ignoresSafeArea(edges: .bottom))
     }
 
@@ -308,7 +310,7 @@ struct GuestListView: View {
             }
         case .card:
             if demo.continuePreview() {
-                isShowingEndOfPreview = true
+                session.continueFromGuestListCard(demo)
             }
         }
     }

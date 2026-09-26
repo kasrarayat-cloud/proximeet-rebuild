@@ -1,0 +1,71 @@
+{
+  "chapter": "05 Wristband",
+  "status": "Approved app visual direction on 2026-09-25; physical wearable is a separate unapproved proposal.",
+  "tool": "Built-in image generation",
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "assets": [
+    {
+      "intent": "Social",
+      "color": "Coral",
+      "weave": "Basket weave",
+      "prompt": "Use case: product-mockup.\nAsset type: premium photoreal decorative wristband hero for Proximeet mobile intent selection.\nCreate ONE extraordinary coral woven wristband, isolated on genuinely transparent alpha. A broad, continuous 22 mm textile band curves into a generous open oval, like an exquisite reusable event wristband rather than a watch. View from slightly above and straight in front: rear half of the oval arches upward, front half rests lower; inner negative space remains clearly visible. Width-to-height of the object about 1.8:1. Its front-center has a small precise low-profile brushed stainless steel clasp bridging the woven strap, with a thin graphite gasket, realistic seam, restrained chamfer and a completely BLANK flat front face. Closed clasp, no loose dangling end. The clasp should feel small and expertly made, not a giant plate. No watch face, no screen, no sensor, no jewelry stones. Slight natural textile tension and gentle curvature, outstanding fine fiber detail.\nColor and textile: warm human coral fabric, richly saturated yet sophisticated, with an elegant tight basket-weave and subtly lighter edge stitching. Tiny balanced graphite hardware accents. Light ivory stitch line only at outer edges. No cyan on this specific band.\nLighting: controlled luxury product photography; broad soft upper-left key; subtle cool reflections on brushed steel; realistic contact occlusion inside the weave. Mature editorial craft, impressive material presence. No excessive shine, plastic, neon, hologram or sci-fi.\nComposition: front-center clasp face nearly level, no Dutch angle; entire object centered, complete silhouette, 12 percent transparent margin all around. Intended to display at 360px wide. Square canvas. No ground plane, environment, human hand, wrist, other objects, text, numbers, logos, letters, badges, UI or symbols. All words and symbols will be native editable interface elements outside the art.\nMaintain believable strap continuity all the way around the oval. This is a static product-art reference, not a model or rig.",
+      "source_asset": "exec-802cf47d-e0dd-4b9c-bf73-0860b1465ead.png"
+    },
+    {
+      "intent": "Dating",
+      "color": "rich orchid purple",
+      "weave": "fine diagonal herringbone weave",
+      "prompt": "Use case: precise-object-edit. Input image is the edit target and exact geometry reference. Make the dating material variant of this Proximeet wristband. Change ONLY the coral textile to rich orchid purple and its surface weave to fine diagonal herringbone weave. Preserve the identical oval silhouette, closed front-center brushed stainless clasp, graphite gasket, camera angle, scale, position, framing, band width, lighting direction and transparent margins. Keep restrained ivory edge stitching. Exquisite believable woven fibers, premium product photography. Preserve all transparent alpha, including the inner oval opening. Keep the entire object visible. No text, logos, letters, symbols, UI, scene, hand or wrist. Do not change the pose or hardware. The result must match the reference so the four bands form one coherent family.",
+      "reference_asset": "exec-802cf47d-e0dd-4b9c-bf73-0860b1465ead.png",
+      "source_asset": "exec-1463674a-ea85-44a0-8fab-8864e9d83ab7.png"
+    },
+    {
+      "intent": "Business",
+      "color": "deep vibrant network blue",
+      "weave": "precise fine straight rib weave",
+      "prompt": "Use case: precise-object-edit. Input image is the edit target and exact geometry reference. Make the business material variant of this Proximeet wristband. Change ONLY the coral textile to deep vibrant network blue and its surface weave to precise fine straight rib weave. Preserve the identical oval silhouette, closed front-center brushed stainless clasp, graphite gasket, camera angle, scale, position, framing, band width, lighting direction and transparent margins. Keep restrained ivory edge stitching. Exquisite believable woven fibers, premium product photography. Preserve all transparent alpha, including the inner oval opening. Keep the entire object visible. No text, logos, letters, symbols, UI, scene, hand or wrist. Do not change the pose or hardware. The result must match the reference so the four bands form one coherent family.",
+      "reference_asset": "exec-802cf47d-e0dd-4b9c-bf73-0860b1465ead.png",
+      "source_asset": "exec-77d622ac-7367-4110-8fa7-4cfa173694f4.png"
+    },
+    {
+      "intent": "Activity",
+      "color": "warm golden amber",
+      "weave": "technical chevron weave with subtle alternating directional stitches",
+      "prompt": "Use case: precise-object-edit. Input image is the edit target and exact geometry reference. Make the activity material variant of this Proximeet wristband. Change ONLY the coral textile to warm golden amber and its surface weave to technical chevron weave with subtle alternating directional stitches. Preserve the identical oval silhouette, closed front-center brushed stainless clasp, graphite gasket, camera angle, scale, position, framing, band width, lighting direction and transparent margins. Keep restrained ivory edge stitching. Exquisite believable woven fibers, premium product photography. Preserve all transparent alpha, including the inner oval opening. Keep the entire object visible. No text, logos, letters, symbols, UI, scene, hand or wrist. Do not change the pose or hardware. The result must match the reference so the four bands form one coherent family.",
+      "reference_asset": "exec-802cf47d-e0dd-4b9c-bf73-0860b1465ead.png",
+      "source_asset": "exec-a8105b2b-c644-4e3e-916a-9174b9e183ba.png"
+    }
+  ],
+  "limits": [
+    "Static raster product artwork, not 3D geometry or an animated rig.",
+    "All names, symbols, descriptions, selected markers and controls remain native editable interface elements.",
+    "Band choice represents one current demo intent. It grants no age verification, presence, visibility, chat or approach consent."
+  ],
+  "figma_page": "42:111",
+  "review_board": "45:166",
+  "frames": {
+    "unselected": "42:112",
+    "social": "42:113",
+    "dating": "42:114",
+    "business": "42:115",
+    "activity": "42:116"
+  },
+  "delivery_framing": {
+    "shared_crop_xyxy": [
+      22,
+      335,
+      1235,
+      920
+    ],
+    "delivery_size": [
+      540,
+      260
+    ],
+    "note": "A shared crop keeps the four textile variants aligned. Preserve the original alpha artwork for implementation."
+  },
+  "approval": {
+    "date": "2026-09-25",
+    "quote": "on wrist section its perfect i approve it",
+    "scope": "Existing five-state Wristband app design and decorative material family only."
+  }
+}

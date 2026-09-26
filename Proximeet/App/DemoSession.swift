@@ -78,6 +78,29 @@ final class DemoSession {
         flow.leaveGuestList()
     }
 
+    /// Continue preview on the approved Guest List card: opens the approved Wristband.
+    func continueFromGuestListCard(_ demo: GuestListDemo) {
+        flow.continueFromGuestListCard(demo)
+    }
+
+    // MARK: - Approved Wristband
+
+    /// The single current intent, or none. Memory only.
+    var intent: BandIntent? { flow.draft.band }
+
+    /// Chooses the intent; choosing the current one again does nothing.
+    func chooseIntent(_ intent: BandIntent) {
+        flow.chooseIntent(intent)
+    }
+
+    /// Whether Continue preview may show the end-of-preview message.
+    var canContinueWristband: Bool { flow.continueWristbandPreview() }
+
+    /// Back on the Wristband: returns to the Guest List card, with the draft and intent kept.
+    func leaveWristband() {
+        flow.leaveWristband()
+    }
+
     #if DEBUG
     /// DEBUG fixtures only: open the next Guest List on its card, as if Preview my card had been
     /// pressed. Read once.
