@@ -24,11 +24,22 @@ scope:
 `scripts/places_review.sh` builds its xcodebuild runs from that file.
 `scripts/places_review_results.py` judges every row against the build's logs.
 
-| Scope | Selected iPhone 17 Pro Max | Device B (a clone of it) | Smaller iPhone | Executions |
-| --- | --- | --- | --- | --- |
-| `places` | the recorded journey (alone, full holds), then rapid taps and interruptions and the Reduce Motion preview | all twelve intent-venue combinations, Back routes with the retained category and draft, the band change, missing choices and the guarded explanation, the Birthday gate on the way back, relaunch, the largest text, the seven screens | the seven screens and the largest text | 13 (11 unique) |
-| `signal` | Signal's journey (unrecorded), twelve states, first choices, rapid changes, the endpoint | the age-gate journey, relaunch, Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests`, both Guest List keyboard tests | the keyboard Done/Back check and Signal's largest text | 16 (14 unique) |
-| `regressions` | the Wristband (7), Pass (4) and Birthday (2) tests, the two walkthroughs first | the Guest List's paste test, its on-screen-keyboard tests with the names test, Welcome (all 4), a time-gated repeat of the paste test, and last its hardware Tab test | not used | 27 required (+1 optional repeat) |
+Each scope uses the selected iPhone 17 Pro Max ("main") and one other device, and the two run in
+parallel. Every test with 440-point pixel anchors runs on main, or on device B, the same model.
+
+| Scope | Main (iPhone 17 Pro Max) | The other device | Executions |
+| --- | --- | --- | --- |
+| `places` | The recorded journey (alone, full holds). Then the Birthday gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion preview, relaunch and the seven screens | The smaller iPhone: Back routes with the retained category and draft, the band change, all twelve intent-venue combinations, the largest text, missing choices and the guarded explanation, and the seven screens | 13 (11 unique) |
+| `signal` | Signal's journey (unrecorded), twelve states, first choices, rapid changes and the endpoint. Then build 6ab7e942's device-B tests (the same model): the age-gate journey, relaunch, the Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests` and both Guest List keyboard tests | The smaller iPhone: the keyboard Done/Back check and Signal's largest text | 16 (14 unique) |
+| `regressions` | The Wristband (7), Pass (4) and Birthday (2) tests, the two walkthroughs first | Device B (a clone of main): the Guest List's paste test, its on-screen-keyboard tests with the names test, Welcome (all 4), a time-gated repeat of the paste test, and last its hardware Tab test | 27 required (+1 optional repeat) |
+
+**Devices and time (after build `6ab84ede`).**
+- Two measurements from that build set the device plan:
+  - A simulator restarted after its first boot was not ready for 3.5 to 5.7 minutes.
+  - A second first boot during the compilation slowed it by about 2 minutes.
+- So the main simulator boots alone during the compilation and is never restarted. For regressions, device B is cloned from it before either boots. The other device boots when `ui-review` starts.
+- The UI deadline is 1380 s after the gate. The run input `PLACES_UI_DEADLINE_SECONDS` (600 to 1380) lowers it.
+- `proximeet-places-review-short` runs the same steps with a 24-minute limit. Its own `PLACES_UI_DEADLINE_SECONDS` is 1110 (at the worst 72 + 1110 + 75 + 100 + about 40 = 1397 s). It is for a final build that must fit what is left of the chapter's 90 free minutes.
 
 `signal` and `regressions` preserve the earlier coverage: 41 unique test methods in 43 required
 executions (builds `6ab7e942` and `6ab81e22`).
@@ -106,13 +117,15 @@ checkout is exactly the reviewed revision:
 7. `codemagic_verify.sh domain-tests`: `swift test` on the Mac. It covers the Places rules (the
    12-combination matrix, precedence, state preservation, clock independence) and every earlier
    chapter's rules.
-8. `places_review.sh ui-review` runs the manifest's runs in three steps:
-   - it compiles the test harness and clones device B;
-   - it runs the main and device B runs in parallel, then the smaller iPhone's;
+8. `places_review.sh ui-review` runs the manifest's runs in four steps:
+   - it boots the other device and compiles the test harness;
+   - it copies the build products for the other device, so the two xcodebuild processes never
+     share a DerivedData folder;
+   - it runs main's runs and the other device's in parallel;
    - `bounded_test` bounds every xcodebuild. At its bound the run gets SIGINT, then SIGKILL 75 s
      later, so its result bundle survives.
 
-   The UI deadline is 1380 s after the gate.
+   The UI deadline is 1380 s after the gate, or the run input.
 9. `places_review.sh compact-video`: a half-size re-encode of the journey, trimmed to the app by
    the test's own start marker and duration. The original is kept.
 10. `verdict`, `package-review` and `enforce`: the build fails unless the automated verdict is

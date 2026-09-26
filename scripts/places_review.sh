@@ -91,6 +91,17 @@ SMALLER_IPHONES="iPhone 17e|iPhone 16e|iPhone SE (3rd generation)|iPhone 17|iPho
 # after its UI review. At the worst: 58 + 1380 + 75 + (20 + 20 + 60) + about 30 = 1643 s, about 27:25,
 # inside the workflow's 28 minutes. A normal run ends minutes before the deadline.
 UI_DEADLINE_SECONDS=1380
+# A lower deadline for a build with a shorter limit: the run input PLACES_UI_DEADLINE_SECONDS, 600 to
+# 1380, digits only (the workflow proximeet-places-review-short, 24 minutes, sets 1110: at the worst
+# 72 + 1110 + 75 + 100 + about 40 = 1397 s). The source gate rejects any other value.
+case "${PLACES_UI_DEADLINE_SECONDS:-}" in
+    ''|*[!0-9]*|0*) ;;
+    *)
+        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 1380 ]; then
+            UI_DEADLINE_SECONDS="$PLACES_UI_DEADLINE_SECONDS"
+        fi
+        ;;
+esac
 # xcodebuild needs 13-57 s to close its result bundle after its last test on this host type; an
 # interrupted run gets 75 s before SIGKILL.
 TEST_GRACE_SECONDS=75
@@ -544,6 +555,10 @@ if scope not in scopes:
         problems.append("PLACES_REVIEW_SCOPE must be one of %s (got %r)" % (", ".join(sorted(scopes)), scope))
     scope = scope or "places"
 
+deadline = os.environ.get("PLACES_UI_DEADLINE_SECONDS", "")
+if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 1380):
+    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 1380 seconds (got %r)" % deadline)
+
 head = git("rev-parse", "HEAD") or "unavailable"
 pin = os.environ.get("PLACES_EXPECTED_COMMIT", "").strip()
 if pin:
@@ -561,6 +576,7 @@ lines = [
     "codemagic_commit=" + os.environ.get("CM_COMMIT", "unset"),
     "commit_pin=" + (("PLACES_EXPECTED_COMMIT=" + pin) if pin else "none (compare git_head with the reviewed SHA)"),
     "scope=" + scope,
+    "ui_deadline_seconds=" + (deadline or "1380 (default)"),
     "frozen_manifest_sha256=" + sha256(frozen_path),
     "review_manifest_sha256=" + sha256(review_path),
     "run_manifest_sha256=" + sha256(run_manifest),
@@ -592,7 +608,7 @@ stage_destinations() {
     run xcrun simctl list devices available
     xcrun simctl list -j devices available > "$META/places-devices-available.json"
     xcrun simctl list -j runtimes available > "$META/places-runtimes-available.json"
-    local status=0 smaller
+    local status=0 smaller b_udid
     run python3 - "$META/places-devices-available.json" "$META/places-runtimes-available.json" \
         "$SIM_UDID" "$PRIMARY_TARGET" "$OUT/destination.txt" <<'PY' || status=$?
 import json
@@ -624,22 +640,37 @@ print("\n".join(lines))
 sys.exit(0 if selected and selected[0] == primary else 1)
 PY
 
-    # The first boots (minutes of data migration) start now, behind the compilation and the domain
-    # tests: the selected simulator, which device B is later cloned from, and (when the scope uses
-    # one) the smaller iPhone.
-    rm -f "$SMALL_ENV"
+    # Devices. Build 6ab84ede showed that a simulator restarted after its first boot is not ready for
+    # 3.5 to 5.7 minutes, and that a second first boot during the compilation slows it by about two
+    # minutes. So the selected simulator boots now, alone, behind the compilation and the domain
+    # tests, and is never restarted. The second device (device B, cloned from it now before either
+    # boots, or the smaller iPhone) boots when ui-review starts. Nothing is deleted here; ui-review
+    # deletes device B when it ends.
+    printf 'memory_bytes=%s\ncpus=%s\n' "$(sysctl -n hw.memsize 2>/dev/null || echo unknown)" \
+        "$(sysctl -n hw.ncpu 2>/dev/null || echo unknown)" > "$META/places-host.txt"
+    run cat "$META/places-host.txt" || true
+    rm -f "$SMALL_ENV" "$DEVICE_B_ENV"
+    if scope_uses b; then
+        run xcrun simctl shutdown "$SIM_UDID" || true
+        if b_udid="$(xcrun simctl clone "$SIM_UDID" "$DEVICE_B_NAME" 2>>"$LOG")" && [ -n "$b_udid" ]; then
+            printf 'DEVICE_B_UDID=%s\n' "$b_udid" > "$DEVICE_B_ENV"
+            note "Device B: $DEVICE_B_NAME, cloned from $SIM_UDID before either boots: $b_udid."
+            summary_line "places-device-b" "cloned $b_udid from $SIM_UDID ($SIM_NAME, $SIM_RUNTIME_NAME) before either boots"
+        else
+            note "WARNING: device B could not be cloned; its runs will follow the selected simulator's."
+            summary_line "places-device-b" "NOT CLONED; its runs follow the selected simulator's"
+        fi
+    fi
+    if scope_uses small; then
+        smaller="$(smaller_iphone)" || smaller=""
+        if [ -n "$smaller" ]; then
+            printf 'SMALL_UDID=%s\nSMALL_NAME=%q\n' "$(printf '%s' "$smaller" | cut -f1)" "$(printf '%s' "$smaller" | cut -f2)" > "$SMALL_ENV"
+            note "Smaller iPhone: $(printf '%s' "$smaller" | cut -f2) ($(printf '%s' "$smaller" | cut -f1))."
+        else
+            note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
+        fi
+    fi
     run xcrun simctl boot "$SIM_UDID" || true
-    if ! scope_uses small; then
-        note "Scope $SCOPE: no smaller iPhone is used."
-        return "$status"
-    fi
-    smaller="$(smaller_iphone)" || smaller=""
-    if [ -n "$smaller" ]; then
-        printf 'SMALL_UDID=%s\nSMALL_NAME=%q\n' "$(printf '%s' "$smaller" | cut -f1)" "$(printf '%s' "$smaller" | cut -f2)" > "$SMALL_ENV"
-        run xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" || true
-    else
-        note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
-    fi
     return "$status"
 }
 
@@ -722,13 +753,13 @@ reboot_destination() {
 lane_run() {
     local name="$1" udid="$2" derived="$3" bundle="$4" seconds="$5" status=0 mark
     shift 5
-    rm -rf "$OUT/$bundle.xcresult"
+    rm -rf "${OUT:?}/${bundle:?}.xcresult"
     mark="$(wc -l < "$LOG" | tr -d ' ')"
     xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     if [ "$status" -eq 70 ] && destination_lost "$mark"; then
         printf '%s %s %s %s\n' "${name}_destination_unavailable" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
         reboot_destination "$udid"
-        rm -rf "$OUT/$bundle.xcresult"
+        rm -rf "${OUT:?}/${bundle:?}.xcresult"
         status=0
         xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     fi
@@ -766,7 +797,7 @@ journey_run() {
             stop_recorder
             rm -f "$movie"
         fi
-        rm -rf "$OUT/$bundle.xcresult"
+        rm -rf "${OUT:?}/${bundle:?}.xcresult"
         mark="$(wc -l < "$LOG" | tr -d ' ')"
         status=0
         # shellcheck disable=SC2046
@@ -864,15 +895,42 @@ stage_ui_review() {
     load_simulator
     check_app
     local build_status b_udid="" b_log="$LOGS/places-ui-review-device-b.log" waited=0 small_udid=""
-    rm -rf "$OUT"/*.xcresult "$OUT"/attachments-* "$OUT"/places-walkthrough-* "$OUT/recording-started.txt" \
-        "$OUT/runs.txt" "$OUT/smaller.txt" "$b_log" "$OUT/walkthrough-started.txt" "$OUT/walkthrough-duration.txt" \
-        "$OUT/compact-video.txt" "$OUT"/*-summary.json "$OUT"/*-tests.json
+    local second="" second_udid="" second_derived="$DERIVED_DATA"
+    rm -rf "${OUT:?}"/*.xcresult "${OUT:?}"/attachments-* "${OUT:?}"/places-walkthrough-* \
+        "${OUT:?}"/*-summary.json "${OUT:?}"/*-tests.json
+    rm -f "$OUT/recording-started.txt" "$OUT/runs.txt" "$OUT/smaller.txt" "$b_log" "$OUT/walkthrough-started.txt" \
+        "$OUT/walkthrough-duration.txt" "$OUT/compact-video.txt"
     : > "$OUT/runs.txt"
     export NSUnbufferedIO=YES
     note "Scope: $SCOPE. UI deadline: $(remaining)s left of the ${UI_DEADLINE_SECONDS}s budget."
     awk -F '\t' -v scope="$SCOPE" '!/^#/ && $1 == scope' "$RUN_MANIFEST" > "$OUT/manifest-rows.tsv"
 
-    # 1. Test-harness compilation (the app and ProximeetUITests), recorded on its own.
+    # 1. The second device (device B, cloned in destinations, or the smaller iPhone) boots now, behind
+    #    the test-harness compilation; the selected simulator has been booting since destinations.
+    if [ -f "$DEVICE_B_ENV" ]; then
+        # shellcheck source=/dev/null
+        . "$DEVICE_B_ENV"
+        b_udid="$DEVICE_B_UDID"
+        DEVICE_B_CREATED="$b_udid"
+        second="b"
+        second_udid="$b_udid"
+    fi
+    if [ -f "$SMALL_ENV" ]; then
+        # shellcheck source=/dev/null
+        . "$SMALL_ENV"
+        small_udid="$SMALL_UDID"
+        if [ -z "$second" ]; then
+            second="small"
+            second_udid="$small_udid"
+            printf 'device=%s (%s)\n' "$SMALL_NAME" "$small_udid" > "$OUT/smaller.txt"
+        fi
+    fi
+    if [ -n "$second_udid" ]; then
+        run xcrun simctl boot "$second_udid" || true
+        BOOTED_BY_US="$BOOTED_BY_US $second_udid"
+    fi
+
+    # 2. Test-harness compilation (the app and ProximeetUITests), recorded on its own.
     if run bounded "$(budget 600)" xcodebuild -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
         -destination "platform=iOS Simulator,id=$SIM_UDID" -derivedDataPath "$DERIVED_DATA" \
         -only-testing:ProximeetUITests \
@@ -887,68 +945,44 @@ stage_ui_review() {
     fi
     summary_line "places-ui-build" "PASS (UI test harness compiled)"
 
-    # 2. The first boots started in destinations. The smaller iPhone finishes its data migration and
-    #    waits shut down, so its later boot is quick. Device B is a clone of the selected simulator
-    #    after its first boot, so it starts warm; it runs from its own copy of the build products
-    #    (a clone on APFS), so the two xcodebuild processes never share a DerivedData folder.
-    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || true
-    if [ -f "$SMALL_ENV" ]; then
-        # shellcheck source=/dev/null
-        . "$SMALL_ENV"
-        small_udid="$SMALL_UDID"
-        run bounded "$(budget 300)" xcrun simctl bootstatus "$SMALL_UDID" -b || true
-        run xcrun simctl shutdown "$SMALL_UDID" || true
-    fi
-    run xcrun simctl shutdown "$SIM_UDID" || true
-    rm -f "$DEVICE_B_ENV"
-    if b_udid="$(xcrun simctl clone "$SIM_UDID" "$DEVICE_B_NAME" 2>>"$LOG")" && [ -n "$b_udid" ]; then
-        DEVICE_B_CREATED="$b_udid"
-        printf 'DEVICE_B_UDID=%s\n' "$b_udid" > "$DEVICE_B_ENV"
-        note "Device B: $DEVICE_B_NAME, cloned from $SIM_UDID after its first boot: $b_udid."
-        summary_line "places-device-b" "cloned $b_udid from $SIM_UDID ($SIM_NAME, $SIM_RUNTIME_NAME)"
-        rm -rf "$DERIVED_DATA_B"
-        if ! run cp -Rc "$DERIVED_DATA" "$DERIVED_DATA_B" && ! run ditto "$DERIVED_DATA" "$DERIVED_DATA_B"; then
-            note "WARNING: the build products could not be copied for device B; everything runs on $SIM_NAME."
-            b_udid=""
+    # 3. The other device runs from its own copy of the build products (a clone on APFS), so the two
+    #    xcodebuild processes never share a DerivedData folder.
+    if [ -n "$second" ]; then
+        rm -rf "${DERIVED_DATA_B:?}"
+        if run cp -Rc "$DERIVED_DATA" "$DERIVED_DATA_B" || run ditto "$DERIVED_DATA" "$DERIVED_DATA_B"; then
+            second_derived="$DERIVED_DATA_B"
+        else
+            note "WARNING: the build products could not be copied for the other device; its runs follow the selected simulator's."
+            second=""
         fi
-    else
-        b_udid=""
-        note "WARNING: device B could not be cloned; the tests run in sequence on $SIM_NAME."
-        summary_line "places-device-b" "NOT CLONED; tests run in sequence"
     fi
-    run xcrun simctl boot "$SIM_UDID" || true
-    if [ -n "$b_udid" ]; then
-        run xcrun simctl boot "$b_udid" || true
-    fi
-    run bounded "$(budget 240)" xcrun simctl bootstatus "$SIM_UDID" -b || true
+    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || true
     status_bar "$SIM_UDID"
-    if [ -n "$b_udid" ]; then
-        run bounded "$(budget 240)" xcrun simctl bootstatus "$b_udid" -b || true
-        status_bar "$b_udid"
+    if [ -n "$second" ]; then
         (
             trap - EXIT INT TERM
             LOG="$b_log"
             : > "$LOG"
-            note "Device B ($b_udid), scope $SCOPE."
-            run_lane b "$b_udid" "$DERIVED_DATA_B"
+            note "Second device ($second, $second_udid), scope $SCOPE."
+            run bounded "$(budget 420)" xcrun simctl bootstatus "$second_udid" -b || true
+            status_bar "$second_udid"
+            run_lane "$second" "$second_udid" "$second_derived"
         ) &
         B_PID=$!
-        summary_line "places-parallel" "device B $b_udid runs its $SCOPE runs beside the selected simulator's"
+        summary_line "places-parallel" "$second $second_udid runs its $SCOPE runs beside the selected simulator's"
     fi
 
-    # 3. The selected simulator's runs (the places scope's recorded journey first).
+    # 4. The selected simulator's runs (the places scope's recorded journey first).
     run_lane main "$SIM_UDID" "$DERIVED_DATA"
 
-    # 4. Without device B, its runs happen here, after the selected simulator's.
-    if [ -z "$b_udid" ]; then
+    # 5. Without its device, device B's runs happen here, after the selected simulator's; the smaller
+    #    iPhone's runs follow the selected simulator's when device B took the parallel lane (no scope
+    #    uses both today), or are recorded as having no device.
+    if scope_uses b && [ "$second" != "b" ]; then
         run_lane b "$SIM_UDID" "$DERIVED_DATA"
     fi
-
-    # 5. The smaller iPhone (the selected simulator shuts down first to free memory).
-    if scope_uses small; then
-        if [ -n "$b_udid" ]; then
-            run xcrun simctl shutdown "$SIM_UDID" || true
-        fi
+    if scope_uses small && [ "$second" != "small" ]; then
+        run xcrun simctl shutdown "$SIM_UDID" || true
         if smaller_segment; then
             summary_line "places-smaller" "ran: $(tr '\n' ' ' < "$OUT/smaller.txt")"
         else
@@ -956,11 +990,14 @@ stage_ui_review() {
         fi
     fi
 
-    # 6. Device B's results, and the compact video.
+    # 6. The second device's results, and the compact video.
     if [ -n "$B_PID" ]; then
-        note "Waiting for device B ($(remaining)s left)."
+        note "Waiting for the second device ($(remaining)s left)."
         wait "$B_PID" || true
         B_PID=""
+        if [ "$second" = "small" ]; then
+            summary_line "places-smaller" "ran beside the selected simulator: $(tr '\n' ' ' < "$OUT/smaller.txt")"
+        fi
     fi
     if [ -n "$COMPACT_PID" ]; then
         waited=0
@@ -979,10 +1016,10 @@ stage_ui_review() {
 
     # 7. What actually ran, judged against the manifest, execution by execution.
     python3 scripts/places_review_results.py "$RUN_MANIFEST" "$SCOPE" "$OUT/runs.txt" "$OUT/ui-review-tests.txt" \
-        "$OUT/executions.tsv" "$SIM_UDID" "$b_udid" "$small_udid" "$LOG" ${b_udid:+"$b_log"} \
+        "$OUT/executions.tsv" "$SIM_UDID" "$b_udid" "$small_udid" "$LOG" ${second:+"$b_log"} \
         > "$OUT/ui-review-counts.txt" 2>>"$LOG" || note "ERROR: scripts/places_review_results.py failed; the results are incomplete."
-    # Device B's log joins this one only now, after the parse, so no result is read twice.
-    if [ -n "$b_udid" ]; then
+    # The second device's log joins this one only now, after the parse, so no result is read twice.
+    if [ -n "$second" ]; then
         cat "$b_log" >> "$LOG" 2>/dev/null || true
     fi
     run cat "$OUT/ui-review-tests.txt"

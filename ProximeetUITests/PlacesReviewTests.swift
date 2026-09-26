@@ -1023,7 +1023,10 @@ final class PlacesReviewTests: XCTestCase {
             box(places.back, "Back", CGRect(x: 24, y: 64, width: 44, height: 44))
             switch stage {
             case .browse:
-                box(places.headline, "Headline", CGRect(x: 32, y: 148, width: 376, height: 112))
+                // The headline's accessibility frame is its words' union, not the 376 x 112 box, so
+                // only its x is checked here; its drawn glyph rows are checked in softlyDrawn.
+                lines.append("Headline \(NSCoder.string(for: places.headline.frame))")
+                XCTAssertEqual(places.headline.frame.minX, 32, accuracy: 1, "\(state): Headline x \(places.headline.frame.minX), approved 32.")
                 top(places.context, "Snapshot line", x: 32, y: 274)
                 box(places.tabs, "Tabs", CGRect(x: 32, y: 316, width: 376, height: 48))
                 for (index, key) in Self.categories.enumerated() {
@@ -1047,7 +1050,10 @@ final class PlacesReviewTests: XCTestCase {
                 box(places.primary, "Primary", CGRect(x: 32, y: 812, width: 376, height: 60))
                 box(places.detailSecondary, "Back to places", CGRect(x: 32, y: 883, width: 376, height: 44))
             case .explanation:
-                box(places.explanationHeadline, "Headline", CGRect(x: 32, y: 148, width: 376, height: 112))
+                // As on browsing: the headline's x here, its drawn glyph rows in softlyDrawn.
+                lines.append("Headline \(NSCoder.string(for: places.explanationHeadline.frame))")
+                XCTAssertEqual(places.explanationHeadline.frame.minX, 32, accuracy: 1,
+                               "\(state): Headline x \(places.explanationHeadline.frame.minX), approved 32.")
                 top(places.explanationSupport, "Support", x: 32, y: 274)
                 box(places.explanationVenue, "Venue card", CGRect(x: 32, y: 330, width: 376, height: 88))
                 box(places.step(1), "Step 1", CGRect(x: 32, y: 445, width: 376, height: 112))
@@ -1088,7 +1094,13 @@ final class PlacesReviewTests: XCTestCase {
 
     // MARK: - Waiting and input
 
+    /// Returns at once when the label is already shown; otherwise waits up to 15 s for it. (An
+    /// XCTNSPredicateExpectation makes its first check about a second after it starts, so a state
+    /// that already holds is read directly rather than polled.)
     private func waitForLabel(_ element: XCUIElement, _ label: String) {
+        if element.exists && element.label == label {
+            return
+        }
         XCTAssertTrue(element.waitForExistence(timeout: 15), "\(element.identifier) should be showing.")
         let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
         // Generous: under load a snapshot can take seconds; the wait ends as soon as the label shows.
@@ -1096,11 +1108,17 @@ final class PlacesReviewTests: XCTestCase {
     }
 
     private func waitFor(_ element: XCUIElement, enabled: Bool) -> Bool {
+        if element.exists && element.isEnabled == enabled {
+            return true
+        }
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == %@", NSNumber(value: enabled)), object: element)
         return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 
     private func waitFor(_ element: XCUIElement, selected: Bool) -> Bool {
+        if element.exists && element.isSelected == selected {
+            return true
+        }
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == %@", NSNumber(value: selected)), object: element)
         return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
@@ -1185,7 +1203,11 @@ final class PlacesReviewTests: XCTestCase {
 
     // MARK: - What is drawn on screen
     //
-    // In points at 440 × 956, from the approved frames: the ivory ticket (#F6F7F2) from y 466 to 812
+    // In points at 440 × 956, from the approved frames: the headline's white glyphs from y 159 to 261
+    // and x 36 to 314 ("Find your / kind of place.") or y 159 to 250 and x 33 to 344 ("Arrive. / Then
+    // connect."), as the approved board draws them (docs/design/places-approved/reference/
+    // places-review.png, frames at x 40 and 1000, y 172);
+    // the ivory ticket (#F6F7F2) from y 466 to 812
     // on browsing and from 238 to 776 on a detail, read at x 60–88, left of every venue's scene and
     // right of the ticket's corner; 26 perforation dashes (6 × 1, every 13 pt from x 50 to 381) at
     // y 739 (browsing) or 480 (a detail), with a ground-coloured notch at each edge; the chips'
@@ -1193,6 +1215,7 @@ final class PlacesReviewTests: XCTestCase {
     // ivory, or #1F2424 with #737D7A words when disabled; the explanation's ivory card (330–418) and
     // #111415 steps (445–557, 573–685), and its cyan demo line.
 
+    private static let white: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in min(r, g, b) > 200 }
     private static let ivory: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in min(r, g, b) >= 232 && max(r, g, b) - min(r, g, b) <= 14 }
     private static let ink: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in max(r, g, b) < 60 }
     private static let ground: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in max(r, g, b) <= 16 }
@@ -1243,6 +1266,14 @@ final class PlacesReviewTests: XCTestCase {
                     XCTAssertEqual(rows.bottom, bottom, accuracy: 1.5, "\(state): \(name) bottom drawn at \(rows.bottom), approved \(bottom).")
                 }
             }
+            /// The leftmost and rightmost drawn columns in `rect`, against the board's.
+            @MainActor func columns(_ name: String, _ rect: CGRect, _ test: @escaping (UInt8, UInt8, UInt8) -> Bool,
+                                    left: CGFloat, right: CGFloat) {
+                let ink = shot.inkColumns(in: rect, where: test)
+                lines.append(String(format: "%@ columns %.2f-%.2f", name, ink.first?.minX ?? -1, ink.last?.maxX ?? -1))
+                XCTAssertEqual(ink.first?.minX ?? -1, left, accuracy: 1.5, "\(state): \(name) left edge drawn at \(ink.first?.minX ?? -1), approved \(left).")
+                XCTAssertEqual(ink.last?.maxX ?? -1, right, accuracy: 1.5, "\(state): \(name) right edge drawn at \(ink.last?.maxX ?? -1), approved \(right).")
+            }
             @MainActor func filled(_ name: String, _ rect: CGRect, _ test: @escaping (UInt8, UInt8, UInt8) -> Bool, atLeast: Double) {
                 let fraction = shot.fraction(in: rect, where: test)
                 lines.append(String(format: "%@ %.2f", name, fraction))
@@ -1261,6 +1292,8 @@ final class PlacesReviewTests: XCTestCase {
             }
             switch stage {
             case .browse:
+                edge("headline", CGRect(x: 32, y: 140, width: 376, height: 130), Self.white, top: 159, bottom: 261)
+                columns("headline", CGRect(x: 32, y: 140, width: 376, height: 130), Self.white, left: 36, right: 314)
                 edge("ticket top", CGRect(x: 60, y: 440, width: 28, height: 60), Self.ivory, top: 466)
                 edge("ticket bottom", CGRect(x: 60, y: 780, width: 28, height: 50), Self.ivory, bottom: 812)
                 for (index, key) in Self.categories.enumerated() {
@@ -1284,6 +1317,8 @@ final class PlacesReviewTests: XCTestCase {
                        atLeast: 0.95)
                 edge("primary label", CGRect(x: 90, y: 822, width: 260, height: 40), enabled ? Self.ink : Self.disabledText)
             case .explanation:
+                edge("headline", CGRect(x: 32, y: 140, width: 376, height: 130), Self.white, top: 159, bottom: 250)
+                columns("headline", CGRect(x: 32, y: 140, width: 376, height: 130), Self.white, left: 33, right: 344)
                 edge("venue card", CGRect(x: 380, y: 320, width: 7, height: 110), Self.ivory, top: 330, bottom: 418)
                 edge("step 1", CGRect(x: 360, y: 440, width: 6, height: 124), Self.tileFill, top: 445, bottom: 557)
                 edge("step 2", CGRect(x: 360, y: 568, width: 6, height: 124), Self.tileFill, top: 573, bottom: 685)

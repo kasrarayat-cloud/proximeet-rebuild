@@ -190,8 +190,51 @@ chapter's code.
 
 ## 8. Verification builds
 
-Codemagic builds, their scopes, commits, minutes and results: **PENDING**, reported in the
-delivery message and in each build's own `verdict.txt`.
+| # | Build | Scope | Commit | Minutes | Result |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `6ab84ede6ba94782f897685a` | places | `71487baf` | 25.75 (26 rounded) | **FAIL**, see below |
+
+**Build 1 compiled the app, the domain tests passed on the Mac, and 9 of the 11 Places methods
+executed and passed.** They are:
+- all twelve intent-venue combinations;
+- Back routes with the retained category and draft;
+- the band change and missing choices;
+- the Birthday gate on the way back and relaunch;
+- rapid taps and interruptions;
+- the Reduce Motion preview flag;
+- the largest text on the 440-pt phone.
+
+It failed for two reasons, both the harness's and neither the app's.
+
+1. **The headline check measured the wrong thing.** In the walkthrough, the headline's
+   accessibility frame (an `.ignore` container) came back as its words' union: 285 × 121.67 at
+   y 143.17, not the 376 × 112 layout box. Every other frame and pixel check on Now, Common
+   Ground's detail and the explanation passed, including:
+   - the ivory ticket's edges at 466/812 and 238/776;
+   - the 26 perforation dashes from x 50 to 381 and both notches;
+   - the tab fills, the chips, the scene and the primary action's fill.
+
+   The captures, compared with the approved board at 1×, match it element for element: a mean
+   difference of 2.6 to 3.3 levels, and only anti-aliasing outlines. The drawn headline glyphs
+   are at 159.33–262.0 (Now) and 159.33–251.33 (explanation), against the board's 159–261 and
+   159–250. The check is now those glyph rows, taken from the board, to 1.5 pt, with the
+   frame's x.
+2. **Time.** Both simulators were restarted after their first boot, and neither was ready for
+   3.5 and 5.7 minutes. Device B's run reached its bound during the seven screens, and the smaller
+   iPhone was left unrun for the deadline. The places scope was not verified on either the seven
+   screens or the smaller iPhone.
+
+**Deviation alert: the harness changed shape between builds.** It still runs the same tests and
+judges them the same way, with no retries.
+- Main boots alone and is never restarted; each scope pairs it with one parallel device (see
+  `docs/verification/places-mac-review.md`).
+- Signal's former device-B tests run on main, the same model.
+- The Places tests' wait helpers return at once when the state already holds. An
+  XCTNSPredicateExpectation makes its first check about a second after it starts, and those
+  seconds cost minutes.
+- The reason is the budget: three scopes at build 1's pace would not fit the 64 minutes left.
+
+Later builds are reported in the delivery message and in each build's own `verdict.txt`.
 
 ## 9. Not verified by automation
 

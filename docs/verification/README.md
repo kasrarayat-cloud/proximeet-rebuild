@@ -28,7 +28,7 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `signal-approved-files.sha256` | SHA-256 of the approved assets: those of the Wristband, the blank Signal tag, and the six `docs/design/*-approved/` folders |
 | `signal-review-files.sha256` | SHA-256 of every other file, except itself |
 | `signal-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `SignalSelectionView.swift`; the Signal gate confirms they are absent |
-| `places-mac-review.md` | The Places run: the manual, unsigned simulator workflow `proximeet-places-review`, its three scopes (places, signal, regressions), source gate, steps and downloads |
+| `places-mac-review.md` | The Places run: the manual, unsigned simulator workflow `proximeet-places-review` (and its 24-minute twin `proximeet-places-review-short`), its three scopes (places, signal, regressions), source gate, steps and downloads |
 | `places-review-manifest.tsv` | Every execution of every scope: device, run, bound and kind; the harness runs it and the results parser judges it |
 | `places-approved-files.sha256` | SHA-256 of the approved assets: those of Signal, the three Places scenes, and the seven `docs/design/*-approved/` folders |
 | `places-review-files.sha256` | SHA-256 of every other file, except itself |
