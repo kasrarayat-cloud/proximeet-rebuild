@@ -5,7 +5,8 @@ import ProximeetDomain
 /// DEBUG-only launch arguments for inspecting scenes directly. Never compiled into Release.
 ///
 ///     -ProximeetFixture welcome | birthday | birthday-adult | birthday-under18 | pass |
-///                       guest-list | band | band-selected | signal | signal-selected | ready
+///                       guest-list | guest-list-filled | guest-list-card | guest-list-name-only |
+///                       band | band-selected | signal | signal-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
 ///     -ProximeetFixtureSignal comeSayHi | chatFirst | withMyCrew | justLooking
 ///     -ProximeetReduceMotionPreview YES
@@ -49,8 +50,14 @@ enum PreviewFixtures {
         case birthdayUnder18 = "birthday-under18"
         /// The approved Pass (intro), opened from Birthday's Continue with 12 May 1997.
         case pass
+        /// The approved Guest List editor, empty, opened from a completed Pass.
         case guestList = "guest-list"
+        /// The editor with the approved fictional Alex example.
         case guestListFilled = "guest-list-filled"
+        /// The personal card of the fictional Alex example.
+        case guestListCard = "guest-list-card"
+        /// The personal card with only the fictional name: no opener, no interests.
+        case guestListNameOnly = "guest-list-name-only"
         case band
         case bandSelected = "band-selected"
         case signal
@@ -61,12 +68,22 @@ enum PreviewFixtures {
     static let firstName = "Alex"
     static let interests = ["Bouldering", "Film photography", "Board games"]
 
+    /// The approved Guest List's fictional example (Figma 36:169). Never a real person's data,
+    /// and never used outside previews and DEBUG launches.
+    static let exampleIntroduction = GuestIntroduction(
+        name: "Alex",
+        opener: "Always up for coffee and a good story.",
+        interests: GuestIntroduction.Interest.allCases
+    )
+
     static func session(
         at stage: Stage,
         band: BandIntent = .social,
         signal: ApproachSignal = .chatFirst
     ) -> DemoSession {
-        DemoSession(flow: flow(at: stage, band: band, signal: signal))
+        let session = DemoSession(flow: flow(at: stage, band: band, signal: signal))
+        session.fixtureOpensGuestListCard = stage == .guestListCard || stage == .guestListNameOnly
+        return session
     }
 
     static func flow(at stage: Stage, band: BandIntent, signal: ApproachSignal) -> DemoFlow {
@@ -85,7 +102,7 @@ enum PreviewFixtures {
         switch stage {
         case .birthday:
             return flow
-        case .birthdayAdult, .birthdayUnder18, .pass:
+        case .birthdayAdult, .birthdayUnder18, .pass, .guestList, .guestListFilled, .guestListCard, .guestListNameOnly:
             // The approved Figma example dates, entered and checked through the domain.
             let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
             flow.updateBirthday { entry in
@@ -94,21 +111,32 @@ enum PreviewFixtures {
                 entry.setYear(stage == .birthdayUnder18 ? 2012 : 1997)
                 entry.commit(today: today)
             }
-            if stage == .pass {
-                // Through Birthday's own gate, as a guest would reach it.
-                flow.continueFromBirthday(today: today)
+            if stage == .birthdayAdult || stage == .birthdayUnder18 { return flow }
+            // Through Birthday's own gate, as a guest would reach it.
+            _ = flow.continueFromBirthday(today: today)
+            if stage == .pass { return flow }
+            // Through the Pass's Continue preview, after a completed demo. (The Pass screen below
+            // is a new view, so it shows its intro; only the real route leaves it complete.)
+            var demo = PassDemo()
+            demo.start()
+            demo.finish()
+            flow.continueFromCompletedPass(demo)
+            switch stage {
+            case .guestListFilled, .guestListCard:
+                flow.editIntroduction { $0 = exampleIntroduction }
+            case .guestListNameOnly:
+                flow.editIntroduction { $0.name = exampleIntroduction.name }
+            default:
+                break
             }
             return flow
         default:
             break
         }
-        // Later scenes are reached through the earlier demo's pass flow, for their own captures.
+        // Later, unapproved scenes are reached through the legacy route, for their own captures.
         flow.submitBirthday(birthday, using: BirthdayEligibility(referenceDate: reference, calendar: calendar))
         flow.continueFromPass()
-        if stage == .guestList { return flow }
-
         flow.saveProfile(firstName: firstName, interests: interests)
-        if stage == .guestListFilled { return flow }
         flow.continueFromGuestList()
         if stage == .band { return flow }
 

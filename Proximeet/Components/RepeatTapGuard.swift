@@ -5,11 +5,13 @@ import UIKit.UIGestureRecognizerSubclass
 /// While its view is in a window, swallows the repeated taps of a rapid multi-tap anywhere in
 /// that window: touches whose `UITouch.tapCount` is above 1. UIKit counts a tap as a repeat
 /// only when it lands close to the previous one within the system's multi-tap interval, so a
-/// quick double tap on "Try the demo" cannot also press "Finish preview" underneath it, and a
-/// double tap on Back cannot also press Birthday's Back while Pass slides away.
+/// quick double tap on "Try the demo" cannot also press "Finish preview" underneath it, a
+/// double tap on Back cannot also press Birthday's Back while Pass slides away, and a double
+/// tap on "Edit introduction" cannot also press the editor's Back in the same place.
 ///
 /// A first tap is never delayed or altered: the recognizer fails as soon as it sees one, and it
-/// has no timer of its own. VoiceOver activation sends no touches and is unaffected.
+/// has no timer of its own. Text fields keep their own double and triple taps (selecting a word
+/// or a paragraph). VoiceOver activation sends no touches and is unaffected.
 struct RepeatTapGuard: UIViewRepresentable {
     func makeUIView(context: Context) -> GuardView {
         GuardView()
@@ -51,7 +53,18 @@ final class RepeatTapSwallower: UIGestureRecognizer {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard state == .possible else { return }
-        state = touches.contains { $0.tapCount > 1 } ? .began : .failed
+        let repeated = touches.contains { $0.tapCount > 1 && !Self.isInTextInput($0.view) }
+        state = repeated ? .began : .failed
+    }
+
+    /// Whether `view` is a text field or text view, or lies inside one.
+    private static func isInTextInput(_ view: UIView?) -> Bool {
+        var current = view
+        while let candidate = current {
+            if candidate is UITextInput { return true }
+            current = candidate.superview
+        }
+        return false
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {

@@ -8,8 +8,9 @@ import ProximeetDomain
 /// verification, stores nothing and grants nothing. The stage (`PassDemo`) is view-local, so
 /// every entry from Birthday starts at the intro, and it changes only when the guest presses
 /// the matching control: Try the demo, Finish preview, Cancel. Continue preview on the
-/// complete stage only shows "End of this preview." and stays. Back and Leave demo return to
-/// the actual Birthday screen, whose draft is kept.
+/// complete stage opens the approved Guest List; its Back returns here, still complete, since
+/// this screen stays below it. Back and Leave demo return to the actual Birthday screen, whose
+/// draft is kept.
 ///
 /// The ivory pass, clip and loop are the approved raster decoration (`PassArtwork`, the full
 /// 1254² source fitted to the 400 × 400 artwork box); every word on it is native text, moved
@@ -18,7 +19,6 @@ struct PassView: View {
     @Environment(DemoSession.self) private var session
     @Adaptive private var adaptive
     @State private var demo = PassDemo()
-    @State private var isShowingEndOfPreview = false
     /// Changed by Cancel only, so the pass dissolves (180 ms) into its settled place, as in
     /// Figma, instead of gliding there.
     @State private var cardEpoch = 0
@@ -62,9 +62,6 @@ struct PassView: View {
         .background(PassStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
         .toolbar(.hidden, for: .navigationBar)
-        .alert("End of this preview.", isPresented: $isShowingEndOfPreview) {
-            Button("OK", role: .cancel) {}
-        }
         .onChange(of: demo.stage) { _, stage in
             AccessibilityNotification.Announcement(Self.announcement(for: stage)).post()
         }
@@ -112,8 +109,8 @@ struct PassView: View {
             .accessibilityIdentifier("pass.headline")
     }
 
-    /// 376 × 60 at y 812: Try the demo, Finish preview or Continue preview. Each names its own
-    /// transition, which does nothing from any other stage.
+    /// 376 × 60 at y 812: Try the demo, Finish preview or Continue preview (to the approved
+    /// Guest List). Each names its own transition, which does nothing from any other stage.
     private var primaryButton: some View {
         Button(copy.primary) {
             switch demo.stage {
@@ -123,7 +120,7 @@ struct PassView: View {
                 withAnimation(stageAnimation) { _ = demo.finish() }
             case .complete:
                 if demo.continuePreview() {
-                    isShowingEndOfPreview = true
+                    session.continueFromCompletedPass(demo)
                 }
             }
         }

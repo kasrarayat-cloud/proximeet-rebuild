@@ -46,6 +46,44 @@ final class DemoSession {
         flow.leavePass()
     }
 
+    /// Continue preview on the approved Pass's complete stage: opens the approved Guest List.
+    func continueFromCompletedPass(_ demo: PassDemo) {
+        flow.continueFromCompletedPass(demo)
+    }
+
+    // MARK: - Approved Guest List
+
+    /// The introduction draft, exactly as entered. Memory only.
+    var introduction: GuestIntroduction { flow.draft.introduction }
+
+    func editIntroduction(_ change: (inout GuestIntroduction) -> Void) {
+        flow.editIntroduction(change)
+    }
+
+    /// Bound to the Guest List's name field. Every keystroke, paste or composition is stored as
+    /// the field reports it: never trimmed, truncated or rewritten.
+    var introductionName: String {
+        get { flow.draft.introduction.name }
+        set { flow.editIntroduction { $0.name = newValue } }
+    }
+
+    /// Bound to the Guest List's opener field; over the limit the text stays as entered.
+    var introductionOpener: String {
+        get { flow.draft.introduction.opener }
+        set { flow.editIntroduction { $0.opener = newValue } }
+    }
+
+    /// Back on the Guest List editor: returns to the Pass, still complete, with the draft kept.
+    func leaveGuestList() {
+        flow.leaveGuestList()
+    }
+
+    #if DEBUG
+    /// DEBUG fixtures only: open the next Guest List on its card, as if Preview my card had been
+    /// pressed. Read once.
+    var fixtureOpensGuestListCard = false
+    #endif
+
     /// Transactional: `.invalid` leaves any previously saved profile untouched.
     func saveProfile(firstName: String, interests: [String]) -> ProfileSaveOutcome {
         flow.saveProfile(firstName: firstName, interests: interests)

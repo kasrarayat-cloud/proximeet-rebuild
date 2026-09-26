@@ -1,0 +1,32 @@
+{
+  "purpose": "Chapter 4 Guest List decorative introduction-card artwork; founder-approved prototype design.",
+  "tool": "Built-in image generation",
+  "prompt": "Use case: product-mockup.\nAsset type: blank decorative housing for an editable personal introduction card in Proximeet iPhone onboarding.\nPrimary request: One extraordinarily crafted small ivory cotton-paper introduction card resting in a precision graphite card holder. It belongs to a family of tactile ivory invitations, brushed stainless steel clips and vivid cyan woven details.\nSubject: A landscape paper card, approximately 1.35:1 width-to-height ratio, held nearly perfectly front-on and upright so native text can be overlaid. Thick warm ivory uncoated stock with subtle visible cotton fibers, soft rounded corners and a hairline blind-debossed border. Behind it two subtly offset paper sheets peek 4–6 mm at the bottom and right, like an individual card drawn from a guest registry. Thin graphite backing plate and understated bottom support lip. A small expertly machined brushed stainless spring clip hugs the TOP LEFT edge, leaving the main paper face fully clear. A short vivid cyan woven fabric tab protrudes from the RIGHT edge near its upper third; detailed textile fibers and seam, not a dangling lanyard. Quiet luxurious, tactile, bespoke.\nComposition: ONE isolated object centered in square transparent canvas, complete silhouette with generous clear margins. Main card fills about 86 percent width and 67 percent height. The central 80 percent of paper completely blank, evenly lit, spacious for a name, an opener and three interests. No strong perspective distortion or camera tilt; front face level and flat. Thickness visible along bottom/right only.\nLighting: photoreal premium product photography, broad soft upper-left light, controlled cool metal reflections, warm paper, deep fine contact shadows. Natural microtexture without dirty or distressed appearance.\nText: NONE. No words, initials, numbers, lines of text, logo, icon, barcode, portraits, UI, phone or environment. No embossed symbols. Do not draw form fields, chips or buttons. No neon, glow, glass, holograms, plastic toy styling.\nBackground: genuinely transparent alpha, preserve all edges and soft object shadow.",
+  "source_asset": "exec-383c83d7-c4a4-4119-b004-741f76445ac5.png",
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "native_overlays": [
+    "Initials",
+    "Display name",
+    "Optional introduction",
+    "Selected interests"
+  ],
+  "limits": [
+    "Raster decorative artwork, not a 3D model or rig.",
+    "Text, fields, controls, and status remain native editable Figma elements.",
+    "Fictional demo profile only. No venue presence, verification entitlement, or user visibility is created."
+  ],
+  "figma_page": "35:111",
+  "review_board": "36:260",
+  "frames": {
+    "empty": "36:134",
+    "fictional_example": "36:169",
+    "card_preview": "36:204"
+  },
+  "approval": {
+    "status": "approved",
+    "date": "2026-09-25",
+    "founder_quote": "i approve",
+    "scope": "Three-state Guest List introduction/card prototype. No production verification, visibility, or subsequent chapter is approved by this record.",
+    "figma_note": "40:206"
+  }
+}

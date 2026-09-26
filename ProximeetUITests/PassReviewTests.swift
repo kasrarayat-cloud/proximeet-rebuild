@@ -23,8 +23,8 @@ final class PassReviewTests: XCTestCase {
     }
 
     /// The recorded walkthrough: into Pass from a real Birthday date, Try the demo, Finish
-    /// preview at once, the end-of-preview message dismissed, Leave demo back to Birthday with
-    /// the date kept, re-entry at the intro, Cancel, and Back.
+    /// preview at once, Continue preview to the Guest List and Back to the complete Pass, Leave
+    /// demo back to Birthday with the date kept, re-entry at the intro, Cancel, and Back.
     func testWalkthroughStartFinishEndpointLeaveReentryCancelBack() throws {
         print("PASS_WALKTHROUGH_START \(Date().timeIntervalSince1970)")
         let app = launchWelcome()
@@ -68,15 +68,18 @@ final class PassReviewTests: XCTestCase {
                     primary: "Continue preview", exit: "Leave demo")
         _ = softlyMeasured(app, "Complete", anchors: Self.introAnchors)
 
+        // Continue preview opens the approved Guest List (chapter 04); its Back returns here,
+        // still complete.
         pass.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5), "Continue preview shows the end-of-preview message.")
-        XCTAssertTrue(end.buttons["OK"].exists)
+        let guestList = app.descendants(matching: .any)["guestList.headline"]
+        XCTAssertTrue(guestList.waitForExistence(timeout: 5), "Continue preview opens the Guest List.")
+        XCTAssertEqual(guestList.label, "A little about you.")
         hold(0.6)
-        capture("pass-endpoint", app)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
-        XCTAssertEqual(pass.headline.label, "Demo complete.", "Dismissing the message stays on complete.")
+        capture("pass-continue-guest-list", app)
+        app.buttons["guestList.back"].tap()
+        waitForAbsence(guestList)
+        waitForStage(pass, "Demo complete.")
+        XCTAssertEqual(pass.primary.label, "Continue preview", "Back from the Guest List finds the Pass still complete.")
         hold(0.8)
 
         pass.exit.tap()

@@ -25,6 +25,7 @@
 		5C420BEF23E3F9027C17A184 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */; };
 		5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */; };
 		641107C75798A0F0B3E8C92F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE467721E15337452098FA6 /* RootView.swift */; };
+		685E5AB8F1E4026AF72B64DE /* GuestListReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */; };
 		7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */; };
 		834EF4BBCBA66AE3B1CBF734 /* SignalSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B50D6A67C0219950AB662A0 /* SignalSelectionView.swift */; };
 		8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBF4AD5F388E4A893AA059C /* GuestListView.swift */; };
@@ -95,6 +96,7 @@
 		D5AF09BDFAC765B06B25D864 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayReviewTests.swift; sourceTree = "<group>"; };
 		E2B9055BE62D6166F7331A15 /* Fabric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fabric.swift; sourceTree = "<group>"; };
+		F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListReviewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -165,6 +167,7 @@
 			children = (
 				3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */,
 				DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */,
+				F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */,
 				5136C5A73391A81A9EB42327 /* PassReviewTests.swift */,
 				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
 			);
@@ -342,6 +345,7 @@
 			files = (
 				7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */,
 				5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */,
+				685E5AB8F1E4026AF72B64DE /* GuestListReviewTests.swift in UISources */,
 				5AA025BE0C984EA8EE55EAB0 /* PassReviewTests.swift in UISources */,
 				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,
 			);
