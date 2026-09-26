@@ -1,0 +1,45 @@
+# Signal regression correction: the manifest the regressions scope runs and is judged by.
+# scripts/signal_review.sh builds each run's -only-testing list from this file, and
+# scripts/signal_regressions_results.py checks every row against the logs of the build.
+# Columns (tab-separated): order, device, run, bundle, test, kind.
+#   device  main = the selected iPhone 17 Pro Max; b = device B, its clone
+#           "iPhone 17 Pro Max (signal review B)". Both run iOS 26.5 on the same host, in parallel.
+#   run     one bounded xcodebuild test-without-building, in this order on its device; within a run
+#           XCTest orders the tests by class, then by name, which is the order listed here.
+#   kind    required = one of the 27 required regression executions of build 6ab7ee20's manifest
+#           (docs/verification/signal-regressions-original-manifest.txt): the same 27 tests, 23 on the
+#           same device as there; the four Welcome tests moved from the selected simulator to device
+#           B (the same model and runtime) to balance the two lanes.
+#           repeat = a planned second execution of a required test from a fresh app and test-runner
+#           state, to check repeatability. It is not a new unique test and not a retry;
+#           it runs only if the time budget allows both it and the run after it.
+# Automatic retries are off for every run. A failed, skipped, interrupted or missing required
+# execution fails the verdict; so does a repeat that runs and does not pass.
+M1	main	main_early	RegressionsMainEarly	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	required
+M2	main	main_early	RegressionsMainEarly	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required
+M3	main	main_rest	RegressionsMain	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	required
+M4	main	main_rest	RegressionsMain	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	required
+M5	main	main_rest	RegressionsMain	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	required
+M6	main	main_rest	RegressionsMain	PassReviewTests/testReduceMotionPreviewKeepsThePassStationary	required
+M7	main	main_rest	RegressionsMain	PassReviewTests/testWalkthroughStartFinishEndpointLeaveReentryCancelBack	required
+M8	main	main_rest	RegressionsMain	WristbandReviewTests/testEndpointDuplicateTapsAndBack	required
+M9	main	main_rest	RegressionsMain	WristbandReviewTests/testEveryChangeBetweenIntentsKeepsEverythingInAgreement	required
+M10	main	main_rest	RegressionsMain	WristbandReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+M11	main	main_rest	RegressionsMain	WristbandReviewTests/testRapidChangesLeaveTheLastChoice	required
+M12	main	main_rest	RegressionsMain	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	required
+M13	main	main_rest	RegressionsMain	WristbandReviewTests/testRelaunchStartsUnselected	required
+B1	b	paste_b	GuestListPasteB	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	required
+B2	b	regressions_b	RegressionsB	GuestListReviewTests/testBlankInternationalAndLongNames	required
+B3	b	regressions_b	RegressionsB	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	required
+B4	b	regressions_b	RegressionsB	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	required
+B5	b	regressions_b	RegressionsB	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	required
+B6	b	regressions_b	RegressionsB	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	required
+B7	b	regressions_b	RegressionsB	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	required
+B8	b	regressions_b	RegressionsB	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required
+B9	b	regressions_b	RegressionsB	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required
+B10	b	regressions_b	RegressionsB	WelcomeReviewTests/testDefaultGeometry	required
+B11	b	regressions_b	RegressionsB	WelcomeReviewTests/testHonestNotices	required
+B12	b	regressions_b	RegressionsB	WelcomeReviewTests/testLargestTextSize	required
+B13	b	regressions_b	RegressionsB	WelcomeReviewTests/testReduceMotionPreviewLaunch	required
+B14	b	paste_repeat_b	GuestListPasteRepeatB	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	repeat
+B15	b	hardware_keys_b	GuestListHardwareKeysB	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required

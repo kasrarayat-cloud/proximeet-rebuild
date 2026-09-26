@@ -14,7 +14,12 @@
 #                Birthday gate on the way back (full journey), the Guest List keyboard Back on the
 #                real route and Done/Back on two phone sizes; the Wristband → Signal interaction test
 #   regressions  the earlier chapters: the Wristband (its Continue preview now opens Signal), the
-#                Guest List, the Pass, Birthday and Welcome (all four of its tests)
+#                Guest List, the Pass, Birthday and Welcome (all four of its tests). Its runs, their
+#                order, devices and result bundles come from
+#                docs/verification/signal-regressions-recovery-manifest.tsv (the regression
+#                correction after build 6ab7ee20): no automatic retries, the checks that failed or
+#                never ran there first, a planned repeat of the paste test when time allows, and
+#                Signal-Regression-Recovery.zip in place of Signal-Regressions-Review.zip
 #
 # Stages:
 #   checkpoint    source gate. The approved assets (Welcome poses, Manrope fonts and licence, the
@@ -36,13 +41,17 @@
 #                 then (signal scope) the smaller iPhone's keyboard check, largest-text test and
 #                 fixture captures. The
 #                 signal scope records the full journey first; the compact video is made in the
-#                 background once the recording ends. Every xcodebuild is bounded by time; a failed
-#                 test other than the recorded journey is retried once and reported as such. Zero
-#                 executed tests, or any final failure or skip of a required test, fails the stage
+#                 background once the recording ends. Every xcodebuild is bounded by time; in the
+#                 signal scope a failed test other than the recorded journey is retried once and
+#                 reported as such. Zero executed tests, or any final failure or skip of a required
+#                 test, fails the stage. The regressions scope retries nothing: every execution
+#                 counts, and an xcodebuild that reaches its bound is interrupted (SIGINT) so it can
+#                 close its result bundle before it is killed
 #   compact-video half-size re-encode of the recording, trimmed to the app (signal scope)
 #   verdict       automated results, kept apart from outstanding manual review
-#   package-review  build/artifacts/Signal-Review.zip (signal) or Signal-Regressions-Review.zip
-#                 (regressions), with an offline index.html; the signal scope also makes
+#   package-review  build/artifacts/Signal-Review.zip (signal) or Signal-Regression-Recovery.zip
+#                 (regressions, by scripts/signal_regression_recovery.py), with an offline
+#                 index.html; the signal scope also makes
 #                 Signal-Screens.zip, Signal-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
 #                 Signal-walkthrough-original.zip; each archive's SHA-256
 #   enforce       fail the build unless the verdict says PASS (run last)
@@ -80,6 +89,23 @@ SMALLER_IPHONES="iPhone 17e|iPhone 16e|iPhone SE (3rd generation)|iPhone 17|iPho
 # build), leaving the verdict, the packages and publishing inside the workflow's 28 minutes (the
 # compact video is made during the UI work).
 UI_DEADLINE_SECONDS=1440
+# The regressions scope has its own deadline (set below, once the scope is known). Build 6ab7ee20 ran
+# on a plain M2 host. After this deadline come an interrupted xcodebuild's grace (TEST_GRACE_SECONDS),
+# its export (at most EXPORT_SECONDS), then the verdict, the recovery package and publishing; after
+# the UI review, build 6ab7ee20 needed 8 s for all of those. With the gate starting 47-58 s into the
+# build: 58 + 1410 + 75 + 60 + about 30 = 1633 s, about 27:15 at the worst, inside the 28 minutes.
+REGRESSIONS_UI_DEADLINE_SECONDS=1410
+# xcodebuild needs 13-57 s to close its result bundle after its last test on this host type (builds
+# 6ab7dbf0 to 6ab7ee20, without interruption); an interrupted run gets 75 s before SIGKILL.
+TEST_GRACE_SECONDS=75
+EXPORT_SECONDS=90
+REGRESSIONS_MANIFEST="docs/verification/signal-regressions-recovery-manifest.tsv"
+# The planned paste repeat runs only while this much time is left before the deadline. Measured on
+# build 6ab7ee20's device B (plain M2): about 20 s to start a warm xcodebuild, 34 s to close (up to
+# 57 s on this host type) and 5 s to export. The repeat run is then about 165 s at worst (the paste
+# test about 85 s); the required hardware-key run after it about 105 s (a 23 s test); 30 s spare.
+# The repeat is optional: when it does not fit, it is recorded as not run for time.
+REPEAT_GATE_SECONDS=300
 
 # The tests. Signal scope: the selected simulator records the journey, then runs SIGNAL_MAIN_TESTS;
 # device B runs SIGNAL_B_TESTS, the interaction test and both keyboard tests; the smaller iPhone the
@@ -104,6 +130,7 @@ TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance
 # Wristband's first build a test). Every attempt is parsed and reported; only the final outcome
 # counts, and exit 65 is accepted only for the run that shows the failed-then-passed test.
 RETRY="-retry-tests-on-failure -test-iterations 2"
+TEST_BOUND="bounded"
 WARMUP_SMALL_SECONDS=8
 SETTLE_SECONDS=3
 STATUS_BARS=""
@@ -131,6 +158,14 @@ LOG="$LOGS/signal-$STAGE${SIGNAL_LOG_SUFFIX:-}.log"
 # The scope recorded by the checkpoint (the checkpoint itself reads the run input).
 SCOPE="$(cat "$SCOPE_FILE" 2>/dev/null || true)"
 [ -n "$SCOPE" ] || SCOPE="${SIGNAL_REVIEW_SCOPE:-signal}"
+if [ "$SCOPE" = "regressions" ]; then
+    # No automatic retries: a test that fails, even once, is a failure. The bound interrupts rather
+    # than kills, so the result bundle survives (build 6ab7ee20 lost RegressionsMain.xcresult).
+    RETRY=""
+    TEST_BOUND="bounded_test"
+    UI_DEADLINE_SECONDS="$REGRESSIONS_UI_DEADLINE_SECONDS"
+    EXPORT_SECONDS=60
+fi
 
 utc_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 summary_line() { printf '%s  %-17s %s\n' "$(utc_now)" "$1" "$2" >> "$SUMMARY"; }
@@ -158,6 +193,64 @@ bounded() {
         seconds=1
     fi
     perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or die "exec failed: $!\n"' "$seconds" "$@"
+}
+
+# bounded_test <seconds> <command...>: for an xcodebuild test run. The command runs in its own
+# process group. At <seconds> the group gets SIGINT, as from Ctrl-C, which xcodebuild answers by
+# stopping its tests and closing its result bundle; only if it is still running
+# TEST_GRACE_SECONDS later does the group get SIGKILL; after a stop, whatever is left of the group
+# gets SIGKILL too, so no helper is left holding the log pipe.
+# Exits 142 when the bound was reached (as bounded does), otherwise with the command's own status.
+bounded_test() {
+    local seconds="$1"
+    shift
+    if [ "$seconds" -lt 1 ]; then
+        seconds=1
+    fi
+    perl -e '
+        use POSIX ();
+        my ($limit, $grace) = (shift @ARGV, shift @ARGV);
+        my $pid = fork();
+        die "fork failed: $!\n" unless defined $pid;
+        if ($pid == 0) {
+            # The device B lane is a background job, which starts with SIGINT ignored; the command
+            # gets the default back, so the stop below reaches it.
+            $SIG{INT} = "DEFAULT";
+            $SIG{QUIT} = "DEFAULT";
+            POSIX::setsid();
+            exec { $ARGV[0] } @ARGV or die "exec failed: $!\n";
+        }
+        my ($deadline, $stopped, $killed) = (time + $limit, 0, 0);
+        # Signals meant for this stage reach the group too: SIGINT stops it as the bound would;
+        # SIGTERM or SIGHUP kill it.
+        my $end = sub { kill "-KILL", $pid; exit 143; };
+        $SIG{TERM} = $end;
+        $SIG{HUP} = $end;
+        $SIG{INT} = sub { $deadline = 0 unless $stopped; };
+        while (1) {
+            my $done = waitpid($pid, POSIX::WNOHANG());
+            if ($done == $pid) {
+                my $status = $?;
+                if ($stopped) {
+                    kill "-KILL", $pid;
+                    exit 142;
+                }
+                exit(($status & 127) ? 128 + ($status & 127) : ($status >> 8));
+            }
+            exit 1 if $done < 0;
+            my $now = time;
+            if (!$stopped && $now >= $deadline) {
+                ($stopped, $deadline) = (1, $now + $grace);
+                print STDERR "bounded_test: stopping at ${limit} s (or on SIGINT); SIGINT to process group $pid, SIGKILL after ${grace} s more\n";
+                kill "-INT", $pid;
+            } elsif ($stopped && !$killed && $now >= $deadline) {
+                $killed = 1;
+                print STDERR "bounded_test: still running ${grace} s after SIGINT; SIGKILL to process group $pid\n";
+                kill "-KILL", $pid;
+            }
+            select(undef, undef, undef, 0.5);
+        }
+    ' "$seconds" "$TEST_GRACE_SECONDS" "$@"
 }
 
 # Seconds left before the UI deadline (a large number when the start was not recorded).
@@ -617,7 +710,11 @@ export_results() {
     local result="$1" dir="$2"
     [ -d "$result" ] || return 0
     xcrun xcresulttool get test-results summary --path "$result" > "${result%.xcresult}-summary.json" 2>>"$LOG" || true
-    if bounded 90 xcrun xcresulttool export attachments --path "$result" --output-path "$dir" >> "$LOG" 2>&1; then
+    if [ "$SCOPE" = "regressions" ]; then
+        # The whole test tree as JSON, for the recovery package's raw results.
+        bounded 60 xcrun xcresulttool get test-results tests --path "$result" > "${result%.xcresult}-tests.json" 2>>"$LOG" || true
+    fi
+    if bounded "$EXPORT_SECONDS" xcrun xcresulttool export attachments --path "$result" --output-path "$dir" >> "$LOG" 2>&1; then
         note "Exported XCTest attachments to $dir."
     else
         note "NOTE: attachment export unavailable for $result; the per-test results are in the log and summary."
@@ -634,7 +731,7 @@ xctest() {
         return 124
     fi
     # shellcheck disable=SC2086
-    run bounded "$seconds" env TEST_RUNNER_PROXIMEET_SIGNAL_REVIEW=1 TEST_RUNNER_PROXIMEET_WRISTBAND_REVIEW=1 \
+    run "$TEST_BOUND" "$seconds" env TEST_RUNNER_PROXIMEET_SIGNAL_REVIEW=1 TEST_RUNNER_PROXIMEET_WRISTBAND_REVIEW=1 \
         TEST_RUNNER_PROXIMEET_GUEST_LIST_REVIEW=1 \
         TEST_RUNNER_PROXIMEET_PASS_REVIEW=1 TEST_RUNNER_PROXIMEET_BIRTHDAY_REVIEW=1 \
         TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1 TEST_RUNNER_PROXIMEET_SHORT_HOLDS=1 xcodebuild \
@@ -689,6 +786,15 @@ lane_run() {
     return 0
 }
 
+# The regressions manifest: the result bundle of <run>, and its -only-testing arguments.
+manifest_bundle() {
+    awk -F '\t' -v run="$1" '!/^#/ && $3 == run { print $4; exit }' "$REGRESSIONS_MANIFEST"
+}
+
+manifest_tests() {
+    awk -F '\t' -v run="$1" '!/^#/ && $3 == run { printf "-only-testing:ProximeetUITests/%s ", $5 }' "$REGRESSIONS_MANIFEST"
+}
+
 # Device B's lane for the scope, on <udid> with <derived data>.
 lane_b() {
     local udid="$1" derived="$2"
@@ -698,11 +804,27 @@ lane_b() {
             $(only SignalReviewTests $SIGNAL_B_TESTS) $(only BandSignalInteractionTests $INTERACTION_TESTS) \
             $(only GuestListReviewTests $KEYBOARD_TESTS)
     else
+        # The paste test first (it failed twice in build 6ab7ee20), alone; then the on-screen
+        # keyboard tests with the names test and Welcome; then, time allowing, the planned repeat
+        # of the paste test from a fresh app and runner; last the hardware-key test, which can
+        # leave the simulator without its on-screen keyboard. No retries.
+        local left
         # shellcheck disable=SC2046
-        lane_run regressions_b "$udid" "$derived" RegressionsB 1000 yes $(only GuestListReviewTests $GUEST_LIST_TESTS)
+        lane_run paste_b "$udid" "$derived" "$(manifest_bundle paste_b)" 480 no $(manifest_tests paste_b)
         # shellcheck disable=SC2046
-        lane_run hardware_keys_b "$udid" "$derived" GuestListHardwareKeysB 420 yes \
-            $(only GuestListReviewTests $GUEST_LIST_HARDWARE_KEY_TESTS)
+        lane_run regressions_b "$udid" "$derived" "$(manifest_bundle regressions_b)" 1000 no $(manifest_tests regressions_b)
+        left="$(remaining)"
+        if [ "$left" -ge "$REPEAT_GATE_SECONDS" ]; then
+            # shellcheck disable=SC2046
+            lane_run paste_repeat_b "$udid" "$derived" "$(manifest_bundle paste_repeat_b)" 300 no \
+                $(manifest_tests paste_repeat_b)
+        else
+            note "The planned repeat of the paste test is left unrun: ${left}s left, under ${REPEAT_GATE_SECONDS}s."
+            printf '%s %s %s %s\n' paste_repeat_b "$(manifest_bundle paste_repeat_b)" none time >> "$OUT/runs.txt"
+        fi
+        # shellcheck disable=SC2046
+        lane_run hardware_keys_b "$udid" "$derived" "$(manifest_bundle hardware_keys_b)" 240 no \
+            $(manifest_tests hardware_keys_b)
     fi
 }
 
@@ -890,10 +1012,13 @@ stage_ui_review() {
         # shellcheck disable=SC2046
         lane_run signal_main "$SIM_UDID" "$DERIVED_DATA" SignalMain 900 yes $(only SignalReviewTests $SIGNAL_MAIN_TESTS)
     else
+        # The checks that failed or never ran in build 6ab7ee20 first, in their own run: the
+        # Birthday walkthrough (its short Month drag) and the full Wristband walkthrough. Then the
+        # rest of this lane. No retries.
         # shellcheck disable=SC2046
-        lane_run regressions_main "$SIM_UDID" "$DERIVED_DATA" RegressionsMain 1000 yes \
-            $(only WristbandReviewTests $WRISTBAND_TESTS) $(only PassReviewTests $PASS_TESTS) \
-            $(only BirthdayReviewTests $BIRTHDAY_TESTS) $(only WelcomeReviewTests $WELCOME_TESTS)
+        lane_run main_early "$SIM_UDID" "$DERIVED_DATA" "$(manifest_bundle main_early)" 780 no $(manifest_tests main_early)
+        # shellcheck disable=SC2046
+        lane_run main_rest "$SIM_UDID" "$DERIVED_DATA" "$(manifest_bundle main_rest)" 1000 no $(manifest_tests main_rest)
     fi
 
     # 4. Without device B, its lane runs here, after the selected simulator's.
@@ -940,6 +1065,15 @@ stage_ui_review() {
     if [ -f "$SMALL_ENV" ]; then
         small_udid="$(sed -n 's/^SMALL_UDID=//p' "$SMALL_ENV")"
     fi
+    if [ "$SCOPE" = "regressions" ]; then
+        # Judged against the manifest, execution by execution (no retries in this scope). The
+        # required rows are also written as results/required.txt, the earlier builds' format.
+        awk -F '\t' '!/^#/ && $6 == "required" { split($5, t, "/"); printf "%s %s.%s\n", $2, t[1], t[2] }' \
+            "$REGRESSIONS_MANIFEST" > "$OUT/required.txt"
+        python3 scripts/signal_regressions_results.py "$REGRESSIONS_MANIFEST" "$OUT/runs.txt" "$OUT/ui-review-tests.txt" \
+            "$OUT/executions.tsv" "$SIM_UDID" "$b_udid" "$LOG" ${b_udid:+"$b_log"} > "$OUT/ui-review-counts.txt" \
+            2>>"$LOG" || note "ERROR: scripts/signal_regressions_results.py failed; the results are incomplete."
+    else
     {
         if [ "$SCOPE" = "signal" ]; then
             for t in $SIGNAL_WALKTHROUGH $SIGNAL_MAIN_TESTS; do printf 'main SignalReviewTests.%s\n' "$t"; done
@@ -1049,6 +1183,7 @@ print("scope %s: %d unique cases, %d executions (passed %d, failed %d, skipped %
       % (scope, len(unique), executed, counts["passed"], counts["failed"], counts["skipped"], len(retried),
          "yes" if not missing else "no", ",".join("%s:%s" % (r[0], r[2]) for r in runs), "PASS" if ok else "FAIL"))
 PY
+    fi
     # Device B's log joins this one only now, after the parse, so no result is read twice.
     if [ -n "$b_udid" ]; then
         cat "$b_log" >> "$LOG" 2>/dev/null || true
@@ -1177,7 +1312,9 @@ covered = {
               "Continue, Back and background/resume during the movement, the endpoint, the missing intent, relaunch, the "
               "Reduce Motion preview flag, the largest text on two sizes; the Birthday gate on the way back; the Guest "
               "List keyboard Back on the real route and Done/Back on two sizes; the Wristband → Signal interaction test",
-    "regressions": "the Wristband (Continue preview opens Signal), the Guest List, the Pass, Birthday, Welcome (all four)",
+    "regressions": "the 27 required executions of docs/verification/signal-regressions-recovery-manifest.tsv: the "
+                   "Wristband (Continue preview opens Signal), the Guest List, the Pass, Birthday, Welcome (all four); "
+                   "no automatic retries",
 }.get(scope, "unknown scope")
 required = {
     "source gate (exact reviewed revision, approved assets, Signal guard, intent colour guard)": source.get("result") == "MATCH",
@@ -1196,8 +1333,11 @@ if scope == "signal":
 lines = [
     "Signal review verdict, scope '%s' (automated results only; manual review is listed separately)" % scope,
     "",
-    "Build       Codemagic %s; this verdict covers only the '%s' scope's tests. The other scope runs as its own build "
-    "on the same commit." % (os.environ.get("CM_BUILD_ID", "(not on Codemagic)"), scope),
+    ("Build       Codemagic %s; this verdict covers only the '%s' scope's tests. The other scope runs as its own build "
+     "on the same commit." % (os.environ.get("CM_BUILD_ID", "(not on Codemagic)"), scope)) if scope == "signal" else
+    ("Build       Codemagic %s; this verdict covers only the 'regressions' scope, at the source below. The 'signal' "
+     "scope is not re-run: it ran as Codemagic build 6ab7e9420cb984b7efbcbded on "
+     "1085af3d7be62ef3fc463016446aa87c76b976f3." % os.environ.get("CM_BUILD_ID", "(not on Codemagic)")),
     "Source      git_head=%s  commit_pin=%s" % (source.get("git_head", "?"), source.get("commit_pin", "?")),
     "Toolchain   %s, %s; iphonesimulator SDK %s" % (tools.get("xcode", "?"), tools.get("xcode_build", "?"), tools.get("iphonesimulator_sdk", "?")),
     "Simulator   %s, %s (%s)" % (simulator.get("device_name", "?"), simulator.get("runtime_name", "?"), simulator.get("runtime_build", "?")),
@@ -1214,7 +1354,13 @@ lines += ["    XCTest detail: %s unique test cases, %s executions (passed %s, fa
     tests.get("unique_test_cases", "?"), tests.get("executions", "?"), tests.get("passed", "?"), tests.get("failed", "?"),
     tests.get("skipped", "?"), tests.get("flag_markers_in_log", "?"))]
 lines += ["    required: " + tests.get("required_passed", "?")]
-lines += ["    retried (failed, then run once more): " + tests.get("retried", "?")]
+if scope == "regressions":
+    lines += ["    first attempts: " + tests.get("first_attempt_required", "?"),
+              "    retries: " + tests.get("retries", "?") + "; tests executed more than once in one run: " + tests.get("retried", "?"),
+              "    planned repeat (not a unique test, not a retry): " + tests.get("repeats", "?"),
+              "    started without a recorded outcome (a time bound, a runner crash or restart): " + tests.get("interrupted", "?")]
+else:
+    lines += ["    retried (failed, then run once more): " + tests.get("retried", "?")]
 lines += ["    infrastructure reruns (simulator not found, no test ran): " + tests.get("infrastructure_reruns", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
@@ -1251,6 +1397,13 @@ PY
 # ---------------------------------------------------------------------------------------
 
 stage_package_review() {
+    if [ "$SCOPE" = "regressions" ]; then
+        # The regression correction's download, made whether the review passed or not.
+        local status=0
+        run python3 scripts/signal_regression_recovery.py "$ROOT" "$OUT" "$ARTIFACTS" || status=$?
+        summary_line "signal-package" "$(unzip -l "$ARTIFACTS/Signal-Regression-Recovery.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in Signal-Regression-Recovery.zip; $(tr '\n' ' ' < "$OUT/package-links.txt" 2>/dev/null)"
+        return "$status"
+    fi
     run python3 - "$ROOT" "$OUT" "$ARTIFACTS" "$SCOPE" <<'PY'
 import hashlib
 import html

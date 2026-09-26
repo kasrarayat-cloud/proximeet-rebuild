@@ -392,7 +392,7 @@ workflows:
       - name: ProximeetDomain tests on the Mac host (swift test, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
         script: bash scripts/codemagic_verify.sh domain-tests
         ignore_failure: true
-      - name: Signal XCTest review for the run's scope (signal - recorded journey, twelve states, integration; regressions - earlier chapters)
+      - name: Signal XCTest review for the run's scope (signal - recorded journey, twelve states, integration; regressions - earlier chapters, by the correction manifest, no retries)
         script: bash scripts/signal_review.sh ui-review
         ignore_failure: true
       - name: Compact walkthrough video (half size, trimmed to the app; original kept; signal scope)
@@ -401,7 +401,7 @@ workflows:
       - name: Verdict - automated results apart from outstanding manual review
         script: bash scripts/signal_review.sh verdict
         ignore_failure: true
-      - name: Package Signal-Review.zip (or Signal-Regressions-Review.zip), Signal-Screens.zip and the walkthrough downloads
+      - name: Package Signal-Review.zip, Signal-Screens.zip and the walkthrough downloads (signal), or Signal-Regression-Recovery.zip (regressions)
         script: bash scripts/signal_review.sh package-review
         ignore_failure: true
       - name: Enforce the automated verdict (fails the build unless PASS)
@@ -411,6 +411,8 @@ workflows:
       - build/artifacts/Signal-Review.zip.sha256
       - build/artifacts/Signal-Regressions-Review.zip
       - build/artifacts/Signal-Regressions-Review.zip.sha256
+      - build/artifacts/Signal-Regression-Recovery.zip
+      - build/artifacts/Signal-Regression-Recovery.zip.sha256
       - build/artifacts/Signal-Screens.zip
       - build/artifacts/Signal-Screens.zip.sha256
       - build/artifacts/Signal-walkthrough-compact.zip
