@@ -454,8 +454,9 @@ final class GuestListReviewTests: XCTestCase {
 
     /// Starts from the DEBUG fixture `guest-list`. A hardware keyboard: Tab moves from the name to
     /// the introduction, Shift-Tab back, and Tab in the introduction leaves it; no tab character
-    /// is typed into either field. Runs in its own xcodebuild pass with the other tests that send
-    /// hardware key events, after every test that needs the on-screen keyboard.
+    /// is typed into either field. The only test that sends hardware key events (the pastes no
+    /// longer fall back to ⌘V), so it runs in its own xcodebuild pass, after every test that needs
+    /// the on-screen keyboard.
     func testHardwareTabAndShiftTabMoveBetweenFields() throws {
         let app = launch(fixture: "guest-list")
         let guest = GuestListElements(app: app)
@@ -814,55 +815,196 @@ final class GuestListReviewTests: XCTestCase {
         return value == placeholder ? "" : value
     }
 
-    /// Replaces `field`'s text with `text` through the system pasteboard (a paste, not typing: the
-    /// keyboard's own substitutions play no part). The field is emptied with the delete key, then
-    /// pasted into from the edit menu, a touch interaction; ⌘V is the fallback. The tests that can
-    /// reach the fallback run after every test that needs the on-screen keyboard.
+    /// Replaces `field`'s text with `text` through the system pasteboard: a real paste chosen from
+    /// the edit menu, never typing and never a hardware shortcut, so the tests that paste can run
+    /// before the tests that need the on-screen keyboard. Each step waits for something it can
+    /// observe, and every wait is bounded:
+    /// 1. the fictional payload is on the pasteboard, read back by the test runner that wrote it;
+    /// 2. the field has keyboard focus, the keyboard is up and the field has stopped moving;
+    /// 3. the field is emptied with the delete key from the end of its text, one pass at a time,
+    ///    until it is seen empty (at most four passes);
+    /// 4. the edit menu is opened with a tap on the still, empty field; if no menu appears within
+    ///    5 s, with one press-and-hold, which opens it when the finger lifts (never a second tap,
+    ///    which would close a menu that arrived late). Its Paste is tapped exactly once, so the
+    ///    payload cannot arrive twice;
+    /// 5. an "Allow Paste" prompt, if the system actually shows one, is answered by its own button;
+    /// 6. the field must then hold exactly the payload, and still hold it a moment later.
+    /// Build 6ab7ee20 (a plain M2 host) is why: in both attempts of the opener test the first
+    /// delete pass left text, a second pass from the left emptied the field, the tap that should
+    /// have opened the edit menu opened none within 3 s, and the ⌘V fallback did not land within
+    /// 3 s. Every step is noted with its time; on failure the screen and the element tree are
+    /// attached as well.
     private func paste(_ text: String, into field: XCUIElement, placeholder: String, _ app: XCUIApplication) {
-        UIPasteboard.general.string = text
-        let end = field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.85))
-        end.tap()
-        _ = waitForFocus(field)
-        // Right-to-left text ends at the left edge, so empty the field from either side.
-        let start = field.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.85))
-        for (pass, edge) in [end, start].enumerated() {
+        let started = Date()
+        var steps: [String] = []
+        func record(_ step: String) {
+            steps.append(String(format: "%.1f s %@", Date().timeIntervalSince(started), step))
+        }
+        func fail(_ message: String) {
+            record("FAILED: " + message)
+            captureFailureState("paste-failure-\(field.identifier)", app)
+            attachNote("Paste into \(field.identifier): " + steps.joined(separator: "; "))
+            XCTFail(message)
+        }
+
+        // 1. The payload, on the pasteboard and read back.
+        let pasteboard = UIPasteboard.general
+        let previousChange = pasteboard.changeCount
+        pasteboard.string = text
+        guard waitUntil(5, { pasteboard.changeCount != previousChange && pasteboard.hasStrings && pasteboard.string == text }) else {
+            return fail("The fictional payload was not on the pasteboard within 5 s.")
+        }
+        record("payload on the pasteboard (\(text.count) characters)")
+
+        // 2. Focus, the keyboard, and a field that has stopped moving. A tap that gives the field
+        //    focus goes to the end of its text: the right edge, or the left for right-to-left text.
+        let rightToLeft = Self.startsRightToLeft(fieldText(field, placeholder: placeholder))
+        var caretAtEnd = false
+        if !waitForFocus(field, timeout: 1) {
+            _ = waitForStillFrame(field)
+            field.coordinate(withNormalizedOffset: CGVector(dx: rightToLeft ? 0.05 : 0.95, dy: 0.85)).tap()
+            guard waitForFocus(field) else {
+                return fail("\(field.identifier) did not take keyboard focus within 5 s of a tap.")
+            }
+            caretAtEnd = true
+            record("focused with a tap at the \(rightToLeft ? "left" : "right") edge")
+        }
+        guard waitForKeyboard(app) else {
+            return fail("No keyboard appeared for \(field.identifier) within 5 s.")
+        }
+
+        // 3. Empty the field, pass by pass, reading it back after each pass.
+        var pass = 0
+        while !fieldText(field, placeholder: placeholder).isEmpty {
+            pass += 1
+            guard pass <= 4 else {
+                return fail("\(field.identifier) still holds \(fieldText(field, placeholder: placeholder).count) characters after 4 delete passes.")
+            }
             let current = fieldText(field, placeholder: placeholder)
-            guard !current.isEmpty else { break }
-            if pass > 0 {
-                edge.tap()
+            let fromLeft = Self.startsRightToLeft(current)
+            if !(caretAtEnd && pass == 1) {
+                _ = waitForStillFrame(field)
+                field.coordinate(withNormalizedOffset: CGVector(dx: fromLeft ? 0.05 : 0.95, dy: 0.85)).tap()
             }
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.utf16.count + 2))
+            _ = waitUntil(3) { fieldText(field, placeholder: placeholder).isEmpty }
+            record("delete pass \(pass) from the \(fromLeft ? "left" : "right"): \(current.count) → "
+                + "\(fieldText(field, placeholder: placeholder).count) characters")
         }
         XCTAssertEqual(fieldText(field, placeholder: placeholder), "", "\(field.identifier) is empty before the paste.")
-        hold(0.6)
-        end.tap()
+
+        // 4. The edit menu, on the still, empty field, and its Paste, once.
+        let end = field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.85))
         let menuPaste = app.menuItems["Paste"]
-        if menuPaste.waitForExistence(timeout: 3) {
-            menuPaste.tap()
-        } else {
-            attachNote("No edit-menu Paste appeared; pasted with ⌘V.")
-            field.typeKey("v", modifierFlags: .command)
+        let still = waitForStillFrame(field)
+        hold(0.6)
+        record("field \(still ? "still" : "STILL MOVING after 5 s") at \(NSCoder.string(for: field.frame)), empty")
+        var opener = "a menu already open"
+        if !menuPaste.exists {
+            end.tap()
+            opener = "a tap on the empty field"
+            if !menuPaste.waitForExistence(timeout: 5) {
+                record("no edit menu within 5 s of the tap")
+                captureFailureState("paste-no-menu-after-tap-\(field.identifier)", app)
+                _ = waitForStillFrame(field)
+                if !menuPaste.exists {
+                    end.press(forDuration: 1.0)
+                    opener = "a press-and-hold on the empty field, after the tap opened none"
+                    guard menuPaste.waitForExistence(timeout: 5) else {
+                        return fail("No edit menu with Paste appeared on \(field.identifier): not after a tap, not after a press-and-hold.")
+                    }
+                }
+            }
         }
-        allowPasteIfAsked(app)
-        XCTAssertTrue(valueEquals(field, text), "The paste arrived in \(field.identifier).")
+        record("edit menu opened by \(opener)")
+        menuPaste.tap()
+        record("Paste tapped once")
+
+        // 5 and 6. The payload arrives, whole and once; a real Allow Paste prompt is answered.
+        var answered = false
+        let arrived = waitUntil(10) {
+            if (field.value as? String) == text {
+                return true
+            }
+            if !answered && answerPastePrompt(app) {
+                answered = true
+            }
+            return false
+        }
+        guard arrived else {
+            return fail("The paste did not arrive in \(field.identifier) within 10 s of tapping Paste; it holds "
+                + "\(fieldText(field, placeholder: placeholder).count) characters.")
+        }
+        record("the field holds the payload\(answered ? ", after an Allow Paste prompt was answered" : "")")
+        hold(0.6)
+        guard (field.value as? String) == text else {
+            return fail("\(field.identifier) changed after the paste arrived: it now holds "
+                + "\(fieldText(field, placeholder: placeholder).count) characters.")
+        }
+        record("unchanged a moment later")
+        attachNote("Paste into \(field.identifier): " + steps.joined(separator: "; "))
     }
 
-    private func valueEquals(_ field: XCUIElement, _ text: String) -> Bool {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: field)
-        return XCTWaiter.wait(for: [expectation], timeout: 3) == .completed
-    }
-
-    /// The edit menu's Paste does not ask; ⌘V might. No waiting when nothing asks.
-    private func allowPasteIfAsked(_ app: XCUIApplication) {
-        for candidate in [app.buttons["Allow Paste"], XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow Paste"]]
-        where candidate.exists {
+    /// Answers an "Allow Paste" prompt for the fictional payload, if the system actually shows one,
+    /// with its own button, in the app or on SpringBoard (never a coordinate). The edit menu's Paste
+    /// is not expected to ask.
+    private func answerPastePrompt(_ app: XCUIApplication) -> Bool {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for candidate in [app.buttons["Allow Paste"], springboard.buttons["Allow Paste"]] where candidate.exists {
+            capture("paste-allow-prompt", app)
+            attachNote("An Allow Paste prompt appeared; it was answered with its Allow Paste button for the fictional payload.")
             candidate.tap()
+            return true
+        }
+        return false
+    }
+
+    /// Whether `text`'s first letter is Hebrew or Arabic: its end is then at the field's left edge.
+    private static func startsRightToLeft(_ text: String) -> Bool {
+        guard let letter = text.unicodeScalars.first(where: { $0.properties.isAlphabetic }) else { return false }
+        return (0x0590...0x08FF).contains(letter.value) || (0xFB1D...0xFEFC).contains(letter.value)
+    }
+
+    /// Polls `condition` every quarter-second until it holds or `seconds` have passed.
+    private func waitUntil(_ seconds: TimeInterval, _ condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while true {
+            if condition() {
+                return true
+            }
+            if Date() >= deadline {
+                return false
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         }
     }
 
-    private func waitForFocus(_ field: XCUIElement) -> Bool {
+    /// Whether `element`'s frame reads the same three times in a row, a quarter-second apart,
+    /// within `seconds`: a field that is still resizing or scrolling would take a tap at a stale
+    /// point.
+    private func waitForStillFrame(_ element: XCUIElement, _ seconds: TimeInterval = 5) -> Bool {
+        var last = element.frame
+        var same = 0
+        return waitUntil(seconds) {
+            let now = element.frame
+            same = (now == last && !now.isEmpty) ? same + 1 : 0
+            last = now
+            return same >= 2
+        }
+    }
+
+    /// The screen and the app's whole element tree, attached when a step fails.
+    private func captureFailureState(_ name: String, _ app: XCUIApplication) {
+        capture(name, app)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = name + "-element-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
+    private func waitForFocus(_ field: XCUIElement, timeout: TimeInterval = 5) -> Bool {
         let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
-        return XCTWaiter.wait(for: [focused], timeout: 5) == .completed
+        return XCTWaiter.wait(for: [focused], timeout: timeout) == .completed
     }
 
     private func waitForKeyboard(_ app: XCUIApplication) -> Bool {

@@ -82,15 +82,36 @@ final class BirthdayReviewTests: XCTestCase {
         hold(0.6)
         XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"])
 
-        // A finger that turns the unset Month wheel less than half a row and lets go: the wheel
-        // returns to its placeholder, perhaps without didSelectRow, and must again draw the
-        // placeholder alone.
-        let month = screen.wheel(1).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        // A finger that turns the unset Month wheel less than half a row (20 pt; the rows are 47 to
+        // 53 pt apart) and lets go: the wheel returns to its placeholder, perhaps without
+        // didSelectRow, and must again draw the placeholder alone.
+        //
+        // Builds 6ab74794 and 6ab7ee20 (plain M2 hosts) left the wheel on March and on January,
+        // three rows and one row along the drag. A 20-pt placement reaches neither: the wheel was
+        // flung, so it still carried speed when the finger lifted. The drag now begins only once
+        // every wheel is seen at rest and the Month wheel is seen unset; it starts on the Month
+        // wheel's lane, on the date window's centre line; and the finger rests 0.8 s (was 0.3 s)
+        // before it lifts. The distance, the speed and the expected result are unchanged, and
+        // nothing is retried.
+        XCTAssertTrue(waitForWheelsAtRest(app, "Before the Month drag"), "Every wheel is at rest before the Month drag.")
+        XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"], "The Month drag starts from Not set.")
+        softly {
+            assertNeighboursHidden(app, wheels: [1, 2], "Before the Month drag")
+        }
+        capture("birthday-before-month-drag", app)
+        let month = monthLane(app, screen)
+        let began = Date()
         month.press(forDuration: 0.1, thenDragTo: month.withOffset(CGVector(dx: 0, dy: -20)),
-                    withVelocity: .slow, thenHoldForDuration: 0.3)
+                    withVelocity: .slow, thenHoldForDuration: 0.8)
+        let took = Date().timeIntervalSince(began)
         hold(1.0)
+        let settled = waitForWheelsAtRest(app, "After a Month drag back")
+        attachNote(String(format: "Month drag: 20 pt up from the lane at (%.1f, %.1f), held 0.8 s before lifting; "
+                          + "performing it took %.2f s; afterwards the wheels were %@.", month.screenPoint.x,
+                          month.screenPoint.y, took, settled ? "at rest" : "still changing after 6 s"))
         capture("birthday-after-month-release", app)
         softly {
+            XCTAssertTrue(settled, "The Month wheel comes to rest after the drag.")
             XCTAssertEqual(screen.wheelValues, ["12", "Not set", "Not set"], "A short Month drag must return to Not set.")
             assertNeighboursHidden(app, wheels: [1, 2], "After a Month drag back")
             assertWindowEdgesClear(app, "After a Month drag back")
@@ -389,6 +410,48 @@ final class BirthdayReviewTests: XCTestCase {
             return nil
         }
         return WheelWindow(frame: frame)
+    }
+
+    /// The Month wheel's lane: the middle column's centre, on the date window's centre line (the
+    /// picker's own frame is taller than the clipped window, but centred on it). Both frames are
+    /// noted.
+    private func monthLane(_ app: XCUIApplication, _ screen: BirthdayElements) -> XCUICoordinate {
+        let identified = app.pickers["birthday.wheels"]
+        let window = (identified.exists ? identified : app.pickers.firstMatch).frame
+        let column = screen.wheel(1).frame
+        let lane = CGPoint(x: column.isEmpty ? window.midX : column.midX, y: window.midY)
+        attachNote(String(format: "Month lane: (%.1f, %.1f); Month wheel frame %@; picker frame %@.", lane.x, lane.y,
+                          NSCoder.string(for: column), NSCoder.string(for: window)))
+        XCTAssertEqual(lane.x, window.midX, accuracy: 50, "The Month lane lies in the picker's middle column.")
+        return app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: lane.x, dy: lane.y))
+    }
+
+    /// Whether every wheel is at rest on screen: two screenshots in a row light the same number
+    /// of pixels in each wheel's column of the date window, at two brightness thresholds. Bounded
+    /// by `timeout`; the outcome and the number of screenshots are noted.
+    private func waitForWheelsAtRest(_ app: XCUIApplication, _ state: String, timeout: TimeInterval = 6) -> Bool {
+        guard let wheels = wheelWindow(app, state) else { return false }
+        let deadline = Date().addingTimeInterval(timeout)
+        var previous: [Int] = []
+        var shots = 0
+        while Date() < deadline {
+            guard let shot = RenderedScreen(app) else { return false }
+            shots += 1
+            var counts: [Int] = []
+            for index in 0..<3 {
+                let column = wheels.band(index, from: -75, to: 75)
+                counts.append(shot.lit(column, above: 45))
+                counts.append(shot.lit(column, above: 100))
+            }
+            if counts == previous {
+                attachNote("\(state): the wheels were at rest after \(shots) screenshots (lit pixels per column: \(counts)).")
+                return true
+            }
+            previous = counts
+            hold(0.25)
+        }
+        attachNote("\(state): the wheels were still changing after \(Int(timeout)) s (\(shots) screenshots).")
+        return false
     }
 
     private func capture(_ name: String, _ app: XCUIApplication) {
