@@ -28,6 +28,11 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `signal-approved-files.sha256` | SHA-256 of the approved assets: those of the Wristband, the blank Signal tag, and the six `docs/design/*-approved/` folders |
 | `signal-review-files.sha256` | SHA-256 of every other file, except itself |
 | `signal-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `SignalSelectionView.swift`; the Signal gate confirms they are absent |
+| `places-mac-review.md` | The Places run: the manual, unsigned simulator workflow `proximeet-places-review`, its three scopes (places, signal, regressions), source gate, steps and downloads |
+| `places-review-manifest.tsv` | Every execution of every scope: device, run, bound and kind; the harness runs it and the results parser judges it |
+| `places-approved-files.sha256` | SHA-256 of the approved assets: those of Signal, the three Places scenes, and the seven `docs/design/*-approved/` folders |
+| `places-review-files.sha256` | SHA-256 of every other file, except itself |
+| `places-review-deletions.txt` | Files removed by the approved chapters; the Places gate confirms they are absent |
 
 The harness consists of:
 - `scripts/welcome_review.sh`: the steps checkpoint, destinations, captures, ui-review and verdict;
@@ -41,6 +46,10 @@ The harness consists of:
 - `ProximeetUITests/WristbandReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WRISTBAND_REVIEW=1`;
 - `scripts/signal_review.sh`: the Signal steps, with a `signal` and a `regressions` scope (`SIGNAL_REVIEW_SCOPE`) run as two builds on one commit;
 - `ProximeetUITests/SignalReviewTests.swift`: skipped unless the runner gets `PROXIMEET_SIGNAL_REVIEW=1`;
-- `ProximeetUITests/BandSignalInteractionTests.swift`: ungated; the approved Wristband → Signal interaction;
+- `ProximeetUITests/BandSignalInteractionTests.swift`: ungated; the approved Wristband → Signal interaction, now ending in Places;
+- `scripts/places_review.sh`, `scripts/places_review_results.py`, `scripts/places_review_package.py` and
+  `scripts/places_source_manifests.py`: the Places steps, driven and judged by `places-review-manifest.tsv`
+  (`PLACES_REVIEW_SCOPE`), its packages and its source-gate manifests;
+- `ProximeetUITests/PlacesReviewTests.swift`: skipped unless the runner gets `PROXIMEET_PLACES_REVIEW=1`;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.
