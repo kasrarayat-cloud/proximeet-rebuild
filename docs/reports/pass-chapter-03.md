@@ -124,9 +124,9 @@ a credential.
   - that only an eligible committed date opens Pass;
   - leaving back to Birthday with its draft;
   - that a repeated Continue or Back does not repeat.
-- **UI** (`PassReviewTests`, three tests; see the verification doc): the real route, the gate,
-  rapid taps, waiting, background/resume, Reduce Motion (preview flag), and screen-pixel
-  comparisons with the approved board.
+- **UI** (`PassReviewTests`, four tests; see the verification doc): the real route, the gate,
+  rapid taps, waiting, background/resume, Reduce Motion (preview flag), the largest text size,
+  and screen-pixel comparisons with the approved board.
 - **Birthday:** `BirthdayReviewTests` keep all their checks. Only the walkthrough's Continue
   expectation changed (intentionally): Continue opens Pass, and Back returns with the date
   kept.
@@ -150,8 +150,12 @@ delivery message, not in this file.
    interval is treated as a repeat. A separate tap is honoured at once.
 4. **The DEMO label is hidden from VoiceOver.** This avoids reading "demo" three times. The
    label stays visible in every state.
-5. **Card type does not follow Dynamic Type.** It is part of the printed pass, as Birthday's
+5. **The DEMO label is built not to truncate.** The next build's largest-text capture and test
+   are the evidence for that. Its growth stops at the largest non-accessibility size,
+   because it sits in the header row beside the wordmark, which gives way first. The first
+   build showed "DE…" at the largest accessibility size.
+6. **Card type does not follow Dynamic Type.** It is part of the printed pass, as Birthday's
    console is. All other text scales, and the page scrolls.
-6. **The Birthday gate is untouched, and its expectations change only where intended.** The
+7. **The Birthday gate is untouched, and its expectations change only where intended.** The
    `.demoPass` requirement accepts the approved committed-adult check. The legacy stored date is
    kept for the DEBUG fixtures of later scenes.

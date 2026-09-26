@@ -89,7 +89,12 @@ struct PassView: View {
             .accessibilityIdentifier("pass.back")
             PassWordmark()
             Spacer(minLength: 8)
+            // Never truncated: the wordmark gives way first. Its growth stops at the largest
+            // non-accessibility size (it is hidden from VoiceOver; the pass and the headline
+            // also say "demo").
             PassDemoBadge()
+                .layoutPriority(1)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
         .frame(minHeight: 44)
         .padding(.leading, 24)
@@ -247,9 +252,10 @@ private struct PassDemoBadge: View {
         Text("DEMO")
             .lineLimit(1)
             .manrope(.bold, size: size, designSize: 16, lineHeight: 24)
+            .fixedSize()
             .foregroundStyle(PassStyle.cyan)
+            .padding(.horizontal, 8)
             .frame(minWidth: 80, minHeight: 32)
-            .padding(.horizontal, size > 16 ? 6 : 0)
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(PassStyle.cyan.opacity(0.45), lineWidth: 1)

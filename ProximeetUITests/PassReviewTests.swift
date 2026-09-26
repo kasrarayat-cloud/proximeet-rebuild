@@ -210,6 +210,49 @@ final class PassReviewTests: XCTestCase {
         }
     }
 
+    /// The largest accessibility text size (`-UIPreferredContentSizeCategoryName`, as Welcome's
+    /// large-text test uses): the DEMO label is drawn whole, not truncated; the words stay; and
+    /// every control is reachable by scrolling. Starts from the DEBUG fixture that opens Pass
+    /// through Birthday's gate.
+    func testLargestTextKeepsTheDemoLabelWholeAndControlsReachable() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ProximeetFixture", "pass",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+        let pass = PassElements(app: app)
+        waitForStage(pass, "Your next chapter.")
+        hold(1.5)
+        XCTAssertGreaterThan(pass.headline.frame.height, 118 + 10, "The largest text size must be applied.")
+        capture("pass-largest-text-top", app)
+        softly {
+            guard let shot = RenderedScreen(app) else { return }
+            // Build 6ab71ced drew "DE…" here: an ellipsis is a run of dots far shorter than the letters.
+            let clusters = shot.inkColumns(in: CGRect(x: 180, y: 50, width: 260, height: 110), where: Self.cyan)
+            let tallest = clusters.map { $0.height }.max() ?? 0
+            attachNote("Largest text: DEMO label glyph clusters (points): "
+                + clusters.map { String(format: "%.1f-%.1f h %.1f", $0.minX, $0.maxX, $0.height) }.joined(separator: ", ") + ".")
+            XCTAssertGreaterThanOrEqual(clusters.count, 3, "The DEMO label should be drawn as its letters.")
+            XCTAssertFalse(clusters.contains { $0.height < tallest * 0.5 }, "The DEMO label is truncated: an ellipsis is drawn.")
+        }
+        XCTAssertTrue(pass.back.isHittable, "Back is reachable at the top.")
+        XCTAssertEqual(pass.claim.label, Self.claim)
+        XCTAssertEqual(pass.card.label, "Demo pass, 18 plus")
+        var swipes = 0
+        while !(pass.primary.isHittable && pass.exit.isHittable) && swipes < 8 {
+            app.swipeUp()
+            swipes += 1
+        }
+        XCTAssertTrue(pass.primary.isHittable, "Try the demo must be reachable by scrolling.")
+        XCTAssertTrue(pass.exit.isHittable, "Leave demo must be reachable by scrolling.")
+        attachNote("Swipes needed to reach both actions: \(swipes).")
+        hold(0.8)
+        capture("pass-largest-text-bottom", app)
+        pass.primary.tap()
+        waitForStage(pass, "Demo in progress.")
+    }
+
     // MARK: - Route helpers
 
     private func launchWelcome() -> XCUIApplication {
@@ -449,6 +492,38 @@ private struct RenderedScreen {
             return nil
         }
         pixels = buffer
+    }
+
+    /// Runs of adjacent pixel columns in `rect` (points) holding a pixel that passes `test` (a
+    /// letter each, for widely set type), with each run's vertical ink extent, in points.
+    func inkColumns(in rect: CGRect, where test: (UInt8, UInt8, UInt8) -> Bool) -> [(minX: CGFloat, maxX: CGFloat, height: CGFloat)] {
+        let x0 = max(0, Int((rect.minX * scale).rounded())), x1 = min(width, Int((rect.maxX * scale).rounded()))
+        let y0 = max(0, Int((rect.minY * scale).rounded())), y1 = min(height, Int((rect.maxY * scale).rounded()))
+        guard x0 < x1, y0 < y1 else { return [] }
+        var runs: [(minX: CGFloat, maxX: CGFloat, height: CGFloat)] = []
+        var start: Int?
+        var top = Int.max, bottom = Int.min
+        for x in x0...x1 {
+            var columnTop: Int?, columnBottom: Int?
+            if x < x1 {
+                for y in y0..<y1 {
+                    let index = (y * width + x) * 4
+                    if test(pixels[index], pixels[index + 1], pixels[index + 2]) {
+                        if columnTop == nil { columnTop = y }
+                        columnBottom = y
+                    }
+                }
+            }
+            if let columnTop, let columnBottom {
+                if start == nil { start = x; top = Int.max; bottom = Int.min }
+                top = min(top, columnTop)
+                bottom = max(bottom, columnBottom)
+            } else if let first = start {
+                runs.append((CGFloat(first) / scale, CGFloat(x) / scale, CGFloat(bottom + 1 - top) / scale))
+                start = nil
+            }
+        }
+        return runs
     }
 
     /// The first and last pixel rows in `rect` (points) holding a pixel that passes `test`, in

@@ -79,15 +79,21 @@ The XCTest review runs in this order:
 5. `testReduceMotionPreviewKeepsThePassStationary` launches with the app-level
    `-ProximeetReduceMotionPreview YES` flag, not the system setting, and checks the pass does
    not move.
-6. `BirthdayReviewTests` and `WelcomeReviewTests` run as regressions.
+6. `testLargestTextKeepsTheDemoLabelWholeAndControlsReachable` launches at the largest
+   accessibility text size. It checks, from the screen's pixels, that the DEMO label is drawn
+   whole with no ellipsis, and that Back, Try the demo and Leave demo are reachable by
+   scrolling.
+7. `BirthdayReviewTests` and `WelcomeReviewTests` run as regressions.
 
 All runs pass `TEST_RUNNER_PROXIMEET_PASS_REVIEW=1`, `…_BIRTHDAY_REVIEW=1` and
 `…_WELCOME_REVIEW=1`. Every required test must be discovered, executed and passed; a skip
 fails the stage.
 
 `compact-video` re-encodes the recording at half size with AVFoundation
-(`scripts/compact_video.swift`), starting from the walkthrough test's own start marker. If it
-fails, the compact file is a labelled copy of the original.
+(`scripts/compact_video.swift`). It trims to the app itself: from the first near-black frame
+(the app's launch) to the last one before the bright home screen returns, found from frame
+brightness. It falls back to the test's start marker, and if the re-encode fails, the compact
+file is a labelled copy of the original.
 
 ## 3. Starting it
 

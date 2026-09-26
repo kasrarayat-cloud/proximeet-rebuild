@@ -56,7 +56,7 @@ WALKTHROUGH="ProximeetUITests/PassReviewTests/testWalkthroughStartFinishEndpoint
 # Tests that must run and pass (a skip or an undiscovered test is a failure). Welcome geometry is
 # asserted on the 440 x 956 reference, which the primary target provides; Welcome's large-text
 # test may skip if its launch argument has no effect, and is reported either way.
-REQUIRED_PASSING_TESTS="PassReviewTests.testWalkthroughStartFinishEndpointLeaveReentryCancelBack PassReviewTests.testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn PassReviewTests.testReduceMotionPreviewKeepsThePassStationary BirthdayReviewTests.testWalkthroughEntryCorrectionContinueBack BirthdayReviewTests.testTypedEntryPreservesComponentsAndKeyboard WelcomeReviewTests.testHonestNotices WelcomeReviewTests.testReduceMotionPreviewLaunch WelcomeReviewTests.testDefaultGeometry"
+REQUIRED_PASSING_TESTS="PassReviewTests.testWalkthroughStartFinishEndpointLeaveReentryCancelBack PassReviewTests.testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn PassReviewTests.testReduceMotionPreviewKeepsThePassStationary PassReviewTests.testLargestTextKeepsTheDemoLabelWholeAndControlsReachable BirthdayReviewTests.testWalkthroughEntryCorrectionContinueBack BirthdayReviewTests.testTypedEntryPreservesComponentsAndKeyboard WelcomeReviewTests.testHonestNotices WelcomeReviewTests.testReduceMotionPreviewLaunch WelcomeReviewTests.testDefaultGeometry"
 WARMUP_SECONDS=15
 SETTLE_SECONDS=4
 RESTORE_CONTENT_SIZE=""
@@ -629,6 +629,7 @@ stage_ui_review() {
         -destination "platform=iOS Simulator,id=$SIM_UDID" -derivedDataPath "$DERIVED_DATA" \
         -only-testing:ProximeetUITests/PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn \
         -only-testing:ProximeetUITests/PassReviewTests/testReduceMotionPreviewKeepsThePassStationary \
+        -only-testing:ProximeetUITests/PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable \
         -only-testing:ProximeetUITests/BirthdayReviewTests \
         -only-testing:ProximeetUITests/WelcomeReviewTests \
         -parallel-testing-enabled NO -resultBundlePath "$rest_result" \
@@ -707,7 +708,7 @@ stage_compact_video() {
         start="$(python3 -c "import sys; print('%.2f' % max(0.0, float(sys.argv[1]) - float(sys.argv[2]) - 0.5))" "$marker" "$started")"
     fi
     note "Trim start: ${start}s (walkthrough start $marker, recording start $started)."
-    xcrun swift scripts/compact_video.swift "$movie" "$compact" "$start" >> "$LOG" 2>&1 &
+    xcrun swift scripts/compact_video.swift "$movie" "$compact" "$start" > "$OUT/compact-video.out" 2>> "$LOG" &
     pid=$!
     while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 600 ]; do
         sleep 0.5
@@ -720,8 +721,9 @@ stage_compact_video() {
     elif wait "$pid"; then
         status=0
     fi
+    cat "$OUT/compact-video.out" >> "$LOG" 2>/dev/null || true
     if [ "$status" -eq 0 ] && [ -s "$compact" ]; then
-        printf 'result=RE-ENCODED\nmethod=AVFoundation export, half size, trimmed from %ss\n' "$start" > "$OUT/compact-video.txt"
+        printf 'result=RE-ENCODED\nmethod=AVFoundation export: %s\n' "$(tail -n 1 "$OUT/compact-video.out")" > "$OUT/compact-video.txt"
     else
         cp "$movie" "$compact"
         printf 'result=FALLBACK COPY (not re-encoded, not trimmed)\n' > "$OUT/compact-video.txt"
@@ -988,6 +990,7 @@ visual approval, which is the founder's decision. The simulator app cannot be in
 <h2>End of preview, and leaving</h2><div class="row">%s%s%s%s%s</div>
 <h2>Gate, rapid taps, waiting and resume</h2><div class="row">%s%s%s%s</div>
 <h2>Reduce Motion (the app's preview flag, not the system setting)</h2><div class="row">%s%s</div>
+<h2>Largest accessibility text size (XCTest)</h2><div class="row">%s%s</div>
 <h2>Birthday and Welcome regressions</h2><div class="row">%s%s%s%s</div>
 <h2>Supplementary fixture captures (not interactions)</h2><div class="row">%s%s%s%s</div>
 <p class="note">The largest-text capture uses an undocumented simulator command and is unverified until the text is seen to
@@ -1012,6 +1015,8 @@ grow. VoiceOver, the system Reduce Motion setting and on-device motion are manua
     shot("pass-after-double-back", "Double tap on Back: Birthday, not Welcome"),
     shot("pass-reduce-motion-preview-intro", "Preview flag: intro"),
     shot("pass-reduce-motion-preview-progress", "Preview flag: in progress, the pass has not moved"),
+    shot("pass-largest-text-top", "Largest text: the header (DEMO label) and Back"),
+    shot("pass-largest-text-bottom", "Largest text: scrolled to both actions"),
     shot("birthday-continue-opens-pass", "Birthday's Continue opens Pass"),
     shot("birthday-empty", "Birthday empty state (regression)"),
     shot("more-options-choice", "Welcome: More options"),
