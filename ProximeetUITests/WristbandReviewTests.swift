@@ -307,7 +307,8 @@ final class WristbandReviewTests: XCTestCase {
 
     /// Starts from the DEBUG fixture `wristband-social` at the largest accessibility text size:
     /// DEMO is drawn whole, the choices become one column, and every choice, the helper, the
-    /// privacy sentence and both actions are reachable by scrolling. Nothing is shrunk.
+    /// privacy sentence and both actions are reachable by scrolling. No copy or choice is shrunk;
+    /// only the header's wordmark may give way, as on the Guest List.
     func testLargestTextKeepsEveryChoiceReachable() throws {
         let app = XCUIApplication()
         app.launchArguments = [

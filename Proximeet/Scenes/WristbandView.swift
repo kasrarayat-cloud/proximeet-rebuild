@@ -308,7 +308,7 @@ private struct WristbandTileRow: Layout {
 ///
 /// Its size never depends on the selection, so choosing cannot rearrange the grid: the check is
 /// always laid out and only fades in, and Figma's 1.5 pt inside-border shift of a selected tile's
-/// content is drawn as an offset. The name's column is up to 89 pt (Figma), which puts the check at
+/// content is drawn as an offset, applied at once rather than animated. The name's column is up to 89 pt (Figma), which puts the check at
 /// x 145 (146.5 selected) in a 182-pt tile, but never forces a width. The icon and check grow at
 /// most 1.5× with Dynamic Type; at accessibility sizes they share a line above the name, so the
 /// name has the tile's whole width and never breaks inside the word.
@@ -339,7 +339,10 @@ private struct WristbandTileLabel: View {
                           color: WristbandStyle.secondaryText)
         }
         .padding(14)
-        .offset(x: selected ? 1.5 : 0, y: selected ? 1.5 : 0)
+        // Not animated: the content never slides; only the check and the border dissolve.
+        .animation(nil) { content in
+            content.offset(x: selected ? 1.5 : 0, y: selected ? 1.5 : 0)
+        }
         .frame(maxWidth: .infinity, minHeight: 78, maxHeight: .infinity, alignment: .topLeading)
     }
 

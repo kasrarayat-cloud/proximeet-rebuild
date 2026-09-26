@@ -159,6 +159,11 @@ delivery message, not in this file.
     fades in, and the shift is an offset. So a tile's size does not depend on the selection (on
     narrower phones two columns still fit, and choosing never switches to one column), and at the
     largest sizes a row never overflows. The icon and check grow at most 1.5× with Dynamic Type;
-    the words grow fully. At accessibility sizes the icon and check share a line above the name,
+    the words grow fully. The 1.5 pt shift is applied at once, never animated, so nothing slides
+    in either motion setting. At accessibility sizes the icon and check share a line above the name,
     so a name never breaks inside the word. Two tiles share a row only when both fit at equal
     widths (a small layout measures the wider tile), otherwise the choices are one column.
+13. **For Signal: the legacy palette.** The DEBUG-only later scenes (Signal, Ready) still tint
+    Social with the legacy cyan `Palette.social` (#35D7FF), while the approved Wristband's Social
+    is coral #F2877F and cyan is the DEMO label's colour. The approved route cannot reach those
+    scenes; the colours need reconciling before chapter 06 connects Signal.
