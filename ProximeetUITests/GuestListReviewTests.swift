@@ -165,12 +165,19 @@ final class GuestListReviewTests: XCTestCase {
             XCTAssertEqual(guest.card.label, name.shown, "The card shows the name, trimmed only at its edges, once.")
             capture("guest-list-name-\(index + 1)", app)
             if index == names.count - 1 {
-                // The long name wraps; the paper grows with it and holds every line.
+                // The long name wraps; the paper grows with it and holds every line. Checked with the
+                // card's foot scrolled into view above the action bar.
                 XCTAssertGreaterThan(guest.card.frame.height, 256.46 + 20, "The card grows for a long name.")
+                XCTAssertTrue(scrollIntoView(guest.card, guest, app, footOnly: true), "The long name's card foot is reachable.")
+                hold(0.6)
+                capture("guest-list-name-5-foot", app)
                 softly {
                     guard let shot = RenderedScreen(app) else { return }
                     let card = guest.card.frame
-                    let ink = shot.inkRows(in: Self.textColumn(of: card), where: Self.black)
+                    let visibleBottom = guest.primary.frame.minY - 25
+                    XCTAssertLessThan(card.maxY, visibleBottom, "The card's foot is on screen for this check.")
+                    let column = Self.textColumn(of: card).intersection(CGRect(x: 0, y: 70, width: 440, height: max(1, visibleBottom - 70)))
+                    let ink = shot.inkRows(in: column, where: Self.black)
                     XCTAssertNotNil(ink, "The long name is drawn on the card.")
                     if let ink {
                         XCTAssertLessThanOrEqual(ink.bottom, card.maxY - 24, "The text ends on the paper, above its holder.")
@@ -529,7 +536,7 @@ final class GuestListReviewTests: XCTestCase {
         XCTAssertTrue(guest.back.isHittable, "Back is reachable at the top.")
         XCTAssertEqual(fieldText(guest.name, placeholder: "What should we call you?"), "Alex")
         for element in [guest.name, guest.opener, guest.count, guest.coffee, guest.liveMusic, guest.outdoors, guest.boundary] {
-            XCTAssertTrue(scrollUntilHittable(element, app), "\(element.identifier) is reachable by scrolling.")
+            XCTAssertTrue(scrollIntoView(element, guest, app), "\(element.identifier) is reachable by scrolling.")
             XCTAssertGreaterThanOrEqual(element.frame.height, element.elementType == .button ? 44 : 1)
         }
         XCTAssertTrue(guest.primary.isHittable && guest.secondary.isHittable, "Both actions stay on screen.")
@@ -542,8 +549,8 @@ final class GuestListReviewTests: XCTestCase {
         capture("guest-list-largest-text-card-top", app)
         XCTAssertEqual(guest.card.label, Self.alexCard)
         XCTAssertGreaterThan(guest.card.frame.height, 256.46 + 40, "The card grows with its text.")
-        // Scrolled to the line below the card, so the card's foot is on screen above the actions.
-        XCTAssertTrue(scrollUntilHittable(guest.context, app))
+        // Scrolled until the card's foot is on screen, above the actions.
+        XCTAssertTrue(scrollIntoView(guest.card, guest, app, footOnly: true), "The card's foot is reachable by scrolling.")
         hold(0.6)
         capture("guest-list-largest-text-card", app)
         softly {
@@ -558,7 +565,8 @@ final class GuestListReviewTests: XCTestCase {
                 XCTFail("The card's text is not drawn.")
             }
         }
-        XCTAssertTrue(scrollUntilHittable(guest.boundary, app))
+        XCTAssertTrue(scrollIntoView(guest.context, guest, app), "The context line is reachable by scrolling.")
+        XCTAssertTrue(scrollIntoView(guest.boundary, guest, app), "The boundary sentence is reachable by scrolling.")
         XCTAssertTrue(guest.primary.isHittable && guest.secondary.isHittable)
         capture("guest-list-largest-text-card-bottom", app)
     }
@@ -783,18 +791,27 @@ final class GuestListReviewTests: XCTestCase {
         }
     }
 
-    private func scrollUntilHittable(_ element: XCUIElement, _ app: XCUIApplication) -> Bool {
-        var swipes = 0
-        while !element.isHittable && swipes < 10 {
-            app.swipeUp(velocity: .slow)
-            swipes += 1
+    /// Scrolls with short, momentum-free drags until `element` lies between the status bar and the
+    /// top of the action bar: hittability alone counts an element hidden behind the opaque bar.
+    /// `footOnly` checks just the lower edge, for an element taller than the visible area.
+    private func scrollIntoView(_ element: XCUIElement, _ guest: GuestListElements, _ app: XCUIApplication,
+                                footOnly: Bool = false) -> Bool {
+        // In the 32-pt margin, left of every field and chip, so a drag never lands on a control.
+        let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.3))
+        let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.55))
+        for _ in 0..<14 {
+            let frame = element.frame, top: CGFloat = 62, bottom = guest.primary.frame.minY - 25
+            let low = frame.maxY > bottom, high = footOnly ? frame.maxY < top + 40 : frame.minY < top
+            if !low && !high {
+                return true
+            }
+            if low {
+                lower.press(forDuration: 0.05, thenDragTo: upper, withVelocity: .slow, thenHoldForDuration: 0.2)
+            } else {
+                upper.press(forDuration: 0.05, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.2)
+            }
         }
-        var back = 0
-        while !element.isHittable && back < 10 {
-            app.swipeDown(velocity: .slow)
-            back += 1
-        }
-        return element.isHittable
+        return false
     }
 
     private func waitFor(_ element: XCUIElement, enabled: Bool) -> Bool {

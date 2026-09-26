@@ -159,13 +159,16 @@ delivery message, not in this file.
    were added: "Add a name to preview your card." (shown only after the name was edited or left
    blank) and "Keep it to 120 characters to preview your card.".
 3. **The fictional opener's line break.** Figma breaks "Always up for coffee / and a good story."
-   by hand. The app never inserts breaks into a guest's text, so the same 38 characters wrap at
-   the 303-pt column after "good".
+   by hand. The app never inserts breaks into a guest's text; at the 303-pt column iOS's standard
+   line breaking, which avoids leaving one word alone on the last line, sets the same 38
+   characters as "Always up for coffee and a / good story."
 4. **Card layout without optional content.** The remaining lines are centred in the writing
    area. The rule appears only with interests, as the interest line's rule. Separators appear
    only between selected interests; a line that would not fit becomes one interest per line.
 5. **The card grows** for long names or larger text, stretching only a plain band of the paper.
-   This is adapted decoration, not new artwork.
+   This is adapted decoration, not new artwork. A single word wider than the name column (for
+   example "Hohenzollern-" at 38 pt) is broken inside the word ("Hohenzoller" / "n-") at full
+   size rather than overflowing.
 6. **The opener keeps Figma's 24-pt lines.** Manrope Medium 18's natural line is 24.59 pt, so the
    opener block takes Figma's height and its lines are centred on it (within 0.3 pt for two
    lines).

@@ -1053,6 +1053,7 @@ sections = [
                                  shot("guest-list-name-1", "Zoë Ødegård-Nakamura (pasted with spaces)"),
                                  shot("guest-list-name-2", "김민지"), shot("guest-list-name-3", "محمد سالم"),
                                  shot("guest-list-name-4", "Punctuation kept"), shot("guest-list-name-5", "A long name: the card grows"),
+                                 shot("guest-list-name-5-foot", "The long name's card, scrolled to its foot"),
                                  shot("guest-list-card-120-emoji", "120 family emoji: within the limit"))),
     ("Optional content", row(shot("guest-list-name-only-card", "Name only: no rule, no interest line"),
                              shot("guest-list-two-interests", "Two interests: check marks, not colour alone"),
