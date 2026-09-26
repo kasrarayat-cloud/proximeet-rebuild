@@ -16,6 +16,10 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `pass-approved-files.sha256` | SHA-256 of the approved assets: Welcome poses, Manrope faces and licence, the Birthday housing, the Pass artwork, and the three `docs/design/*-approved/` folders |
 | `pass-review-files.sha256` | SHA-256 of every other file, except itself |
 | `pass-review-deletions.txt` | Files removed by the approved chapters (Welcome's, and the legacy `DemoPassView.swift`); the Pass gate confirms they are absent |
+| `guest-list-mac-review.md` | The Guest List run: the manual, unsigned simulator workflow `proximeet-guest-list-review`, its source gate, steps and downloads |
+| `guest-list-approved-files.sha256` | SHA-256 of the approved assets: those of the Pass, the Guest List card art, and the four `docs/design/*-approved/` folders |
+| `guest-list-review-files.sha256` | SHA-256 of every other file, except itself |
+| `guest-list-review-deletions.txt` | Files removed by the approved chapters; the Guest List gate confirms they are absent |
 
 The harness consists of:
 - `scripts/welcome_review.sh`: the steps checkpoint, destinations, captures, ui-review and verdict;
@@ -23,5 +27,7 @@ The harness consists of:
 - `ProximeetUITests/BirthdayReviewTests.swift`: skipped unless the runner gets `PROXIMEET_BIRTHDAY_REVIEW=1`;
 - `scripts/pass_review.sh` and `scripts/compact_video.swift`: the Pass steps and the compact walkthrough video;
 - `ProximeetUITests/PassReviewTests.swift`: skipped unless the runner gets `PROXIMEET_PASS_REVIEW=1`;
+- `scripts/guest_list_review.sh`: the Guest List steps, reusing `scripts/compact_video.swift`;
+- `ProximeetUITests/GuestListReviewTests.swift`: skipped unless the runner gets `PROXIMEET_GUEST_LIST_REVIEW=1`;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.
