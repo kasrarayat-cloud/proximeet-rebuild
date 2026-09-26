@@ -18,11 +18,11 @@ builds on the same pinned commit:
 
 | Scope | Selected iPhone 17 Pro Max | Device B (a clone of it) | Smaller iPhone |
 | --- | --- | --- | --- |
-| `signal` | the recorded journey, then the twelve states, first choices, rapid changes and interruptions, the endpoint | the age-gate journey, relaunch, Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests`, and both Guest List keyboard tests | the keyboard Done/Back check and three direct-launch captures |
+| `signal` | the recorded journey, then the twelve states, first choices, rapid changes and interruptions, the endpoint | the age-gate journey, relaunch, Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests`, and both Guest List keyboard tests | the keyboard Done/Back check, Signal's largest-text test, and three direct-launch captures |
 | `regressions` | the Wristband (7), Pass (4), Birthday (2) and Welcome (all 4) tests | the Guest List's on-screen-keyboard tests (7), then its hardware-key tests (3) | not used |
 
-Between them the two builds cover all 41 UI test methods, in 42 executions: the keyboard check
-runs on two sizes. Each verdict names its build and scope. The final report lists which build
+Between them the two builds cover all 41 UI test methods, in 43 executions: the keyboard check
+and Signal's largest-text test run on two sizes. Each verdict names its build and scope. The final report lists which build
 supplied each result, and counts both builds and their minutes.
 
 ## 1. The source gate
@@ -112,7 +112,10 @@ These run only with `PROXIMEET_SIGNAL_REVIEW=1`.
   attached at once rather than replaying the movement.
 - `testRapidChangesAndInterruptionsStayConsistent`. Rapid taps leave the last choice, with the
   icon to match. Continue preview during a change shows one message. Back during the first
-  movement, then forward, shows the attached tag and Chat first.
+  movement, then forward, shows the attached tag and Chat first. The app sent to the background
+  during the first movement and resumed shows the attached tag, the chosen icon, the summary and
+  Continue. (A change to the system Reduce Motion setting during the movement is not run:
+  XCUITest cannot change it inside a running app.)
 - `testEndpointDuplicateTapsAndBack`. A double tap on Continue preview shows one message and
   stays. A double tap on either Back stops at the Wristband. Re-entry keeps both values, and no
   wording claims a Wave, chat, match, verification or visibility.
@@ -122,11 +125,15 @@ These run only with `PROXIMEET_SIGNAL_REVIEW=1`.
   approach.
 - `testReduceMotionPreviewAttachesAtOnce`. With the app's `-ProximeetReduceMotionPreview YES`
   flag (not the system setting), the tag is attached immediately after the tap.
-- `testLargestTextKeepsEveryChoiceReachable`. At the largest accessibility size:
+- `testLargestTextKeepsEveryChoiceReachable`, on device B and on the smaller iPhone. At the
+  largest accessibility size:
   - DEMO is drawn whole;
   - the headline wraps;
-  - the rows grow taller than 84 pt with their words;
+  - the rows grow taller than 84 pt with their words, with the symbol and radio on a line above
+    them;
   - both choices, the summary, the privacy line and both actions are reachable.
+
+  Its captures name the width.
 - `testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts` (full journey). From Signal
   (Activity, Chat first), Back through every chapter to Birthday. An under-18 date disables
   Continue and opens nothing. The corrected date moves nothing until Continue, which opens the
@@ -176,7 +183,7 @@ Signal scope:
 - `Signal-Screens.zip`:
   - the twelve states (direct launches);
   - the real journey's three Social states and end-of-preview message;
-  - the largest text size;
+  - the largest text size on both widths;
   - the smaller iPhone (direct launches);
   - the integration evidence (age-gate journey, keyboard Back journey, keyboard direct launches
     on two sizes), with the notes the tests attached.

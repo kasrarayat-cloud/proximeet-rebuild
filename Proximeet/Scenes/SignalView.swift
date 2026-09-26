@@ -208,7 +208,7 @@ struct SignalView: View {
             ? nil
             : .easeOut(duration: first ? 0.5 : 0.22)
         withAnimation(animation) {
-            session.chooseApproach(approach)
+            _ = session.chooseApproach(approach)
         }
     }
 
@@ -297,27 +297,34 @@ private enum SignalTagArt {
 /// the explanation (Regular 14/20) in a 262-pt column, and the radio (20 pt): an outline
 /// (#A8B0AD, 1.2 pt), or filled #F6F7F2 with its #050606 tick when selected. The row's size never
 /// depends on the selection; Figma's 1.5 pt inside-border shift of a selected row's content is an
-/// offset, applied at once.
+/// offset, applied at once. At accessibility text sizes the symbol and the radio share a line
+/// above the words, which then have the row's full width, so no word breaks inside itself.
 private struct SignalRowLabel: View {
     let approach: ApproachSignal
     let selected: Bool
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var graphic: CGFloat { min(scale, 1.5) }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            SignalGlyph(pieces: SignalPaths.rowSymbol(approach), stroke: 1.9833333492279053,
-                        color: SignalStyle.rowSymbol, designSize: 28)
-                .frame(width: 28 * graphic, height: 28 * graphic)
-            VStack(alignment: .leading, spacing: 2 * scale) {
-                WristbandText(text: approach.title, face: .semiBold, size: 17, lineHeight: 24, color: .white)
-                WristbandText(text: approach.summary, face: .regular, size: 14, lineHeight: 20,
-                              color: WristbandStyle.secondaryText)
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .center, spacing: 14) {
+                        symbol
+                        Spacer(minLength: 14)
+                        radio
+                    }
+                    words
+                }
+            } else {
+                HStack(alignment: .center, spacing: 14) {
+                    symbol
+                    words
+                    radio
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            SignalRadio(selected: selected)
-                .frame(width: 20 * graphic, height: 20 * graphic)
         }
         .padding(.leading, 16)
         .padding(.trailing, 22)
@@ -327,6 +334,26 @@ private struct SignalRowLabel: View {
             content.offset(x: selected ? 1.5 : 0)
         }
         .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+    }
+
+    private var symbol: some View {
+        SignalGlyph(pieces: SignalPaths.rowSymbol(approach), stroke: 1.9833333492279053,
+                    color: SignalStyle.rowSymbol, designSize: 28)
+            .frame(width: 28 * graphic, height: 28 * graphic)
+    }
+
+    private var words: some View {
+        VStack(alignment: .leading, spacing: 2 * scale) {
+            WristbandText(text: approach.title, face: .semiBold, size: 17, lineHeight: 24, color: .white)
+            WristbandText(text: approach.summary, face: .regular, size: 14, lineHeight: 20,
+                          color: WristbandStyle.secondaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var radio: some View {
+        SignalRadio(selected: selected)
+            .frame(width: 20 * graphic, height: 20 * graphic)
     }
 }
 

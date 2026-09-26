@@ -8,8 +8,9 @@
 # Scopes (the run input SIGNAL_REVIEW_SCOPE; both run on the same pinned commit, and each result
 # says which build supplied it). One scope does not fit a 28-minute build:
 #   signal       Signal: the recorded full journey, all twelve states, first choices, changes,
-#                no-ops, re-entry, interruptions, the endpoint, the missing intent, relaunch, the
-#                Reduce Motion preview flag and the largest text size; the integration checks: the
+#                no-ops, re-entry, interruptions (incl. background/resume), the endpoint, the missing
+#                intent, relaunch, the Reduce Motion preview flag and the largest text size on two
+#                widths; the integration checks: the
 #                Birthday gate on the way back (full journey), the Guest List keyboard Back on the
 #                real route and Done/Back on two phone sizes; the Wristband → Signal interaction test
 #   regressions  the earlier chapters: the Wristband (its Continue preview now opens Signal), the
@@ -32,7 +33,8 @@
 #                 compilation
 #   ui-review     compile the UI test harness; clone the booted iPhone 17 Pro Max ("device B",
 #                 deleted after the run, so it starts warm); run the scope's two lanes in parallel,
-#                 then (signal scope) the smaller iPhone's keyboard check and fixture captures. The
+#                 then (signal scope) the smaller iPhone's keyboard check, largest-text test and
+#                 fixture captures. The
 #                 signal scope records the full journey first; the compact video is made in the
 #                 background once the recording ends. Every xcodebuild is bounded by time; a failed
 #                 test other than the recorded journey is retried once and reported as such. Zero
@@ -81,7 +83,7 @@ UI_DEADLINE_SECONDS=1440
 
 # The tests. Signal scope: the selected simulator records the journey, then runs SIGNAL_MAIN_TESTS;
 # device B runs SIGNAL_B_TESTS, the interaction test and both keyboard tests; the smaller iPhone the
-# keyboard check. Regressions scope: the selected simulator runs the Wristband, Pass, Birthday and
+# keyboard check and Signal's largest-text test. Regressions scope: the selected simulator runs the Wristband, Pass, Birthday and
 # Welcome tests; device B the Guest List's on-screen-keyboard tests, then last its hardware-key
 # tests (hardware key events can leave the simulator without its on-screen keyboard).
 SIGNAL_WALKTHROUGH="testWalkthroughRealJourney"
@@ -90,6 +92,7 @@ SIGNAL_B_TESTS="testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts tes
 INTERACTION_TESTS="testBandSignalInteraction testReducedMotionStillUpdatesImmediately"
 KEYBOARD_TESTS="testKeyboardDoneAndBackStayIndependent testKeyboardBackOnTheRealRouteReturnsToTheCompletePass"
 KEYBOARD_CHECK="testKeyboardDoneAndBackStayIndependent"
+SMALLER_SIGNAL_TESTS="testLargestTextKeepsEveryChoiceReachable"
 WRISTBAND_TESTS="testWalkthroughRouteChoicesBackReentryEndpoint testEveryChangeBetweenIntentsKeepsEverythingInAgreement testRapidChangesLeaveTheLastChoice testEndpointDuplicateTapsAndBack testRelaunchStartsUnselected testReduceMotionPreviewChangesWithoutMovement testLargestTextKeepsEveryChoiceReachable"
 GUEST_LIST_TESTS="testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint testInterestsToggleIndependentlyAndOptionalContentIsOmitted testKeyboardFocusOrderReachabilityAndDismissal testRepeatedTapsNeverDuplicateOrSkipARoute testRelaunchResetsTheDraftAndNothingIsConferred testReduceMotionPreviewKeepsTheCardStationary testLargestTextReflowsAndKeepsEverythingReachable"
 GUEST_LIST_HARDWARE_KEY_TESTS="testBlankInternationalAndLongNames testOpenerLimitBoundariesAndPreservedPaste testHardwareTabAndShiftTabMoveBetweenFields"
@@ -111,6 +114,7 @@ B_PID=""
 COMPACT_PID=""
 ENCODER_PID=""
 LAUNCH_PID=""
+LAST_RUN_STATUS=0
 
 STAGE="${1:-}"
 case "$STAGE" in
@@ -661,6 +665,7 @@ lane_run() {
         RETRY="" xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     fi
     printf '%s %s %s %s\n' "$name" "$bundle" "$status" "$retry" >> "$OUT/runs.txt"
+    LAST_RUN_STATUS="$status"
     export_results "$OUT/$bundle.xcresult" "$OUT/attachments-$bundle"
     return 0
 }
@@ -682,7 +687,9 @@ lane_b() {
     fi
 }
 
-# The keyboard Done/Back check and three Signal fixture captures on the smaller iPhone (signal scope).
+# The keyboard Done/Back check, Signal's largest-text test and three Signal fixture captures on the
+# smaller iPhone (signal scope). smaller.txt records the xcodebuild exit; the verdict decides from the
+# per-test results, so this summary line never says PASS on its own.
 smaller_segment() {
     local udid name left
     if [ ! -f "$SMALL_ENV" ]; then
@@ -695,9 +702,9 @@ smaller_segment() {
     udid="$SMALL_UDID"
     name="$SMALL_NAME"
     left="$(remaining)"
-    if [ "$left" -lt 150 ]; then
+    if [ "$left" -lt 180 ]; then
         note "SKIPPED (time budget): ${left}s left, too little to boot $name."
-        printf 'device=%s (%s)\nkeyboard=not run (time budget)\n' "$name" "$udid" > "$OUT/smaller.txt"
+        printf 'device=%s (%s)\ntests=not run (time budget)\n' "$name" "$udid" > "$OUT/smaller.txt"
         return 1
     fi
     note "Smaller iPhone: $name ($udid)."
@@ -707,7 +714,10 @@ smaller_segment() {
     run bounded "$(budget 240)" xcrun simctl bootstatus "$udid" -b || return 1
     status_bar "$udid"
     # shellcheck disable=SC2046
-    lane_run smaller "$udid" "$DERIVED_DATA" KeyboardSmaller 240 yes $(only GuestListReviewTests $KEYBOARD_CHECK)
+    lane_run smaller "$udid" "$DERIVED_DATA" KeyboardSmaller 360 yes $(only GuestListReviewTests $KEYBOARD_CHECK) \
+        $(only SignalReviewTests $SMALLER_SIGNAL_TESTS)
+    printf 'tests_xcodebuild_exit=%s (keyboard check and largest text; see the per-test results)\n' "$LAST_RUN_STATUS" \
+        >> "$OUT/smaller.txt"
     run xcrun simctl install "$udid" "$APP_PATH" || return 1
     launch "$udid" -ProximeetFixture signal -ProximeetFixtureBand social || return 1
     sleep "$WARMUP_SMALL_SECONDS"
@@ -876,9 +886,9 @@ stage_ui_review() {
             run xcrun simctl shutdown "$SIM_UDID" || true
         fi
         if smaller_segment; then
-            summary_line "signal-smaller" "PASS ($(tr '\n' ' ' < "$OUT/smaller.txt"))"
+            summary_line "signal-smaller" "ran: $(tr '\n' ' ' < "$OUT/smaller.txt")"
         else
-            summary_line "signal-smaller" "exit $? ($(tr '\n' ' ' < "$OUT/smaller.txt" 2>/dev/null))"
+            summary_line "signal-smaller" "segment exit $?: $(tr '\n' ' ' < "$OUT/smaller.txt" 2>/dev/null)"
         fi
     fi
 
@@ -916,6 +926,7 @@ stage_ui_review() {
             for t in $INTERACTION_TESTS; do printf 'b BandSignalInteractionTests.%s\n' "$t"; done
             for t in $KEYBOARD_TESTS; do printf 'b GuestListReviewTests.%s\n' "$t"; done
             for t in $KEYBOARD_CHECK; do printf 'small GuestListReviewTests.%s\n' "$t"; done
+            for t in $SMALLER_SIGNAL_TESTS; do printf 'small SignalReviewTests.%s\n' "$t"; done
         else
             for t in $WRISTBAND_TESTS; do printf 'main WristbandReviewTests.%s\n' "$t"; done
             for t in $PASS_TESTS; do printf 'main PassReviewTests.%s\n' "$t"; done
@@ -1088,6 +1099,7 @@ stage_verdict() {
     run python3 - "$SUMMARY" "$META" "$OUT" "$SCOPE" <<'PY'
 import json
 import os
+import re
 import sys
 
 summary_path, meta, out, scope = sys.argv[1:5]
@@ -1123,10 +1135,10 @@ compact, smaller = kv(os.path.join(out, "compact-video.txt")), kv(os.path.join(o
 simulator = json.load(open(os.path.join(meta, "simulator.json"))) if os.path.isfile(os.path.join(meta, "simulator.json")) else {}
 movie = os.path.join(out, "signal-walkthrough-original.mp4")
 covered = {
-    "signal": "Signal: the recorded journey, all twelve states, first choices, changes, no-ops, re-entry, interruptions, "
-              "the endpoint, the missing intent, relaunch, the Reduce Motion preview flag, the largest text; the Birthday "
-              "gate on the way back; the Guest List keyboard Back on the real route and Done/Back on two sizes; the "
-              "Wristband → Signal interaction test",
+    "signal": "Signal: the recorded journey, all twelve states, first choices, changes, no-ops, re-entry, rapid changes, "
+              "Continue, Back and background/resume during the movement, the endpoint, the missing intent, relaunch, the "
+              "Reduce Motion preview flag, the largest text on two sizes; the Birthday gate on the way back; the Guest "
+              "List keyboard Back on the real route and Done/Back on two sizes; the Wristband → Signal interaction test",
     "regressions": "the Wristband (Continue preview opens Signal), the Guest List, the Pass, Birthday, Welcome (all four)",
 }.get(scope, "unknown scope")
 required = {
@@ -1167,7 +1179,8 @@ lines += ["    required: " + tests.get("required_passed", "?")]
 lines += ["    retried (failed, then run once more): " + tests.get("retried", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
-    lines += ["    " + line.strip() for line in open(path) if "Tests.test" in line or line.startswith("xcodebuild_exit")]
+    lines += ["    " + line.strip() for line in open(path)
+              if re.match(r"^\w+Tests\.test\w+\[", line) or line.startswith("xcodebuild_exit")]
 lines += ["", "Supplementary (reported, not required):"]
 if scope == "signal":
     lines += ["  smaller iPhone fixture captures (direct launches, not interactions): Social none %s | Dating Chat first %s | "
@@ -1180,7 +1193,8 @@ lines += [
     "OUTSTANDING manual review (automation cannot establish these):",
     "  visual approval against docs/design/signal-approved/reference (the founder decides)",
     "  VoiceOver: the single-choice reading, the selection announcement, focus after each choice and after Back",
-    "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a device",
+    "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested), including a change "
+    "during the movement (not run: XCUITest cannot change it inside a running app), and larger text on a device",
     "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
     "  composing keyboards (Japanese, Chinese, Korean) and the software keyboard on a device",
     "  motion smoothness on a device (simulator recordings drop frames and have variable frame timing)",
@@ -1203,6 +1217,7 @@ import hashlib
 import html
 import json
 import os
+import re
 import shutil
 import sys
 import zipfile
@@ -1319,7 +1334,7 @@ compact_note = kv(os.path.join(out, "compact-video.txt")).get("result", "not pro
 smaller_device = kv(os.path.join(out, "smaller.txt")).get("device", "not run")
 results = {}
 for line in read(os.path.join(out, "ui-review-tests.txt")).splitlines():
-    if "Tests.test" in line and "=" in line:
+    if re.match(r"^\w+Tests\.test\w+\[", line):
         key, _, value = line.partition("=")
         name, _, device = key.partition("[")
         results.setdefault(name, []).append("%s: %s" % (device.rstrip("]"), value))
@@ -1354,6 +1369,12 @@ def shot(key, caption):
 
 def prefixed(prefix):
     return sorted((k, v) for k, v in shots.items() if k.startswith(prefix))
+
+
+def largest_text():
+    # Top, choices, bottom, for each width in turn.
+    order = {"top": 0, "choices": 1, "bottom": 2}
+    return sorted(prefixed("signal-largest-text-"), key=lambda kv: (kv[0].split("-")[-2], order.get(kv[0].split("-")[3], 9)))
 
 
 def hero(key, intent):
@@ -1409,7 +1430,8 @@ findings = [
      "executions) and ran only three of Welcome's four: testLargestTextSize was missing from its list. It is restored "
      "here. BandSignalInteractionTests drove the legacy band and signal screens and was rewritten for the approved "
      "flow; its retired legacy assertions are covered by the Wristband and Signal review tests. The two scopes, on the "
-     "same commit, cover all 41 UI test methods (42 executions: the keyboard Done/Back check runs on two sizes).",
+     "same commit, cover all 41 UI test methods (43 executions: the keyboard Done/Back check and Signal's "
+     "largest-text test run on two sizes).",
      ["WelcomeReviewTests.testLargestTextSize", "BandSignalInteractionTests.testBandSignalInteraction",
       "BandSignalInteractionTests.testReducedMotionStillUpdatesImmediately"]),
     ("Guest List keyboard Back, real route",
@@ -1458,13 +1480,14 @@ if signal:
          row(shot("signal-reentry-attached-fixture", "Re-entry: attached at once"),
              shot("signal-after-rapid-changes-fixture", "Rapid changes: the last choice"),
              shot("signal-after-back-during-movement-fixture", "Back during the first movement, then forward"),
+             shot("signal-after-background-resume-fixture", "Background during the first movement, then resume"),
              shot("signal-endpoint-fixture", "Continue preview after repeated taps: one message"))),
         ("Reduce Motion (the app's preview flag, not the system setting)",
          row(shot("signal-reduce-motion-preview-activity-chat-fixture", "Preview flag: attached immediately"))),
-        ("Largest accessibility text size (direct launch)",
-         row(shot("signal-largest-text-top-fixture", "Header and headline"),
-             shot("signal-largest-text-choices-fixture", "Both choices"),
-             shot("signal-largest-text-bottom-fixture", "Scrolled: both actions"))),
+        ("Largest accessibility text size (direct launches; the iPhone 17 Pro Max and the smaller iPhone, by width)",
+         row(*[img(v, "Largest text, %s: %s" % (k.split("-")[-2], k.split("-")[3]))
+               for k, v in largest_text()]) if largest_text()
+         else '<p class="missing">Largest-text captures: not produced in this run.</p>'),
         ("Smaller iPhone (%s): supplementary direct launches, not interactions" % smaller_device,
          row(*[img(fixtures[key], "FIXTURE, direct launch: " + key[3:-4].replace("-", " ")) for key in fixture_files])),
         ("Integration: the Birthday gate on the way back (full journey)",
@@ -1494,6 +1517,12 @@ else:
              shot("welcome-default-settled", "Welcome geometry test"), shot("largest-text-top", "Welcome, largest text"))),
     ]
 body = "".join("<h2>%s</h2>%s" % (html.escape(t), content) for t, content in sections)
+try:
+    page_simulator = json.load(open(os.path.join(artifacts, "metadata", "simulator.json")))
+except (OSError, ValueError):
+    page_simulator = {}
+build_label = ("Codemagic build %s" % os.environ["CM_BUILD_ID"]) if os.environ.get("CM_BUILD_ID") else \
+    "a simulator run outside Codemagic"
 page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Proximeet Signal review (%s)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;background:#111;color:#eee}
@@ -1510,8 +1539,8 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 .note{color:#ccc;max-width:780px}</style></head><body>
 <h1>Proximeet Signal: iOS Simulator review, scope “%s”</h1>
 <p><b>%s</b></p>
-<p class="note">Source <code>%s</code>. Real captures from this Codemagic simulator run (iPhone 17 Pro Max, 440 × 956 pt).
-They sit beside the unchanged approved design. The tests were split across two builds on this same commit: “signal” and
+<p class="note">Source <code>%s</code>. Real captures from %s (%s, %s; the smaller iPhone where a caption says so).
+The approved design they are compared with is unchanged. The tests were split across two builds on this same commit: “signal” and
 “regressions”. This page shows one of them, and every result names the device it ran on. Captures named “journey” come
 from the real route, driven by real taps and typing. Captures marked FIXTURE or DIRECT LAUNCH open a prepared state
 directly. Alex is fictional sample data. The approach stays in memory for the run. Choosing one sends no Wave, opens no
@@ -1528,7 +1557,9 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
 <p>Details: %s</p>
 <p class="missing">%s</p>
 </body></html>""" % (
-    html.escape(scope), html.escape(scope), html.escape(headline), html.escape(head), body, finding_rows, test_rows,
+    html.escape(scope), html.escape(scope), html.escape(headline), html.escape(head), html.escape(build_label),
+    html.escape(page_simulator.get("device_name", "an unrecorded simulator")),
+    html.escape(page_simulator.get("runtime_name", "an unrecorded runtime")), body, finding_rows, test_rows,
     html.escape("\n\n".join(notes) or "none"), html.escape(verdict),
     " ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries if n.startswith("app/") and n.endswith(".zip"))
     or "not produced",
@@ -1537,7 +1568,6 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
     ("Not produced in this run: " + ", ".join(missing)) if missing else "")
 
 # Every relative link and image in the page must name a file in the archive.
-import re
 targets = set(re.findall(r'(?:src|href)="([^"#:]+)"', page)) | set(re.findall(r"url\(([^)]+)\)", page))
 packed = {n for n, _ in entries}
 broken = sorted(t for t in targets if t not in packed)
@@ -1580,9 +1610,6 @@ screens += [("signal-journey-social-none", "Signal-13-social-none-XCTest-journey
             ("signal-journey-social-chat", "Signal-14-social-chat-XCTest-journey.png"),
             ("signal-journey-social-hello", "Signal-15-social-hello-XCTest-journey.png"),
             ("signal-journey-endpoint", "Signal-16-end-of-preview-XCTest-journey.png"),
-            ("signal-largest-text-top-fixture", "Signal-17-largest-text-top-XCTest-FIXTURE-direct-launch.png"),
-            ("signal-largest-text-choices-fixture", "Signal-18-largest-text-choices-XCTest-FIXTURE-direct-launch.png"),
-            ("signal-largest-text-bottom-fixture", "Signal-19-largest-text-bottom-XCTest-FIXTURE-direct-launch.png"),
             ("age-gate-return-under18-journey", "Integration-1-age-gate-under-18-blocked-XCTest-journey.png"),
             ("age-gate-return-pass-intro-journey", "Integration-2-age-gate-corrected-pass-intro-XCTest-journey.png"),
             ("age-gate-return-signal-kept-journey", "Integration-3-age-gate-signal-kept-XCTest-journey.png"),
@@ -1602,6 +1629,11 @@ with zipfile.ZipFile(os.path.join(artifacts, "Signal-Screens.zip"), "w", zipfile
             bundle.write(sources[fixtures[key]], target)
         else:
             bundle.writestr(target + ".MISSING.txt", "Not produced in this run.\n")
+    largest = largest_text()
+    for number, (key, name) in enumerate(largest, start=30):
+        bundle.write(sources[name], "Signal-%d-%s-XCTest-FIXTURE-direct-launch.png" % (number, key[len("signal-"):-len("-fixture")]))
+    if not largest:
+        bundle.writestr("Signal-30-largest-text.MISSING.txt", "Not produced in this run.\n")
     keyboard = [(k, v) for k, v in prefixed("guest-list-keyboard-done-back-") + prefixed("guest-list-keyboard-back-corner-")
                 if k.endswith("direct-launch")]
     for number, (key, name) in enumerate(keyboard, start=6):
@@ -1612,13 +1644,23 @@ with zipfile.ZipFile(os.path.join(artifacts, "Signal-Screens.zip"), "w", zipfile
         bundle.writestr("Notes-attached-by-the-tests.txt", "\n\n".join(notes) + "\n")
 made = ["Signal-Screens.zip"]
 if compact:
-    label = ("Compact walkthrough: %s. A half-size re-encode (not the original encoding), trimmed to the app from the "
-             "journey's start marker. The unedited recording is in Signal-walkthrough-original.zip.\n" % compact_note)
+    reencoded = compact_note == "RE-ENCODED"
+    if reencoded:
+        inner = "Signal-walkthrough-compact-RE-ENCODED.mp4"
+        label = ("Compact walkthrough: RE-ENCODED. A half-size AVFoundation re-encode, not the original encoding, trimmed "
+                 "to the app by frame brightness (the journey's start marker is the fallback). The unedited recording is "
+                 "in Signal-walkthrough-original.zip.\n")
+    else:
+        inner = "Signal-walkthrough-FALLBACK-COPY-not-re-encoded-not-trimmed.mp4"
+        label = ("Compact walkthrough: %s. The re-encode did not complete, so this is a plain copy of the unedited "
+                 "recording: not re-encoded and not trimmed.\n" % compact_note)
     with zipfile.ZipFile(os.path.join(artifacts, "Signal-walkthrough-compact.zip"), "w", zipfile.ZIP_STORED) as bundle:
         bundle.writestr("README.txt", readme + label)
-        bundle.write(sources[compact], "Signal-walkthrough-compact-RE-ENCODED.mp4")
-    shutil.copyfile(sources[compact], os.path.join(artifacts, "Signal-walkthrough-compact.mp4"))
-    made += ["Signal-walkthrough-compact.zip", "Signal-walkthrough-compact.mp4"]
+        bundle.write(sources[compact], inner)
+    made.append("Signal-walkthrough-compact.zip")
+    if reencoded:
+        shutil.copyfile(sources[compact], os.path.join(artifacts, "Signal-walkthrough-compact.mp4"))
+        made.append("Signal-walkthrough-compact.mp4")
 if original:
     with zipfile.ZipFile(os.path.join(artifacts, "Signal-walkthrough-original.zip"), "w", zipfile.ZIP_STORED) as bundle:
         bundle.writestr("README.txt", readme + "The unedited simulator recording of the real journey.\n")

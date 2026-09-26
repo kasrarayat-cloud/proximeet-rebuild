@@ -77,7 +77,10 @@ radios, the tag's pose, the icon's ink signature and the band's colour.
 - **Interruptions.** The model changes before any animation, so no timer or animation callback
   authorizes anything. A change to Reduce Motion, or the app becoming active again, ends a
   movement in flight by redrawing the hero at its model pose without animation. Back, Continue
-  and rapid switching act on the model and are consistent by construction.
+  and rapid switching act on the model and are consistent by construction. The UI tests cover
+  rapid switching, Continue, Back and background/resume during the movement. A change to the
+  system Reduce Motion setting during the movement cannot be driven by XCUITest and is a manual
+  check.
 - **Accessibility.**
   - The rows are native buttons with the selected trait, labelled "[Name]. [Explanation]".
   - The group is labelled "Choose one approach".
@@ -88,8 +91,11 @@ radios, the tag's pose, the icon's ink signature and the band's colour.
   - Targets: rows at least 84 pt, primary 60, Back 44.
   - At larger sizes the rows grow and wrap, the icons and radios grow at most 1.5×, the headline
     wraps between words, and the page scrolls.
+  - At accessibility sizes a row's symbol and radio share a line above its words, which then
+    have the row's full width, so no word breaks inside itself on a smaller phone. The reference
+    layout is unchanged at standard sizes.
 
-## 5. Integration findings (resolved)
+## 5. Integration findings (addressed in code; the runtime evidence is in the build artifacts)
 
 1. **Age gate.** The domain already blocked forward routes structurally. It is now hardened:
    once the approved Birthday entry has been touched, an old adult `dateOfBirth` from the legacy
@@ -117,8 +123,9 @@ radios, the tag's pose, the icon's ink signature and the band's colour.
    - **Wristband run** (`6ab78983`): 27 unique tests, 28 executions. It ran only three of
      Welcome's four tests: `testLargestTextSize` had been dropped from the list to save time, and
      the report said "three".
-   - **Signal:** that test is restored. The two scopes cover all 41 UI test methods (42
-     executions), and every unique case and per-device execution is listed separately.
+   - **Signal:** that test is restored. The two scopes cover all 41 UI test methods (43
+     executions: the keyboard check and Signal's largest-text test run on two sizes), and every
+     unique case and per-device execution is listed separately.
    - **`BandSignalInteractionTests`** drove the retired legacy band and signal screens and would
      have failed. It is rewritten for the approved Wristband → Signal flow. Its legacy Ready-scene
      and 3D assertions are retired; the Wristband and Signal review tests replace them.

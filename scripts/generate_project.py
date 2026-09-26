@@ -78,7 +78,7 @@ FIXTURE_ARGUMENTS = (
     "-ProximeetFixture signal-selected",
     "-ProximeetFixture ready",
     "-ProximeetFixtureBand dating",
-    "-ProximeetFixtureSignal withMyCrew",
+    "-ProximeetFixtureSignal chatFirst",
     "-ProximeetReduceMotionPreview YES",
 )
 

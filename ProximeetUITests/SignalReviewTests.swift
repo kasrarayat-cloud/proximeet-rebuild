@@ -229,9 +229,10 @@ final class SignalReviewTests: XCTestCase {
         }
     }
 
-    /// Direct launch (fixture `signal`, Activity): rapid changes leave the last choice; Continue
-    /// preview and Back during the first movement leave the model and the final state consistent;
-    /// a relaunch into the app while moving is not needed, as the pose is derived from the model.
+    /// Direct launch (fixture `signal`, Activity, then Dating and Social): rapid changes leave the
+    /// last choice; Continue preview during a change, Back during the first movement, and the app
+    /// sent to the background during the first movement and resumed, each leave the model and the
+    /// drawn state consistent: the attached tag with the chosen icon, the summary and Continue.
     func testRapidChangesAndInterruptionsStayConsistent() throws {
         let app = launch(fixture: "signal", band: "activity")
         let signal = SignalScreen(app: app)
@@ -285,6 +286,26 @@ final class SignalReviewTests: XCTestCase {
             XCTAssertEqual(Self.glyph(shot), "chatFirst")
         }
         capture("signal-after-back-during-movement-fixture", fresh)
+        fresh.terminate()
+
+        // The app sent to the background during the first movement, then resumed: attached,
+        // Okay to say hello, nothing lost or replayed.
+        let resumed = launch(fixture: "signal", band: "social")
+        let third = SignalScreen(app: resumed)
+        waitForLabel(third.headline, "A hello, on your terms.")
+        third.row("okayToSayHello").tap()
+        XCUIDevice.shared.press(.home)
+        hold(2.0)
+        resumed.activate()
+        XCTAssertTrue(third.headline.waitForExistence(timeout: 10), "Signal is showing again after resume.")
+        hold(0.6)
+        assertState(third, intent: "social", approach: "okayToSayHello")
+        softly {
+            guard let shot = RenderedScreen(resumed) else { return }
+            XCTAssertEqual(Self.pose(shot), "attached", "After resume the tag is attached.")
+            XCTAssertEqual(Self.glyph(shot), "okayToSayHello", "After resume the icon matches the choice.")
+        }
+        capture("signal-after-background-resume-fixture", resumed)
     }
 
     // MARK: - Endpoint and duplicate taps
@@ -403,7 +424,8 @@ final class SignalReviewTests: XCTestCase {
 
     /// Direct launch (fixture `signal-selected`, Social, Chat first) at the largest accessibility
     /// text size: DEMO is drawn whole, the headline wraps, the rows grow with their words, and
-    /// both choices, the summary, the privacy line and both actions stay reachable.
+    /// both choices, the summary, the privacy line and both actions stay reachable. Run on the
+    /// iPhone 17 Pro Max and on the smaller iPhone; the captures name the width.
     func testLargestTextKeepsEveryChoiceReachable() throws {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -415,11 +437,12 @@ final class SignalReviewTests: XCTestCase {
         waitForLabel(signal.headline, "A hello, on your terms.")
         hold(1.2)
         XCTAssertGreaterThan(signal.headline.frame.height, 112 + 10, "The largest text size must be applied.")
-        attachNote("Largest text: headline \(NSCoder.string(for: signal.headline.frame)).")
-        capture("signal-largest-text-top-fixture", app)
+        let width = Int(app.frame.width.rounded())
+        attachNote("Largest text, \(width) pt wide: headline \(NSCoder.string(for: signal.headline.frame)).")
+        capture("signal-largest-text-top-\(width)pt-fixture", app)
         softly {
             guard let shot = RenderedScreen(app) else { return }
-            let clusters = shot.inkColumns(in: CGRect(x: 200, y: 50, width: 240, height: 110), where: Self.cyan)
+            let clusters = shot.inkColumns(in: CGRect(x: app.frame.width - 240, y: 50, width: 240, height: 110), where: Self.cyan)
             let tallest = clusters.map { $0.height }.max() ?? 0
             XCTAssertGreaterThanOrEqual(clusters.count, 4, "DEMO should be drawn as its letters.")
             XCTAssertFalse(clusters.contains { $0.height < tallest * 0.5 }, "DEMO is truncated: an ellipsis is drawn.")
@@ -435,12 +458,12 @@ final class SignalReviewTests: XCTestCase {
             }
         }
         XCTAssertTrue(signal.primary.isHittable && signal.secondary.isHittable, "Both actions stay on screen.")
-        capture("signal-largest-text-choices-fixture", app)
+        capture("signal-largest-text-choices-\(width)pt-fixture", app)
         signal.row("okayToSayHello").tap()
         XCTAssertTrue(waitFor(signal.row("okayToSayHello"), selected: true))
         XCTAssertEqual(signal.summary.label, "Social band · Okay to say hello")
         XCTAssertTrue(scrollIntoView(signal.row("okayToSayHello"), signal, app))
-        capture("signal-largest-text-bottom-fixture", app)
+        capture("signal-largest-text-bottom-\(width)pt-fixture", app)
     }
 
     // MARK: - Integration: the Birthday gate on the way back (full journey)
@@ -643,13 +666,15 @@ final class SignalReviewTests: XCTestCase {
     }
 
     /// Short, momentum-free drags in the page margin until `element` lies between the status bar
-    /// and the top of the action bar.
+    /// and the top of the action bar. The last row ends exactly at the bar's top when the page is
+    /// scrolled to its end, so both edges allow 1 pt; each drag (about 115 pt on the reference
+    /// phone) is shorter than a row's slack, so it cannot step over the window and back.
     private func scrollIntoView(_ element: XCUIElement, _ signal: SignalScreen, _ app: XCUIApplication) -> Bool {
-        let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.3))
-        let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.55))
-        for _ in 0..<16 {
+        let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.30))
+        let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.42))
+        for _ in 0..<28 {
             let frame = element.frame, top: CGFloat = 62, bottom = signal.primary.frame.minY - 13
-            let low = frame.maxY > bottom, high = frame.minY < top
+            let low = frame.maxY > bottom + 1, high = frame.minY < top - 1
             if !low && !high {
                 return true
             }

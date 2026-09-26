@@ -1,8 +1,8 @@
 import XCTest
 
 /// Real taps across the approved Wristband → Signal interaction (chapters 05 and 06). Ungated, so
-/// the original `proximeet-simulator-verification` workflow's interaction reel records the
-/// approved screens. The DEBUG fixture `wristband` only skips the earlier chapters; it reaches the
+/// the original `proximeet-simulator-verification` workflow's interaction reel would record the
+/// approved screens (not run in this chapter; `proximeet-signal-review` runs this class). The DEBUG fixture `wristband` only skips the earlier chapters; it reaches the
 /// Wristband through the same gates as the real route.
 ///
 /// Updated for the approved flow: the legacy band and signal screens (`band.confirm`,

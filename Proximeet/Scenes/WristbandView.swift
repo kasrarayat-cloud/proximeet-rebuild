@@ -19,8 +19,9 @@ import ProximeetDomain
 /// An intent verifies nothing, shows the guest to no one and grants no permission to approach or
 /// message. The four bands are the approved raster decoration (`WristbandArt`, the original
 /// 1254² artworks cropped to [22, 335, 1235, 920]); every word, icon, check and control is native.
-/// `WristbandStyle.color(for:)` and `WristbandArt` are the canonical intent mapping, which Signal
-/// reuses; so do its header, text and action components.
+/// `WristbandStyle.color(for:)` and `WristbandArt` are the canonical intent mapping. Signal reuses
+/// `WristbandArt` (it draws the band, and no intent colour), and its header, text and action
+/// components.
 struct WristbandView: View {
     @Environment(DemoSession.self) private var session
     @Adaptive private var adaptive
