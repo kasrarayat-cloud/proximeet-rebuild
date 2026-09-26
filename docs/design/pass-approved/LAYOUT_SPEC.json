@@ -1,0 +1,2686 @@
+{
+  "schema": "proximeet.figma-layout.v1",
+  "chapter": "03 Pass",
+  "status": "Approved 2026-09-25",
+  "approvalQuote": "i approve thsi as well",
+  "approvalNote": "33:217",
+  "fileKey": "9ZkCIlu9AqAD1f92UDuMAF",
+  "pageId": "26:282",
+  "boardId": "29:154",
+  "frameSize": [
+    440,
+    956
+  ],
+  "roots": [
+    {
+      "rootId": "27:111",
+      "name": "Pass / Intro / demo",
+      "width": 440,
+      "height": 956,
+      "nodes": [
+        {
+          "id": "28:126",
+          "parent": "27:111",
+          "type": "INSTANCE",
+          "name": "Demo header",
+          "box": [
+            24,
+            64,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:126;28:112",
+          "parent": "28:126",
+          "type": "FRAME",
+          "name": "Back / 44 px",
+          "box": [
+            0,
+            0,
+            44,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "30:189",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "30:189",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:126;28:113",
+          "parent": "I28:126;28:112",
+          "type": "FRAME",
+          "name": "Back arrow",
+          "box": [
+            10,
+            10,
+            24,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "id": "I28:126;28:114",
+          "parent": "I28:126;28:113",
+          "type": "VECTOR",
+          "name": "Vector",
+          "box": [
+            5,
+            6,
+            14,
+            12
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:126;28:115",
+          "parent": "28:126",
+          "type": "TEXT",
+          "name": "Proximeet",
+          "box": [
+            60,
+            6,
+            220,
+            32
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Proximeet",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 22,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "I28:126;28:116",
+          "parent": "28:126",
+          "type": "FRAME",
+          "name": "Persistent demo label",
+          "box": [
+            296,
+            6,
+            80,
+            32
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:126;28:117",
+          "parent": "I28:126;28:116",
+          "type": "TEXT",
+          "name": "DEMO",
+          "box": [
+            6,
+            4,
+            68,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:133",
+          "parent": "27:111",
+          "type": "FRAME",
+          "name": "Chapter copy",
+          "box": [
+            32,
+            154,
+            376,
+            182
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "28:134",
+          "parent": "28:133",
+          "type": "TEXT",
+          "name": "Headline",
+          "box": [
+            0,
+            0,
+            376,
+            118
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Your next\nchapter.",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 56,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 59
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": -2.200000047683716
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:135",
+          "parent": "28:133",
+          "type": "TEXT",
+          "name": "State explanation",
+          "box": [
+            0,
+            134,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Preview the age-check experience.",
+            "font": {
+              "family": "Manrope",
+              "style": "Regular",
+              "variationSettings": {
+                "wght": 400
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:136",
+          "parent": "27:111",
+          "type": "INSTANCE",
+          "name": "Demo pass",
+          "box": [
+            20,
+            330,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:136;28:119",
+          "parent": "28:136",
+          "type": "RECTANGLE",
+          "name": "Ivory pass / decoration only",
+          "box": [
+            0,
+            0,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "type": "IMAGE",
+              "imageHash": "121dc1953262683e0b053c6e96a9e65becef609b",
+              "scaleMode": "FIT",
+              "transform": [
+                [
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "I28:136;28:120",
+          "parent": "28:136",
+          "type": "TEXT",
+          "name": "Age category graphic",
+          "box": [
+            92,
+            115,
+            216,
+            100
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "18+",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 88,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 100
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:136;28:121",
+          "parent": "28:136",
+          "type": "TEXT",
+          "name": "Demo pass label",
+          "box": [
+            92,
+            225,
+            216,
+            36
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.02500000037252903,
+                "g": 0.3400000035762787,
+                "b": 0.3700000047683716
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO PASS",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 24,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:136;28:122",
+          "parent": "28:136",
+          "type": "RECTANGLE",
+          "name": "Paper rule",
+          "box": [
+            122,
+            278,
+            156,
+            1
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.07999999821186066,
+                "g": 0.2199999988079071,
+                "b": 0.23000000417232513
+              },
+              "opacity": 0.30000001192092896
+            }
+          ]
+        },
+        {
+          "id": "I28:136;28:123",
+          "parent": "28:136",
+          "type": "TEXT",
+          "name": "Proximeet wordmark",
+          "box": [
+            92,
+            302,
+            216,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "PROXIMEET",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": 2
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:142",
+          "parent": "27:111",
+          "type": "TEXT",
+          "name": "No verification claim",
+          "box": [
+            32,
+            739,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "No age or identity verification\nis performed.",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:143",
+          "parent": "27:111",
+          "type": "INSTANCE",
+          "name": "Primary action",
+          "box": [
+            32,
+            812,
+            376,
+            60
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.9649999737739563,
+                "g": 0.968999981880188,
+                "b": 0.9490000009536743
+              },
+              "opacity": 1
+            }
+          ],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "27:112",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "SMART_ANIMATE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.2199999988079071
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "27:112",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "SMART_ANIMATE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.2199999988079071
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:143;21:117",
+          "parent": "28:143",
+          "type": "TEXT",
+          "name": "Continue",
+          "box": [
+            38,
+            17,
+            300,
+            26
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Try the demo",
+            "font": {
+              "family": "Manrope",
+              "style": "SemiBold",
+              "variationSettings": {
+                "wght": 600
+              }
+            },
+            "size": 18,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:145",
+          "parent": "27:111",
+          "type": "INSTANCE",
+          "name": "Exit / 44 px",
+          "box": [
+            32,
+            880,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "30:189",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "30:189",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:145;28:125",
+          "parent": "28:145",
+          "type": "TEXT",
+          "name": "Label",
+          "box": [
+            28,
+            10,
+            320,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Leave demo",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        }
+      ]
+    },
+    {
+      "rootId": "27:112",
+      "name": "Pass / In progress / user controlled",
+      "width": 440,
+      "height": 956,
+      "nodes": [
+        {
+          "id": "28:147",
+          "parent": "27:112",
+          "type": "INSTANCE",
+          "name": "Demo header",
+          "box": [
+            24,
+            64,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:147;28:112",
+          "parent": "28:147",
+          "type": "FRAME",
+          "name": "Back / 44 px",
+          "box": [
+            0,
+            0,
+            44,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "30:189",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "30:189",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:147;28:113",
+          "parent": "I28:147;28:112",
+          "type": "FRAME",
+          "name": "Back arrow",
+          "box": [
+            10,
+            10,
+            24,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "id": "I28:147;28:114",
+          "parent": "I28:147;28:113",
+          "type": "VECTOR",
+          "name": "Vector",
+          "box": [
+            5,
+            6,
+            14,
+            12
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:147;28:115",
+          "parent": "28:147",
+          "type": "TEXT",
+          "name": "Proximeet",
+          "box": [
+            60,
+            6,
+            220,
+            32
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Proximeet",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 22,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "I28:147;28:116",
+          "parent": "28:147",
+          "type": "FRAME",
+          "name": "Persistent demo label",
+          "box": [
+            296,
+            6,
+            80,
+            32
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:147;28:117",
+          "parent": "I28:147;28:116",
+          "type": "TEXT",
+          "name": "DEMO",
+          "box": [
+            6,
+            4,
+            68,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:154",
+          "parent": "27:112",
+          "type": "FRAME",
+          "name": "Chapter copy",
+          "box": [
+            32,
+            154,
+            376,
+            182
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "28:155",
+          "parent": "28:154",
+          "type": "TEXT",
+          "name": "Headline",
+          "box": [
+            0,
+            0,
+            376,
+            118
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Demo in\nprogress.",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 56,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 59
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": -2.200000047683716
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:156",
+          "parent": "28:154",
+          "type": "TEXT",
+          "name": "State explanation",
+          "box": [
+            0,
+            134,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "You control this preview.",
+            "font": {
+              "family": "Manrope",
+              "style": "Regular",
+              "variationSettings": {
+                "wght": 400
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:157",
+          "parent": "27:112",
+          "type": "INSTANCE",
+          "name": "Demo pass",
+          "box": [
+            20,
+            324,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:157;28:119",
+          "parent": "28:157",
+          "type": "RECTANGLE",
+          "name": "Ivory pass / decoration only",
+          "box": [
+            0,
+            0,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "type": "IMAGE",
+              "imageHash": "121dc1953262683e0b053c6e96a9e65becef609b",
+              "scaleMode": "FIT",
+              "transform": [
+                [
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "I28:157;28:120",
+          "parent": "28:157",
+          "type": "TEXT",
+          "name": "Age category graphic",
+          "box": [
+            92,
+            115,
+            216,
+            100
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "18+",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 88,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 100
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:157;28:121",
+          "parent": "28:157",
+          "type": "TEXT",
+          "name": "Demo pass label",
+          "box": [
+            92,
+            225,
+            216,
+            36
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.02500000037252903,
+                "g": 0.3400000035762787,
+                "b": 0.3700000047683716
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO PASS",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 24,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:157;28:122",
+          "parent": "28:157",
+          "type": "RECTANGLE",
+          "name": "Paper rule",
+          "box": [
+            122,
+            278,
+            156,
+            1
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.07999999821186066,
+                "g": 0.2199999988079071,
+                "b": 0.23000000417232513
+              },
+              "opacity": 0.30000001192092896
+            }
+          ]
+        },
+        {
+          "id": "I28:157;28:123",
+          "parent": "28:157",
+          "type": "TEXT",
+          "name": "Proximeet wordmark",
+          "box": [
+            92,
+            302,
+            216,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "PROXIMEET",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": 2
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:163",
+          "parent": "27:112",
+          "type": "TEXT",
+          "name": "No verification claim",
+          "box": [
+            32,
+            739,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "No age or identity verification\nis performed.",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:164",
+          "parent": "27:112",
+          "type": "INSTANCE",
+          "name": "Primary action",
+          "box": [
+            32,
+            812,
+            376,
+            60
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.9649999737739563,
+                "g": 0.968999981880188,
+                "b": 0.9490000009536743
+              },
+              "opacity": 1
+            }
+          ],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "27:113",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "SMART_ANIMATE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.2199999988079071
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "27:113",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "SMART_ANIMATE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.2199999988079071
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:164;21:117",
+          "parent": "28:164",
+          "type": "TEXT",
+          "name": "Continue",
+          "box": [
+            38,
+            17,
+            300,
+            26
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Finish preview",
+            "font": {
+              "family": "Manrope",
+              "style": "SemiBold",
+              "variationSettings": {
+                "wght": 600
+              }
+            },
+            "size": 18,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:166",
+          "parent": "27:112",
+          "type": "INSTANCE",
+          "name": "Exit / 44 px",
+          "box": [
+            32,
+            880,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "27:111",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "27:111",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:166;28:125",
+          "parent": "28:166",
+          "type": "TEXT",
+          "name": "Label",
+          "box": [
+            28,
+            10,
+            320,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Cancel",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        }
+      ]
+    },
+    {
+      "rootId": "27:113",
+      "name": "Pass / Complete / demo only",
+      "width": 440,
+      "height": 956,
+      "nodes": [
+        {
+          "id": "28:168",
+          "parent": "27:113",
+          "type": "INSTANCE",
+          "name": "Demo header",
+          "box": [
+            24,
+            64,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:168;28:112",
+          "parent": "28:168",
+          "type": "FRAME",
+          "name": "Back / 44 px",
+          "box": [
+            0,
+            0,
+            44,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "30:189",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "30:189",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:168;28:113",
+          "parent": "I28:168;28:112",
+          "type": "FRAME",
+          "name": "Back arrow",
+          "box": [
+            10,
+            10,
+            24,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "id": "I28:168;28:114",
+          "parent": "I28:168;28:113",
+          "type": "VECTOR",
+          "name": "Vector",
+          "box": [
+            5,
+            6,
+            14,
+            12
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:168;28:115",
+          "parent": "28:168",
+          "type": "TEXT",
+          "name": "Proximeet",
+          "box": [
+            60,
+            6,
+            220,
+            32
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Proximeet",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 22,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "I28:168;28:116",
+          "parent": "28:168",
+          "type": "FRAME",
+          "name": "Persistent demo label",
+          "box": [
+            296,
+            6,
+            80,
+            32
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:168;28:117",
+          "parent": "I28:168;28:116",
+          "type": "TEXT",
+          "name": "DEMO",
+          "box": [
+            6,
+            4,
+            68,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO",
+            "font": {
+              "family": "Manrope",
+              "style": "Bold",
+              "variationSettings": {
+                "wght": 700
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:175",
+          "parent": "27:113",
+          "type": "FRAME",
+          "name": "Chapter copy",
+          "box": [
+            32,
+            154,
+            376,
+            182
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "28:176",
+          "parent": "28:175",
+          "type": "TEXT",
+          "name": "Headline",
+          "box": [
+            0,
+            0,
+            376,
+            118
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Demo\ncomplete.",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 56,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 59
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": -2.200000047683716
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:177",
+          "parent": "28:175",
+          "type": "TEXT",
+          "name": "State explanation",
+          "box": [
+            0,
+            134,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "You have finished the demo.",
+            "font": {
+              "family": "Manrope",
+              "style": "Regular",
+              "variationSettings": {
+                "wght": 400
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:178",
+          "parent": "27:113",
+          "type": "INSTANCE",
+          "name": "Demo pass",
+          "box": [
+            20,
+            330,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": []
+        },
+        {
+          "id": "I28:178;28:119",
+          "parent": "28:178",
+          "type": "RECTANGLE",
+          "name": "Ivory pass / decoration only",
+          "box": [
+            0,
+            0,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "type": "IMAGE",
+              "imageHash": "121dc1953262683e0b053c6e96a9e65becef609b",
+              "scaleMode": "FIT",
+              "transform": [
+                [
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "I28:178;28:120",
+          "parent": "28:178",
+          "type": "TEXT",
+          "name": "Age category graphic",
+          "box": [
+            92,
+            115,
+            216,
+            100
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "18+",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 88,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 100
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:178;28:121",
+          "parent": "28:178",
+          "type": "TEXT",
+          "name": "Demo pass label",
+          "box": [
+            92,
+            225,
+            216,
+            36
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.02500000037252903,
+                "g": 0.3400000035762787,
+                "b": 0.3700000047683716
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO PASS",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 24,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "I28:178;28:122",
+          "parent": "28:178",
+          "type": "RECTANGLE",
+          "name": "Paper rule",
+          "box": [
+            122,
+            278,
+            156,
+            1
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.07999999821186066,
+                "g": 0.2199999988079071,
+                "b": 0.23000000417232513
+              },
+              "opacity": 0.30000001192092896
+            }
+          ]
+        },
+        {
+          "id": "I28:178;28:123",
+          "parent": "28:178",
+          "type": "TEXT",
+          "name": "Proximeet wordmark",
+          "box": [
+            92,
+            302,
+            216,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "PROXIMEET",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": 2
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:184",
+          "parent": "27:113",
+          "type": "TEXT",
+          "name": "No verification claim",
+          "box": [
+            32,
+            739,
+            376,
+            48
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.6600000262260437,
+                "g": 0.6899999976158142,
+                "b": 0.6800000071525574
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "No age or identity verification\nis performed.",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "LEFT"
+          }
+        },
+        {
+          "id": "28:185",
+          "parent": "27:113",
+          "type": "INSTANCE",
+          "name": "Primary action",
+          "box": [
+            32,
+            812,
+            376,
+            60
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.9649999737739563,
+                "g": 0.968999981880188,
+                "b": 0.9490000009536743
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "id": "I28:185;21:117",
+          "parent": "28:185",
+          "type": "TEXT",
+          "name": "Continue",
+          "box": [
+            38,
+            17,
+            300,
+            26
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Continue preview",
+            "font": {
+              "family": "Manrope",
+              "style": "SemiBold",
+              "variationSettings": {
+                "wght": 600
+              }
+            },
+            "size": 18,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:187",
+          "parent": "27:113",
+          "type": "INSTANCE",
+          "name": "Exit / 44 px",
+          "box": [
+            32,
+            880,
+            376,
+            44
+          ],
+          "opacity": 1,
+          "fills": [],
+          "reactions": [
+            {
+              "action": {
+                "type": "NODE",
+                "destinationId": "30:189",
+                "navigation": "NAVIGATE",
+                "transition": {
+                  "type": "DISSOLVE",
+                  "easing": {
+                    "type": "EASE_OUT"
+                  },
+                  "duration": 0.18000000715255737
+                },
+                "resetVideoPosition": false,
+                "resetScrollPosition": true
+              },
+              "actions": [
+                {
+                  "type": "NODE",
+                  "destinationId": "30:189",
+                  "navigation": "NAVIGATE",
+                  "transition": {
+                    "type": "DISSOLVE",
+                    "easing": {
+                      "type": "EASE_OUT"
+                    },
+                    "duration": 0.18000000715255737
+                  },
+                  "resetVideoPosition": false,
+                  "resetScrollPosition": true
+                }
+              ],
+              "trigger": {
+                "type": "ON_CLICK"
+              }
+            }
+          ]
+        },
+        {
+          "id": "I28:187;28:125",
+          "parent": "28:187",
+          "type": "TEXT",
+          "name": "Label",
+          "box": [
+            28,
+            10,
+            320,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "Leave demo",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        }
+      ]
+    },
+    {
+      "rootId": "28:118",
+      "name": "Pass / Demonstration card",
+      "width": 400,
+      "height": 400,
+      "nodes": [
+        {
+          "id": "28:119",
+          "parent": "28:118",
+          "type": "RECTANGLE",
+          "name": "Ivory pass / decoration only",
+          "box": [
+            0,
+            0,
+            400,
+            400
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "type": "IMAGE",
+              "imageHash": "121dc1953262683e0b053c6e96a9e65becef609b",
+              "scaleMode": "FIT",
+              "transform": [
+                [
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "28:120",
+          "parent": "28:118",
+          "type": "TEXT",
+          "name": "Age category graphic",
+          "box": [
+            92,
+            115,
+            216,
+            100
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "18+",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 88,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 100
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:121",
+          "parent": "28:118",
+          "type": "TEXT",
+          "name": "Demo pass label",
+          "box": [
+            92,
+            225,
+            216,
+            36
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.02500000037252903,
+                "g": 0.3400000035762787,
+                "b": 0.3700000047683716
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "DEMO PASS",
+            "font": {
+              "family": "Manrope",
+              "style": "ExtraBold",
+              "variationSettings": {
+                "wght": 800
+              }
+            },
+            "size": 24,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 32
+            },
+            "tracking": {
+              "unit": "PERCENT",
+              "value": 0
+            },
+            "align": "CENTER"
+          }
+        },
+        {
+          "id": "28:122",
+          "parent": "28:118",
+          "type": "RECTANGLE",
+          "name": "Paper rule",
+          "box": [
+            122,
+            278,
+            156,
+            1
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.07999999821186066,
+                "g": 0.2199999988079071,
+                "b": 0.23000000417232513
+              },
+              "opacity": 0.30000001192092896
+            }
+          ]
+        },
+        {
+          "id": "28:123",
+          "parent": "28:118",
+          "type": "TEXT",
+          "name": "Proximeet wordmark",
+          "box": [
+            92,
+            302,
+            216,
+            24
+          ],
+          "opacity": 1,
+          "fills": [
+            {
+              "rgb": {
+                "r": 0.017999999225139618,
+                "g": 0.02199999988079071,
+                "b": 0.02199999988079071
+              },
+              "opacity": 1
+            }
+          ],
+          "text": {
+            "value": "PROXIMEET",
+            "font": {
+              "family": "Manrope",
+              "style": "Medium",
+              "variationSettings": {
+                "wght": 500
+              }
+            },
+            "size": 16,
+            "lineHeight": {
+              "unit": "PIXELS",
+              "value": 24
+            },
+            "tracking": {
+              "unit": "PIXELS",
+              "value": 2
+            },
+            "align": "CENTER"
+          }
+        }
+      ]
+    }
+  ],
+  "artwork": {
+    "original": "assets/pass-artwork.png",
+    "original_size": [
+      1254,
+      1254
+    ],
+    "original_mode": "RGBA",
+    "source_frame_xyxy": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "crop": "None. Keep the full square source framing.",
+    "delivery_reference": "reference/pass-delivery.jpg",
+    "delivery_size": [
+      480,
+      480
+    ],
+    "delivery_mode": "RGB",
+    "delivery_note": "Optimized JPEG composited on the dark stage, using the full source square; treat delivery reference as visual alignment reference, not a replacement for original alpha source. Full-frame downsampling was compared to reference with mean channel difference below 2/255. Exact compression/background recipe not reconstructed.",
+    "figma_image_hash": "121dc1953262683e0b053c6e96a9e65becef609b",
+    "shared_component": "28:118",
+    "local_image_box": [
+      0,
+      0,
+      400,
+      400
+    ],
+    "scaleMode": "FIT",
+    "imageTransform": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0
+      ]
+    ],
+    "native_type": "All card text and rule are native siblings of raster art. Translate all together during motion."
+  },
+  "root_and_controls_appearance": [
+    {
+      "id": "27:111",
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.017999999225139618,
+            "g": 0.02199999988079071,
+            "b": 0.02199999988079071
+          },
+          "boundVariables": {
+            "color": {
+              "type": "VARIABLE_ALIAS",
+              "id": "VariableID:1:15"
+            }
+          }
+        }
+      ],
+      "radius": 0,
+      "nodes": [
+        {
+          "id": "I28:126;28:114",
+          "name": "Vector",
+          "radius": 0,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1.7999999523162842,
+          "strokeAlign": "CENTER"
+        },
+        {
+          "id": "I28:126;28:116",
+          "name": "Persistent demo label",
+          "radius": 8,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.44999998807907104,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        },
+        {
+          "id": "28:143",
+          "name": "Primary action",
+          "radius": 18,
+          "strokes": [],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        }
+      ]
+    },
+    {
+      "id": "27:112",
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.017999999225139618,
+            "g": 0.02199999988079071,
+            "b": 0.02199999988079071
+          },
+          "boundVariables": {
+            "color": {
+              "type": "VARIABLE_ALIAS",
+              "id": "VariableID:1:15"
+            }
+          }
+        }
+      ],
+      "radius": 0,
+      "nodes": [
+        {
+          "id": "I28:147;28:114",
+          "name": "Vector",
+          "radius": 0,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1.7999999523162842,
+          "strokeAlign": "CENTER"
+        },
+        {
+          "id": "I28:147;28:116",
+          "name": "Persistent demo label",
+          "radius": 8,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.44999998807907104,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        },
+        {
+          "id": "28:164",
+          "name": "Primary action",
+          "radius": 18,
+          "strokes": [],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        }
+      ]
+    },
+    {
+      "id": "27:113",
+      "fills": [
+        {
+          "type": "SOLID",
+          "visible": true,
+          "opacity": 1,
+          "blendMode": "NORMAL",
+          "color": {
+            "r": 0.017999999225139618,
+            "g": 0.02199999988079071,
+            "b": 0.02199999988079071
+          },
+          "boundVariables": {
+            "color": {
+              "type": "VARIABLE_ALIAS",
+              "id": "VariableID:1:15"
+            }
+          }
+        }
+      ],
+      "radius": 0,
+      "nodes": [
+        {
+          "id": "I28:168;28:114",
+          "name": "Vector",
+          "radius": 0,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1.7999999523162842,
+          "strokeAlign": "CENTER"
+        },
+        {
+          "id": "I28:168;28:116",
+          "name": "Persistent demo label",
+          "radius": 8,
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.44999998807907104,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.2199999988079071,
+                "g": 0.8600000143051147,
+                "b": 0.8999999761581421
+              },
+              "boundVariables": {}
+            }
+          ],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        },
+        {
+          "id": "28:185",
+          "name": "Primary action",
+          "radius": 18,
+          "strokes": [],
+          "strokeWeight": 1,
+          "strokeAlign": "INSIDE"
+        }
+      ]
+    }
+  ]
+}

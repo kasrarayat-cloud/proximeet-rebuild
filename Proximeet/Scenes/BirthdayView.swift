@@ -8,8 +8,8 @@ import ProximeetDomain
 /// (DD / MMM / YYYY) and is entered on native wheels or, via "Enter date instead", in
 /// labelled typed fields; both edit one in-memory draft. Any edit disables Continue at once;
 /// a wheel that settles, or typed entry submitted with Done, checks the draft again. The
-/// generated graphite housing is decoration behind native text and controls. The next
-/// chapter (Pass) is not built, so an eligible Continue says so and stays here.
+/// generated graphite housing is decoration behind native text and controls. An eligible
+/// Continue opens the approved Pass (chapter 03); Back from Pass returns here, draft kept.
 struct BirthdayView: View {
     @Environment(DemoSession.self) private var session
     @Environment(\.scenePhase) private var scenePhase
@@ -19,7 +19,6 @@ struct BirthdayView: View {
     @State private var yearText = ""
     @State private var initialFocus: Field = .day
     @FocusState private var focus: Field?
-    @State private var isShowingPassNotice = false
     @State private var lastAnnounced: BirthdayStatus?
     /// A wheel is being turned: its value is not settled, so Continue waits for it.
     @State private var isWheelMoving = false
@@ -76,11 +75,6 @@ struct BirthdayView: View {
                 Button("Done") { submitTyped() }
                     .accessibilityIdentifier("birthday.keyboardDone")
             }
-        }
-        .alert("Pass is next.", isPresented: $isShowingPassNotice) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("This prototype stops here for now.")
         }
         .onAppear { session.reevaluateBirthday() }
         .onChange(of: scenePhase) { _, phase in
@@ -212,12 +206,12 @@ struct BirthdayView: View {
         }
     }
 
+    /// Only an eligible committed date opens the approved Pass (chapter 03); anything else
+    /// stays here and says why.
     private func attemptContinue() {
         focus = nil
         guard !isWheelMoving else { return }
-        if session.continueFromBirthday() == .eligible {
-            isShowingPassNotice = true
-        } else {
+        if session.continueFromBirthday() != .eligible {
             announceIfChanged()
         }
     }

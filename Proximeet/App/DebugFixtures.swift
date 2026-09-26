@@ -47,7 +47,7 @@ enum PreviewFixtures {
         case birthdayAdult = "birthday-adult"
         /// The approved Birthday with 12 May 2012 entered and checked (under-18 example).
         case birthdayUnder18 = "birthday-under18"
-        /// The demo pass right after an eligible fixture birthday.
+        /// The approved Pass (intro), opened from Birthday's Continue with 12 May 1997.
         case pass
         case guestList = "guest-list"
         case guestListFilled = "guest-list-filled"
@@ -85,14 +85,18 @@ enum PreviewFixtures {
         switch stage {
         case .birthday:
             return flow
-        case .birthdayAdult, .birthdayUnder18:
+        case .birthdayAdult, .birthdayUnder18, .pass:
             // The approved Figma example dates, entered and checked through the domain.
             let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
             flow.updateBirthday { entry in
                 entry.setDay(12)
                 entry.setMonth(5)
-                entry.setYear(stage == .birthdayAdult ? 1997 : 2012)
+                entry.setYear(stage == .birthdayUnder18 ? 2012 : 1997)
                 entry.commit(today: today)
+            }
+            if stage == .pass {
+                // Through Birthday's own gate, as a guest would reach it.
+                flow.continueFromBirthday(today: today)
             }
             return flow
         default:
@@ -100,8 +104,6 @@ enum PreviewFixtures {
         }
         // Later scenes are reached through the earlier demo's pass flow, for their own captures.
         flow.submitBirthday(birthday, using: BirthdayEligibility(referenceDate: reference, calendar: calendar))
-        if stage == .pass { return flow }
-
         flow.continueFromPass()
         if stage == .guestList { return flow }
 

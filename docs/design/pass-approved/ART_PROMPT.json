@@ -1,0 +1,30 @@
+{
+  "purpose": "Approved Chapter 3 Pass art-direction reference. Explicit user-controlled prototype demo, not age or identity verification.",
+  "tool": "Built-in image generation",
+  "prompt": "Use case: product-mockup. Asset type: art-directed hero for an iPhone onboarding screen, a physical age-check DEMO pass with editable text to be added later. Render ONE spectacularly crafted BLANK ivory cotton-paper guest pass held by a machined brushed-stainless clip and a vivid cyan woven fabric loop. Isolated on a genuinely transparent square canvas. NO text, NO numbers, NO logos, NO barcodes, NO checkmarks, NO seals, NO symbols, NO UI, NO phone, NO person.\n\nThis is the next object in Proximeet's \"A Place Opens\" world: tactile ivory invitation paper, precise graphite and stainless hardware, cyan woven fiber. A generous thick uncoated ivory pass approximately 4:5 proportions, softly rounded lower corners, one small asymmetrical ticket notch on the lower-right edge, with a delicate blind-debossed margin line near edges. Paper face is nearly perfectly FRONT-ON and upright, no strong tilt or rotation so native typography can be laid over it. Leave the entire CENTRAL 65 percent of the paper completely BLANK and evenly lit. Beautiful cotton fibers, paper thickness visible on bottom and right, realistic subtle imperfections, clean mature editorial luxury. Paper must appear premium and weighty, not crumpled or distressed.\n\nAt top center, an exquisitely detailed low-profile brushed-steel spring clip fastens the paper to a slightly offset thin graphite backing plate. Hardware has a soft chamfer, believable hinge and understated reflections; cyan tightly woven textile loop emerges from behind the clip and arches above, introducing the intent wristband material without enclosing the whole card. No lanyard dangling out of frame. Backing plate peeks along bottom-right by about 5 percent width. Tiny paper layer offset at one bottom corner gives depth. Do not crowd the central paper with hardware.\n\nStudio lighting with a broad soft upper-left key, cool controlled metal reflections, subtle warm paper tone, deep contact occlusion. No neon glow, no glassy hologram, no sci-fi HUD, no cartoon. Photoreal high-end product art with outstanding tactile detail. Subject centered, fills 85% of height and 75% of width of square canvas, all loop and paper edges visible, generous transparent margin. Clear strong silhouette for a 400px-wide mobile hero. No floor or environment.",
+  "source_asset": "exec-4ad06890-2132-4b5c-a473-7d60dc88399a.png",
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "page": "26:282",
+  "frames": {
+    "intro": "27:111",
+    "demo_in_progress": "27:112",
+    "demo_complete": "27:113"
+  },
+  "native_overlays": [
+    "18+",
+    "DEMO PASS",
+    "PROXIMEET"
+  ],
+  "limits": [
+    "The image is decorative raster artwork, not a 3D rig.",
+    "All copy, buttons, demo labels and status messages remain native editable Figma elements.",
+    "Demo transitions are user-controlled. No timer, provider call, identity check, or verification entitlement is implied."
+  ],
+  "approval": {
+    "status": "approved",
+    "date": "2026-09-25",
+    "founder_quote": "i approve thsi as well",
+    "scope": "Three-state Pass visual design and explicit user-controlled demo; no real verification or next-chapter approval.",
+    "figma_note": "33:217"
+  }
+}

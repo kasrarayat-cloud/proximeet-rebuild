@@ -28,7 +28,7 @@ private struct SceneDestination: View {
         case .birthday:
             BirthdayView()
         case .demoPass:
-            DemoPassView()
+            PassView()
         case .guestList:
             GuestListView()
         case .band:

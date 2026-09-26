@@ -41,8 +41,9 @@ final class DemoSession {
         flow.submitBirthday(dateOfBirth, using: BirthdayEligibility(referenceDate: now, calendar: calendar))
     }
 
-    func continueFromPass() {
-        flow.continueFromPass()
+    /// Back or Leave demo on the approved Pass: returns to Birthday with its draft kept.
+    func leavePass() {
+        flow.leavePass()
     }
 
     /// Transactional: `.invalid` leaves any previously saved profile untouched.
@@ -100,8 +101,8 @@ final class DemoSession {
         flow.updateBirthday { $0.reevaluate(today: today) }
     }
 
-    /// Continue on Birthday: re-checks against today and returns the result. The flow never
-    /// advances here, because the next chapter (Pass) is not built yet.
+    /// Continue on Birthday: re-checks against today; only an eligible committed date opens
+    /// the approved Pass. Returns the checked status.
     func continueFromBirthday(now: Date = Date()) -> BirthdayStatus? {
         flow.continueFromBirthday(today: Self.civilToday(now: now))
     }

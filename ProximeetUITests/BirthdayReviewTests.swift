@@ -109,15 +109,19 @@ final class BirthdayReviewTests: XCTestCase {
             assertLayoutAnchors(app)
         }
 
+        // Intentionally changed with chapter 03: an eligible Continue opens the approved Pass
+        // (it used to show "Pass is next." and stay). Back from Pass returns here, date kept.
         screen.continueButton.tap()
-        let notice = app.alerts["Pass is next."]
-        XCTAssertTrue(notice.waitForExistence(timeout: 5), "Continue should show the Pass-pending notice.")
-        XCTAssertTrue(notice.staticTexts["This prototype stops here for now."].exists)
-        capture("birthday-pass-notice", app)
+        let passHeadline = app.descendants(matching: .any)["pass.headline"]
+        XCTAssertTrue(passHeadline.waitForExistence(timeout: 5), "Continue should open the Pass.")
+        XCTAssertEqual(passHeadline.label, "Your next chapter.")
         hold(0.8)
-        notice.buttons["OK"].tap()
-        waitForAbsence(notice)
-        XCTAssertTrue(screen.headline.exists, "Continue must stay on Birthday.")
+        capture("birthday-continue-opens-pass", app)
+        app.buttons["pass.back"].tap()
+        XCTAssertTrue(screen.headline.waitForExistence(timeout: 5), "Back from Pass should return to Birthday.")
+        waitForAbsence(passHeadline)
+        XCTAssertEqual(screen.wheelValues, ["12", "May", "1997"], "Birthday keeps its date after Pass.")
+        hold(0.8)
 
         screen.wheel(2).adjust(toPickerWheelValue: "2012")
         waitFor(screen.continueButton, enabled: false, "Correcting to 2012 must disable Continue.")
