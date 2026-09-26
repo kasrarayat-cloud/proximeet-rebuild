@@ -154,7 +154,7 @@ final class GuestListReviewTests: XCTestCase {
             ("Maximiliana Alexandrina Wilhelmina von Hohenzollern-Sigmaringen", "Maximiliana Alexandrina Wilhelmina von Hohenzollern-Sigmaringen"),
         ]
         for (index, name) in names.enumerated() {
-            paste(name.raw, into: guest.name, app)
+            paste(name.raw, into: guest.name, placeholder: "What should we call you?", app)
             XCTAssertEqual(fieldText(guest.name, placeholder: "What should we call you?"), name.raw, "The name is kept exactly as pasted.")
             XCTAssertTrue(guest.primary.isEnabled, "\(name.shown) can be previewed.")
             XCTAssertFalse(guest.nameHelp.exists)
@@ -201,7 +201,7 @@ final class GuestListReviewTests: XCTestCase {
         XCTAssertEqual(unit.count, 8)
         let over = String(repeating: unit, count: 15) + "x"
         XCTAssertEqual(over.count, 121)
-        paste(over, into: guest.opener, app)
+        paste(over, into: guest.opener, placeholder: "A good hello starts with…", app)
         XCTAssertEqual(fieldText(guest.opener, placeholder: "A good hello starts with…"), over, "The paste is kept whole: nothing is cut or rewritten.")
         XCTAssertEqual(guest.count.label, "121 of 120 characters")
         XCTAssertTrue(guest.openerHelp.waitForExistence(timeout: 3), "Over the limit, the help explains why Preview waits.")
@@ -218,7 +218,7 @@ final class GuestListReviewTests: XCTestCase {
         XCTAssertTrue(guest.primary.isEnabled, "120 characters can be previewed.")
 
         let families = String(repeating: "👩‍👩‍👧‍👦", count: 120)
-        paste(families, into: guest.opener, app)
+        paste(families, into: guest.opener, placeholder: "A good hello starts with…", app)
         XCTAssertEqual(guest.count.label, "120 of 120 characters", "120 family emoji are 120 characters.")
         XCTAssertTrue(guest.primary.isEnabled)
         tapKeyboardDoneIfShown(app)
@@ -709,13 +709,22 @@ final class GuestListReviewTests: XCTestCase {
     /// keyboard's own substitutions play no part). The field is emptied with the delete key, then
     /// pasted into from the edit menu, a touch interaction; ⌘V is the fallback. The tests that can
     /// reach the fallback run after every test that needs the on-screen keyboard.
-    private func paste(_ text: String, into field: XCUIElement, _ app: XCUIApplication) {
+    private func paste(_ text: String, into field: XCUIElement, placeholder: String, _ app: XCUIApplication) {
         UIPasteboard.general.string = text
         let end = field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.85))
         end.tap()
         _ = waitForFocus(field)
-        let current = (field.value as? String) ?? ""
-        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.utf16.count + 2))
+        // Right-to-left text ends at the left edge, so empty the field from either side.
+        let start = field.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.85))
+        for (pass, edge) in [end, start].enumerated() {
+            let current = fieldText(field, placeholder: placeholder)
+            guard !current.isEmpty else { break }
+            if pass > 0 {
+                edge.tap()
+            }
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.utf16.count + 2))
+        }
+        XCTAssertEqual(fieldText(field, placeholder: placeholder), "", "\(field.identifier) is empty before the paste.")
         hold(0.6)
         end.tap()
         let menuPaste = app.menuItems["Paste"]
@@ -734,9 +743,10 @@ final class GuestListReviewTests: XCTestCase {
         return XCTWaiter.wait(for: [expectation], timeout: 3) == .completed
     }
 
+    /// The edit menu's Paste does not ask; ⌘V might. No waiting when nothing asks.
     private func allowPasteIfAsked(_ app: XCUIApplication) {
         for candidate in [app.buttons["Allow Paste"], XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow Paste"]]
-        where candidate.waitForExistence(timeout: 0.5) {
+        where candidate.exists {
             candidate.tap()
         }
     }

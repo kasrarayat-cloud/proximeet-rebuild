@@ -64,7 +64,8 @@ GUEST_LIST_HARDWARE_KEY_TESTS="testBlankInternationalAndLongNames testOpenerLimi
 GUEST_LIST_TESTS="testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint testInterestsToggleIndependentlyAndOptionalContentIsOmitted testKeyboardFocusOrderReachabilityAndDismissal testRepeatedTapsNeverDuplicateOrSkipARoute testRelaunchResetsTheDraftAndNothingIsConferred testReduceMotionPreviewKeepsTheCardStationary testLargestTextReflowsAndKeepsEverythingReachable $GUEST_LIST_HARDWARE_KEY_TESTS"
 REQUIRED_PASSING_TESTS="$(for t in $GUEST_LIST_TESTS; do printf 'GuestListReviewTests.%s ' "$t"; done)PassReviewTests.testWalkthroughStartFinishEndpointLeaveReentryCancelBack PassReviewTests.testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn PassReviewTests.testReduceMotionPreviewKeepsThePassStationary PassReviewTests.testLargestTextKeepsTheDemoLabelWholeAndControlsReachable BirthdayReviewTests.testWalkthroughEntryCorrectionContinueBack BirthdayReviewTests.testTypedEntryPreservesComponentsAndKeyboard WelcomeReviewTests.testHonestNotices WelcomeReviewTests.testReduceMotionPreviewLaunch WelcomeReviewTests.testDefaultGeometry"
 WARMUP_SECONDS=15
-SETTLE_SECONDS=4
+WARMUP_SMALL_SECONDS=8
+SETTLE_SECONDS=3
 RESTORE_CONTENT_SIZE=""
 STATUS_BAR_OVERRIDDEN=""
 RECORDER_PID=""
@@ -343,6 +344,7 @@ PY
 
 stage_destinations() {
     load_simulator
+    prestart_smaller
     run xcrun simctl list devices available
     xcrun simctl list -j devices available > "$META/guest-list-devices-available.json"
     xcrun simctl list -j runtimes available > "$META/guest-list-runtimes-available.json"
@@ -472,6 +474,17 @@ capture_large_text() {
     restore_content_size
 }
 
+# Starts booting the smaller iPhone now, behind the build and the main captures, so its first
+# boot (minutes on a fresh machine) is not waited out later. Best effort: capture_smaller boots
+# it itself if this did not.
+prestart_smaller() {
+    local smaller
+    smaller="$(smaller_iphone)" || return 0
+    [ -n "$smaller" ] || return 0
+    note "Booting the smaller iPhone in the background: $(printf '%s' "$smaller" | cut -f2)."
+    xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" >> "$LOG" 2>&1 || true
+}
+
 smaller_iphone() {
     xcrun simctl list -j devices available > "$META/guest-list-simctl-devices.json"
     python3 - "$META/guest-list-simctl-devices.json" "$SIM_RUNTIME_ID" "$SIM_UDID" "$SMALLER_IPHONES" <<'PY'
@@ -499,14 +512,13 @@ capture_smaller() {
     udid="$(printf '%s' "$smaller" | cut -f1)"
     name="$(printf '%s' "$smaller" | cut -f2)"
     note "Smaller iPhone: $name ($udid)."
-    if ! xcrun simctl list devices booted | grep -q "$udid"; then
-        run xcrun simctl boot "$udid" || return 1
-        SMALL_BOOTED_UDID="$udid"
-    fi
+    # Already booting or booted since the destinations stage, normally; shut down afterwards.
+    xcrun simctl boot "$udid" >> "$LOG" 2>&1 || true
+    SMALL_BOOTED_UDID="$udid"
     run xcrun simctl bootstatus "$udid" -b || return 1
     run xcrun simctl install "$udid" "$APP_PATH" || return 1
     launch "$udid" -ProximeetFixture guest-list || return 1
-    sleep "$WARMUP_SECONDS"
+    sleep "$WARMUP_SMALL_SECONDS"
     launch "$udid" -ProximeetFixture guest-list-filled || return 1
     sleep "$SETTLE_SECONDS"
     screenshot "$udid" "08-guest-list-smaller-editor.png" "FIXTURE (-ProximeetFixture guest-list-filled): the fictional example on $name" || return 1
@@ -574,12 +586,11 @@ stage_captures() {
 export_results() {
     local result="$1" dir="$2"
     [ -d "$result" ] || return 0
-    ditto -c -k --sequesterRsrc --keepParent "$result" "$result.zip" || true
     xcrun xcresulttool get test-results summary --path "$result" > "${result%.xcresult}-summary.json" 2>>"$LOG" || true
     if xcrun xcresulttool export attachments --path "$result" --output-path "$dir" >> "$LOG" 2>&1; then
         note "Exported XCTest attachments to $dir."
     else
-        note "NOTE: attachment export unavailable for $result; use the .xcresult.zip."
+        note "NOTE: attachment export unavailable for $result; the per-test results are in the log and summary."
     fi
 }
 
@@ -936,8 +947,6 @@ for key in ("verdict.txt", "ui-review-tests.txt", "destination.txt", "source-che
             "compact-video.txt", "guest-list-walkthrough-original.mp4.sha256", "guest-list-walkthrough-compact.mp4.sha256",
             "GuestListWalkthrough-summary.json", "GuestListReview-summary.json", "GuestListHardwareKeys-summary.json"):
     add("results/" + key, os.path.join(out, key), required=key == "verdict.txt")
-for key in ("GuestListWalkthrough.xcresult.zip", "GuestListReview.xcresult.zip", "GuestListHardwareKeys.xcresult.zip"):
-    add("results/" + key, os.path.join(out, key))
 add("results/summary.txt", os.path.join(artifacts, "summary.txt"))
 for folder, prefix in (("metadata", "results/metadata/"), ("logs", "logs/")):
     directory = os.path.join(artifacts, folder)

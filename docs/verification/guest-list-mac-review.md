@@ -50,8 +50,9 @@ The steps are the Pass review's steps, with `guest_list_review.sh` in place of `
 - `codemagic_verify.sh metadata`, `validate`, `select-simulator`, `build`, `package` and
   `domain-tests`.
 
-The metadata step, the gate, the validation, simulator selection and the build stop the build
-on failure. The evidence steps continue. `enforce` fails the build unless the verdict is PASS.
+`destinations` also starts booting a smaller iPhone in the background, so its first boot overlaps
+the build and the main captures instead of being waited out. The metadata step, the gate, the
+validation, simulator selection and the build stop the build on failure. The evidence steps continue. `enforce` fails the build unless the verdict is PASS.
 
 The XCTest review runs in this order:
 

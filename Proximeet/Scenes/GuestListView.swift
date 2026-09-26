@@ -59,6 +59,12 @@ struct GuestListView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollDismissesKeyboard(.interactively)
+                // The ground behind the status bar, so scrolled text never runs under the clock.
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Color.clear
+                        .frame(height: 0)
+                        .background(GuestListStyle.ground.ignoresSafeArea(edges: .top))
+                }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     actions(bottomInset: proxy.safeAreaInsets.bottom)
                 }
@@ -573,7 +579,10 @@ private struct TightLines: Layout {
         guard let text = subviews.first else { return .zero }
         let size = text.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
         let lines = max(1, (size.height / natural).rounded())
-        return CGSize(width: size.width, height: size.height - lines * max(0, natural - pitch))
+        // The whole offered width, so the text is placed at the width it was measured at and
+        // wraps the same way.
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? size.width
+        return CGSize(width: width, height: size.height - lines * max(0, natural - pitch))
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {

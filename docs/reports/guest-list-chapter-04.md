@@ -172,7 +172,11 @@ delivery message, not in this file.
 7. **No autocorrection** in either field, and no automatic capitalisation in Name, so the system
    never rewrites a guest's words (the handoff rules out capitalisation that rewrites input).
 8. **Tab in Introduction** leaves the field instead of typing a tab character.
-9. **The tap guard exempts text fields**, so word and paragraph selection still work there.
+9. **The tap guard exempts text fields**, so word and paragraph selection still work there, and
+   every other recognizer waits for it (other guards excepted). It decides as the touch begins,
+   so a first tap is not delayed. This is meant to stop a repeat from also pressing what is
+   underneath: the first simulator run showed a double tap on Preview my card also pressing
+   Continue preview. The next run's rapid-tap tests are the evidence either way.
 10. **Card type follows Dynamic Type**, unlike the Pass's printed card, because the handoff asks
     for the card to reflow and grow with larger text.
 11. **The initial is not case-mapped**; it is the grapheme as entered.

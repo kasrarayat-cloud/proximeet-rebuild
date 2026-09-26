@@ -53,15 +53,24 @@ final class RepeatTapSwallower: UIGestureRecognizer {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard state == .possible else { return }
-        let repeated = touches.contains { $0.tapCount > 1 && !Self.isInTextInput($0.view) }
+        let repeated = touches.contains { $0.tapCount > 1 && !Self.isInTextField($0.view) }
         state = repeated ? .began : .failed
     }
 
+    /// Every other recognizer under the window (SwiftUI's buttons included) waits for this one,
+    /// which decides at once, when the touch begins: a first tap is not delayed, and a repeat is
+    /// not also delivered to what is underneath. Another guard's swallower (Pass and Guest List
+    /// share the window during a push or pop) is not made to wait, so the two never wait on each
+    /// other.
+    override func shouldBeRequiredToFail(by otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        !(otherGestureRecognizer is RepeatTapSwallower)
+    }
+
     /// Whether `view` is a text field or text view, or lies inside one.
-    private static func isInTextInput(_ view: UIView?) -> Bool {
+    private static func isInTextField(_ view: UIView?) -> Bool {
         var current = view
         while let candidate = current {
-            if candidate is UITextInput { return true }
+            if candidate is UITextField || candidate is UITextView { return true }
             current = candidate.superview
         }
         return false
