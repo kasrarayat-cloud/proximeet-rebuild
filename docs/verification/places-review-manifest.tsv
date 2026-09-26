@@ -1,0 +1,79 @@
+# Places (chapter 07): the manifest every scope of proximeet-places-review runs and is judged by.
+# scripts/places_review.sh builds each run's -only-testing list from this file, in this order on its
+# device, and scripts/places_review_results.py checks every row against the build's logs.
+# Columns (tab-separated): scope, order, device, run, bundle, seconds, test, kind.
+#   scope    places = the new Places review; signal = the 16 Signal executions of build 6ab7e942
+#            (docs/verification/signal-mac-review.md), with their intentional endpoint change:
+#            Continue preview now opens Places instead of "End of this preview."; regressions = the
+#            27 required executions of docs/verification/signal-regressions-recovery-manifest.tsv
+#            (build 6ab81e22), unchanged, with its time-gated repeat. Together: 41 unique test methods and
+#            43 required executions carried over, and 11 unique Places methods in 13 executions.
+#   device   main = the selected iPhone 17 Pro Max; b = device B, its clone (same model and runtime,
+#            run in parallel with main); small = a smaller installed iPhone, after main.
+#   run      one bounded xcodebuild test-without-building; within a run XCTest orders the tests by
+#            class, then by name. The places scope's run "journey" is the recorded walkthrough
+#            (full holds, alone); every other run uses short holds. The main simulator's first boot
+#            ends about 3 minutes after device B's, so device B carries the longer places run.
+#   seconds  the run's natural time bound; the build's deadline can shorten it.
+#   kind     required = must execute once and pass; repeat = a planned second execution of a
+#            required test from a fresh app and test runner, run only if the time budget allows both
+#            it and the run after it; it is not a unique test and not a retry, and if it runs it must pass.
+# Automatic retries are off in every scope. A failed, skipped, interrupted or missing required
+# execution fails the verdict.
+places	P1	main	journey	PlacesJourney	540	PlacesReviewTests/testWalkthroughRealJourney	required
+places	P2	main	places_main	PlacesMain	600	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+places	P3	main	places_main	PlacesMain	600	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required
+places	P4	b	places_b	PlacesB	1000	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+places	P5	b	places_b	PlacesB	1000	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required
+places	P6	b	places_b	PlacesB	1000	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required
+places	P7	b	places_b	PlacesB	1000	PlacesReviewTests/testEveryIntentAtEveryVenue	required
+places	P8	b	places_b	PlacesB	1000	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+places	P9	b	places_b	PlacesB	1000	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required
+places	P10	b	places_b	PlacesB	1000	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required
+places	P11	b	places_b	PlacesB	1000	PlacesReviewTests/testSevenScreensOnThisPhone	required
+places	P12	small	places_small	PlacesSmall	540	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+places	P13	small	places_small	PlacesSmall	540	PlacesReviewTests/testSevenScreensOnThisPhone	required
+signal	S1	main	signal_main	SignalMain	900	SignalReviewTests/testAllTwelveStates	required
+signal	S2	main	signal_main	SignalMain	900	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+signal	S3	main	signal_main	SignalMain	900	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	required
+signal	S4	main	signal_main	SignalMain	900	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+signal	S5	main	signal_main	SignalMain	900	SignalReviewTests/testWalkthroughRealJourney	required
+signal	S6	b	signal_b	SignalB	1000	BandSignalInteractionTests/testBandSignalInteraction	required
+signal	S7	b	signal_b	SignalB	1000	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+signal	S8	b	signal_b	SignalB	1000	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	required
+signal	S9	b	signal_b	SignalB	1000	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required
+signal	S10	b	signal_b	SignalB	1000	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	required
+signal	S11	b	signal_b	SignalB	1000	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+signal	S12	b	signal_b	SignalB	1000	SignalReviewTests/testMissingIntentKeepsSignalClosed	required
+signal	S13	b	signal_b	SignalB	1000	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required
+signal	S14	b	signal_b	SignalB	1000	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required
+signal	S15	small	signal_small	SignalSmall	360	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required
+signal	S16	small	signal_small	SignalSmall	360	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+regressions	M1	main	main_early	RegressionsMainEarly	780	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	required
+regressions	M2	main	main_early	RegressionsMainEarly	780	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required
+regressions	M3	main	main_rest	RegressionsMain	1000	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	required
+regressions	M4	main	main_rest	RegressionsMain	1000	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	required
+regressions	M5	main	main_rest	RegressionsMain	1000	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	required
+regressions	M6	main	main_rest	RegressionsMain	1000	PassReviewTests/testReduceMotionPreviewKeepsThePassStationary	required
+regressions	M7	main	main_rest	RegressionsMain	1000	PassReviewTests/testWalkthroughStartFinishEndpointLeaveReentryCancelBack	required
+regressions	M8	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testEndpointDuplicateTapsAndBack	required
+regressions	M9	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testEveryChangeBetweenIntentsKeepsEverythingInAgreement	required
+regressions	M10	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+regressions	M11	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testRapidChangesLeaveTheLastChoice	required
+regressions	M12	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	required
+regressions	M13	main	main_rest	RegressionsMain	1000	WristbandReviewTests/testRelaunchStartsUnselected	required
+regressions	B1	b	paste_b	GuestListPasteB	480	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	required
+regressions	B2	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testBlankInternationalAndLongNames	required
+regressions	B3	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	required
+regressions	B4	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	required
+regressions	B5	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	required
+regressions	B6	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	required
+regressions	B7	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	required
+regressions	B8	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required
+regressions	B9	b	regressions_b	RegressionsB	1000	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required
+regressions	B10	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testDefaultGeometry	required
+regressions	B11	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testHonestNotices	required
+regressions	B12	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testLargestTextSize	required
+regressions	B13	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testReduceMotionPreviewLaunch	required
+regressions	B14	b	paste_repeat_b	GuestListPasteRepeatB	300	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	repeat
+regressions	B15	b	hardware_keys_b	GuestListHardwareKeysB	240	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required

@@ -1,0 +1,7 @@
+# Files removed by earlier approved chapters (Welcome's, the Pass's legacy DemoPassView, the Wristband's legacy BandSelectionView) and by the approved Signal (the legacy SignalSelectionView). Places deletes no file.
+# The Places source gate (scripts/places_review.sh checkpoint) confirms they are absent.
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/Contents.json
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/social-worlds-welcome.png
+Proximeet/Scenes/DemoPassView.swift
+Proximeet/Scenes/BandSelectionView.swift
+Proximeet/Scenes/SignalSelectionView.swift
