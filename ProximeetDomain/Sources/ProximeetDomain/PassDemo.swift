@@ -18,7 +18,7 @@ public struct PassDemo: Equatable, Sendable {
         case intro
         /// "Demo in progress." Finish preview, or cancel back to the intro.
         case progress
-        /// "Demo complete." Continue preview only shows the end-of-preview message.
+        /// "Demo complete." Continue preview opens the approved Guest List.
         case complete
     }
 
@@ -51,8 +51,9 @@ public struct PassDemo: Equatable, Sendable {
         return true
     }
 
-    /// "Continue preview" on complete: the review ends here. Returns whether the
-    /// end-of-preview message should be shown; the stage never changes.
+    /// "Continue preview" on complete. Returns whether the guest may move on to the approved
+    /// Guest List (`DemoFlow.continueFromCompletedPass`); the stage never changes, so returning
+    /// to the Pass finds it complete.
     public func continuePreview() -> Bool {
         stage == .complete
     }

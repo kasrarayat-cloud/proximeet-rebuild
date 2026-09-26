@@ -10,6 +10,9 @@ public struct DemoDraft: Equatable, Sendable {
     /// The approved Birthday screen's entry: the day/month/year draft and its last check.
     /// Kept when going Back to Welcome, so returning within the same demo run shows it again.
     public internal(set) var birthdayEntry = BirthdayEntry()
+    /// The approved Guest List's introduction: raw name, raw opener and interests. Kept when
+    /// going Back to Pass, so returning within the same demo run shows it again.
+    public internal(set) var introduction = GuestIntroduction()
     public internal(set) var profile: GuestProfile?
     public internal(set) var band: BandIntent?
     public internal(set) var signal: ApproachSignal?
@@ -26,7 +29,9 @@ public struct DemoDraft: Equatable, Sendable {
             // remains for the DEBUG fixtures of later scenes.
             return birthdayEntry.canContinue || dateOfBirth != nil
         case .guestList:
-            return dateOfBirth != nil
+            // Through the Pass, so through the same Birthday gate. Completing the Pass demo is
+            // checked by `DemoFlow.continueFromCompletedPass`.
+            return meetsRequirements(for: .demoPass)
         case .band:
             return dateOfBirth != nil && profile != nil
         case .signal:

@@ -99,15 +99,44 @@ public struct DemoFlow: Equatable, Sendable {
         return returnTo(.birthday)
     }
 
-    /// The legacy onward route (Guest List). The approved Pass never calls it; it remains for
-    /// the DEBUG fixtures of later, not yet approved scenes.
+    /// Continue preview on the approved Pass's complete stage: opens the approved Guest List
+    /// editor. Only a completed demo on the pass scene moves on, so an unfinished demo or a
+    /// repeated tap (the scene is then Guest List) does nothing.
+    @discardableResult
+    public mutating func continueFromCompletedPass(_ demo: PassDemo) -> Bool {
+        guard demo.continuePreview() else { return false }
+        return advance(from: .demoPass)
+    }
+
+    /// The legacy onward route. The approved Pass never calls it; it remains for the DEBUG
+    /// fixtures of later, not yet approved scenes.
 
     @discardableResult
     public mutating func continueFromPass() -> Bool {
         advance(from: .demoPass)
     }
 
-    // MARK: - Guest list
+    // MARK: - Guest list (approved, chapter 04)
+
+    /// Applies one edit to the introduction. Only available on the guest list scene; nothing
+    /// here validates, trims or navigates. The draft stays in memory for this demo run.
+    @discardableResult
+    public mutating func editIntroduction(_ change: (inout GuestIntroduction) -> Void) -> Bool {
+        guard currentScene == .guestList else { return false }
+        change(&draft.introduction)
+        return true
+    }
+
+    /// Back on the approved Guest List editor: returns to the Pass, whose screen is still below
+    /// it. The introduction is kept. Only available on the guest list scene, so a repeated Back
+    /// cannot also leave the Pass.
+    @discardableResult
+    public mutating func leaveGuestList() -> Bool {
+        guard currentScene == .guestList else { return false }
+        return returnTo(.demoPass)
+    }
+
+    // MARK: - Guest list (legacy profile, DEBUG fixtures of later scenes)
 
     /// Validates and stores the profile. Invalid input leaves the saved profile untouched.
     @discardableResult
