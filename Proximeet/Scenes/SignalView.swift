@@ -113,7 +113,13 @@ struct SignalView: View {
             }
             .accessibilityLabel("Back")
             .accessibilityIdentifier("signal.back")
-            WristbandWordmark()
+            // The wordmark at the text size when it fits; on a narrow phone at the largest sizes, a
+            // smaller cap rather than a truncated name (the shared wordmark cannot shrink itself).
+            ViewThatFits(in: .horizontal) {
+                WristbandWordmark()
+                WristbandWordmark().dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                WristbandWordmark().dynamicTypeSize(...DynamicTypeSize.large)
+            }
             Spacer(minLength: 8)
             WristbandDemoBadge(identifier: "signal.demoBadge")
                 .layoutPriority(1)
@@ -345,10 +351,31 @@ private struct SignalRowLabel: View {
     private var words: some View {
         VStack(alignment: .leading, spacing: 2 * scale) {
             WristbandText(text: approach.title, face: .semiBold, size: 17, lineHeight: 24, color: .white)
-            WristbandText(text: approach.summary, face: .regular, size: 14, lineHeight: 20,
-                          color: WristbandStyle.secondaryText)
+            // The approved frames break each explanation before its last word, as Figma wraps it in
+            // the 262-pt column; iOS would move one more word down to avoid a one-word last line.
+            // So the approved two lines come first, and natural wrapping only where they do not
+            // fit (narrower phones, larger text).
+            ViewThatFits(in: .horizontal) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Self.approvedLines(approach.summary), id: \.self) { line in
+                        explanation(line)
+                    }
+                }
+                explanation(approach.summary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func explanation(_ text: String) -> some View {
+        WristbandText(text: text, face: .regular, size: 14, lineHeight: 20, color: WristbandStyle.secondaryText)
+    }
+
+    /// The explanation as the approved frames draw it: everything but the last word, then the
+    /// last word.
+    static func approvedLines(_ summary: String) -> [String] {
+        guard let space = summary.lastIndex(of: " ") else { return [summary] }
+        return [String(summary[..<space]), String(summary[summary.index(after: space)...])]
     }
 
     private var radio: some View {

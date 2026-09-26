@@ -85,6 +85,11 @@ Retries work like this:
 - xcodebuild's exit 65 is accepted only for a run whose bundle shows a test that failed and then
   passed. The recorded journey must exit 0.
 - A skip, or a test that did not run, fails the stage.
+- If `xcodebuild` cannot find the simulator at all (exit 70, "Unable to find a device matching
+  the provided destination specifier", no test run), the simulator is booted again and the same
+  tests run once more. This happened after the recorded journey in build `6ab7dbf0`. It is not a
+  test retry: the first run is listed as an infrastructure rerun in the results and the verdict,
+  and a second exit 70 fails the stage.
 
 Device B is the selected simulator cloned after its first boot, so it starts warm. It gets an
 APFS clone of the build products and is deleted when the review ends. Without device B, its lane

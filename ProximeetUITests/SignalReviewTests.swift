@@ -141,7 +141,7 @@ final class SignalReviewTests: XCTestCase {
 
         signal.primary.tap()
         let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5), "Continue preview shows the end-of-preview message.")
+        XCTAssertTrue(end.waitForExistence(timeout: 10), "Continue preview shows the end-of-preview message.")
         hold(0.8)
         capture("signal-journey-endpoint", app)
         end.buttons["OK"].tap()
@@ -254,7 +254,7 @@ final class SignalReviewTests: XCTestCase {
         signal.row("chatFirst").tap()
         signal.primary.tap()
         let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5))
+        XCTAssertTrue(end.waitForExistence(timeout: 10))
         XCTAssertEqual(app.alerts.count, 1)
         end.buttons["OK"].tap()
         waitForAbsence(end)
@@ -323,7 +323,7 @@ final class SignalReviewTests: XCTestCase {
 
         signal.primary.doubleTap()
         let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5))
+        XCTAssertTrue(end.waitForExistence(timeout: 10))
         hold(0.8)
         XCTAssertEqual(app.alerts.count, 1, "A double tap shows one message.")
         capture("signal-endpoint-fixture", app)
@@ -507,7 +507,7 @@ final class SignalReviewTests: XCTestCase {
         waitForLabel(pass.headline, "Demo complete.")
         pass.back.tap()
         let birthdayHeadline = app.descendants(matching: .any)["birthday.headline"]
-        XCTAssertTrue(birthdayHeadline.waitForExistence(timeout: 5), "Back through every chapter reaches Birthday.")
+        XCTAssertTrue(birthdayHeadline.waitForExistence(timeout: 10), "Back through every chapter reaches Birthday.")
 
         // An under-18 date: Continue is disabled and nothing moves forward.
         app.pickerWheels.element(boundBy: 2).adjust(toPickerWheelValue: "2012")
@@ -573,9 +573,9 @@ final class SignalReviewTests: XCTestCase {
     private func openCompletedPass(_ app: XCUIApplication) -> PassScreen {
         app.buttons["welcome.moreOptions"].tap()
         let demo = app.buttons.matching(NSPredicate(format: "label == %@", "Continue the demo (no account)")).firstMatch
-        XCTAssertTrue(demo.waitForExistence(timeout: 5), "More options should offer the demo.")
+        XCTAssertTrue(demo.waitForExistence(timeout: 10), "More options should offer the demo.")
         demo.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["birthday.headline"].waitForExistence(timeout: 5), "Birthday should open.")
+        XCTAssertTrue(app.descendants(matching: .any)["birthday.headline"].waitForExistence(timeout: 10), "Birthday should open.")
         app.pickerWheels.element(boundBy: 0).adjust(toPickerWheelValue: "12")
         app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "May")
         app.pickerWheels.element(boundBy: 2).adjust(toPickerWheelValue: "1997")
@@ -630,34 +630,35 @@ final class SignalReviewTests: XCTestCase {
     // MARK: - Waiting and input
 
     private func waitForLabel(_ element: XCUIElement, _ label: String) {
-        XCTAssertTrue(element.waitForExistence(timeout: 6), "\(element.identifier) should be showing.")
+        XCTAssertTrue(element.waitForExistence(timeout: 15), "\(element.identifier) should be showing.")
         let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [shown], timeout: 6), .completed, "Expected “\(label)”, found “\(element.label)”.")
+        // Generous: under load a snapshot can take seconds; the wait ends as soon as the label shows.
+        XCTAssertEqual(XCTWaiter.wait(for: [shown], timeout: 15), .completed, "Expected “\(label)”, found “\(element.label)”.")
     }
 
     private func waitFor(_ element: XCUIElement, enabled: Bool) -> Bool {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == %@", NSNumber(value: enabled)), object: element)
-        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+        return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 
     private func waitFor(_ element: XCUIElement, selected: Bool) -> Bool {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == %@", NSNumber(value: selected)), object: element)
-        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+        return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 
     private func waitForFocus(_ field: XCUIElement) -> Bool {
         let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
-        return XCTWaiter.wait(for: [focused], timeout: 5) == .completed
+        return XCTWaiter.wait(for: [focused], timeout: 10) == .completed
     }
 
     private func waitForAbsence(_ element: XCUIElement) {
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
-        _ = XCTWaiter.wait(for: [gone], timeout: 5)
+        _ = XCTWaiter.wait(for: [gone], timeout: 10)
     }
 
     private func tapKeyboardDone(_ app: XCUIApplication) {
         let done = app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "guestList.keyboardDone", "Done")).firstMatch
-        if done.waitForExistence(timeout: 5) {
+        if done.waitForExistence(timeout: 10) {
             done.tap()
             waitForAbsence(app.keyboards.firstMatch)
         } else {
@@ -748,6 +749,10 @@ final class SignalReviewTests: XCTestCase {
     /// #111415, an unselected row; #242A2B, a selected one.
     private static let tileFill: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in r >= 12 && r <= 24 && g >= 15 && g <= 28 && b >= 16 && b <= 30 }
     private static let selectedFill: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in r >= 30 && r <= 42 && g >= 38 && g <= 48 && b >= 38 && b <= 50 }
+    /// The selected row's 1.5 pt inside border, #7A8585.
+    private static let selectedStroke: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in
+        r >= 105 && r <= 140 && g >= 115 && g <= 150 && b >= 115 && b <= 150
+    }
     private static let disabledFill: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in r >= 25 && r <= 40 && g >= 30 && g <= 45 && b >= 30 && b <= 45 }
     private static let disabledText: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in r > 95 && r < 135 && g > 105 && g < 145 && b > 100 && b < 140 }
 
@@ -844,10 +849,12 @@ final class SignalReviewTests: XCTestCase {
             Anchor("Summary", CGRect(x: 32, y: 547, width: 376, height: 24), white, top: 553.72, bottom: summaryBottom),
         ]
         for (option, y) in [("chatFirst", 602.0), ("okayToSayHello", 698.0)] {
+            // A row spans y to y + 84: the fill when not selected, the inside border when selected
+            // (its antialiased outer pixels resemble the selected fill, so the fill is not used).
             let selected = option == approach
-            anchors.append(Anchor("\(approachTitles[option] ?? option) row", CGRect(x: 32, y: y - 4, width: 376, height: 92),
-                                  selected ? selectedFill : tileFill,
-                                  top: selected ? y + 2 : y, bottom: selected ? y + 82 : y + 84))
+            anchors.append(Anchor("\(approachTitles[option] ?? option) row\(selected ? " border" : "")",
+                                  CGRect(x: 32, y: y - 4, width: 376, height: 92),
+                                  selected ? selectedStroke : tileFill, top: y, bottom: y + 84))
             // The radio: the disc's left half is light when selected, the row's fill when not.
             let disc = CGRect(x: 369.5, y: y + 38, width: 6, height: 4)
             anchors.append(Anchor("\(approachTitles[option] ?? option) radio \(selected ? "filled" : "empty")", disc,

@@ -656,13 +656,32 @@ only() {
 # one bounded run, its exit recorded in $OUT/runs.txt as "<name> <bundle> <exit> <retry>", its
 # attachments exported.
 lane_run() {
-    local name="$1" udid="$2" derived="$3" bundle="$4" seconds="$5" retry="$6" status=0
+    local name="$1" udid="$2" derived="$3" bundle="$4" seconds="$5" retry="$6" status=0 mark
     shift 6
     rm -rf "$OUT/$bundle.xcresult"
+    mark="$(wc -l < "$LOG" | tr -d ' ')"
     if [ "$retry" = "yes" ]; then
         xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     else
         RETRY="" xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
+    fi
+    # xcodebuild could not find the simulator at all (build 6ab7dbf0: exit 70 straight after the
+    # recorded journey; no test ran). That is neither a test failure nor a test retry: the simulator
+    # is booted again and the same tests run once more. Both runs are listed, the first as "infra";
+    # a second exit 70 fails the stage like any other run.
+    if [ "$status" -eq 70 ] && tail -n +"$((mark + 1))" "$LOG" | grep -q "Unable to find a device matching the provided destination specifier"; then
+        printf '%s %s %s %s\n' "${name}_destination_unavailable" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
+        note "xcodebuild could not find $udid (exit 70; no test ran). Booting it again and running the same tests once."
+        note "simctl: $(xcrun simctl list devices 2>&1 | grep "$udid" || echo "$udid not listed")"
+        run xcrun simctl boot "$udid" || true
+        run bounded "$(budget 180)" xcrun simctl bootstatus "$udid" -b || true
+        rm -rf "$OUT/$bundle.xcresult"
+        status=0
+        if [ "$retry" = "yes" ]; then
+            xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
+        else
+            RETRY="" xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
+        fi
     fi
     printf '%s %s %s %s\n' "$name" "$bundle" "$status" "$retry" >> "$OUT/runs.txt"
     LAST_RUN_STATUS="$status"
@@ -994,7 +1013,8 @@ for line in open(runs_path):
 # A run's exit: 0, or 65 only when that run shows a test that failed and then passed (xcodebuild exits
 # 65 when any attempt failed); never for the recorded journey, which is not retried. Anything else
 # (a timeout, a skip for time, 65 without such a test) fails the stage.
-bad_runs = [r for r in runs if not (r[2] == "0" or (r[2] == "65" and r[3] == "yes" and r[1] in retried_in))]
+infra = [r for r in runs if r[3] == "infra"]
+bad_runs = [r for r in runs if r[3] != "infra" and not (r[2] == "0" or (r[2] == "65" and r[3] == "yes" and r[1] in retried_in))]
 counts = {k: sum(1 for v in outcomes.values() if v == k) for k in ("passed", "failed", "skipped")}
 executed = counts["passed"] + counts["failed"]
 unique = {name for (_, name), outcome in outcomes.items() if outcome in ("passed", "failed")}
@@ -1012,10 +1032,14 @@ lines += ["scope=" + scope,
           "passed=%(passed)d" % counts, "failed=%(failed)d" % counts, "skipped=%(skipped)d" % counts,
           "required_passed=" + ("yes" if not missing else "no (" + "; ".join(missing) + ")"),
           "retried=" + ("; ".join(retried) if retried else "none"),
+          "infrastructure_reruns=" + ("; ".join("%s (bundle %s): xcodebuild exit %s, simulator not found, no test ran; "
+                                                "the same tests ran again" % (r[0], r[1], r[2]) for r in infra)
+                                      if infra else "none"),
           "flag_markers_in_log=" + " ".join(sorted(markers)),
           "walkthrough_started_epoch=%s" % (walk_start or "unknown"),
           "devices=main %s; device B %s; smaller %s" % (main_id, b_id or "not used", small_id or "not used")]
-lines += ["xcodebuild_exit_%s=%s (bundle %s, retry %s)" % (r[0], r[2], r[1], r[3]) for r in runs]
+lines += ["xcodebuild_exit_%s=%s (bundle %s, %s)" % (r[0], r[2], r[1], "no test ran; rerun" if r[3] == "infra"
+                                                      else "test retry " + r[3]) for r in runs]
 lines += ["result=" + ("PASS" if ok else "FAIL")]
 open(out_path, "w").write("\n".join(lines) + "\n")
 print("scope %s: %d unique cases, %d executions (passed %d, failed %d, skipped %d; %d retried after a failure); "
@@ -1177,6 +1201,7 @@ lines += ["    XCTest detail: %s unique test cases, %s executions (passed %s, fa
     tests.get("skipped", "?"), tests.get("flag_markers_in_log", "?"))]
 lines += ["    required: " + tests.get("required_passed", "?")]
 lines += ["    retried (failed, then run once more): " + tests.get("retried", "?")]
+lines += ["    infrastructure reruns (simulator not found, no test ran): " + tests.get("infrastructure_reruns", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
     lines += ["    " + line.strip() for line in open(path)

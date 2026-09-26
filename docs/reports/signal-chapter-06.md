@@ -166,10 +166,12 @@ Reported with each build's artifacts (`Signal-Review.zip`, `Signal-Regressions-R
    centre (a 16-pt frame at 6.5, 2), as on the board, rather than being re-centred.
 3. **The tag's rotation.** Figma reports −9°, but its relative matrix turns the tag clockwise on
    screen. The app reproduces the matrix: +9° about the top-left corner, then the offset.
-4. **Line breaks of the explanations** are left to iOS's wrapping in the 262-pt column, not
-   forced. The board breaks after "both" and after "to" ("…after you both / agree.", "…No
-   pressure to / continue."). Whether iOS matches this is checked on the captures, since Linux
-   cannot lay the text out.
+4. **Line breaks of the explanations follow the approved frames.** The board breaks each
+   explanation before its last word ("…after you both / agree.", "…No pressure to / continue.").
+   Left to itself, iOS moves one more word down to avoid a one-word last line, and simulator
+   build `6ab7dbf0` showed exactly that ("…after you / both agree."). So the row offers the
+   approved two lines first and falls back to natural wrapping only where they do not fit, on
+   narrower phones or at larger text sizes. VoiceOver reads the row's own label, not the lines.
 5. **The selection announcement** ("[Name] selected") is posted on each change, and the selected
    trait is set. Whether VoiceOver reads both is a manual check, as on the Wristband.
 6. **The disabled action's hint** "Choose an approach first." is new, short copy for
@@ -177,6 +179,11 @@ Reported with each build's artifacts (`Signal-Review.zip`, `Signal-Regressions-R
 7. **Portrait only**, as on the earlier chapters. Landscape and iPad are untested.
 8. **The legacy `confirmSignal`** now needs the legacy profile, like `confirmBand`, so the
    approved route cannot reach the legacy Ready scene.
-9. **Two builds per candidate.** All of the tests do not fit in one 28-minute build, so the run
+9. **The wordmark on a narrow phone at the largest sizes.** The shared header's wordmark cannot
+   shrink itself. On the 390-pt iPhone 17e at the largest accessibility size it truncated to
+   "Proxim…" (build `6ab7dbf0`), and the approved Wristband uses the same component. Signal's
+   header now falls back to a capped text size rather than truncating. The approved Wristband is
+   left unchanged; the same fix would suit it.
+10. **Two builds per candidate.** All of the tests do not fit in one 28-minute build, so the run
    input `SIGNAL_REVIEW_SCOPE` splits them, and both scopes run on the same pinned commit. Every
    build and minute is counted, and each result names its build.
