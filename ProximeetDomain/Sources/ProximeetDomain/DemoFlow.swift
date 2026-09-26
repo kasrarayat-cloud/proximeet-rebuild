@@ -77,16 +77,30 @@ public struct DemoFlow: Equatable, Sendable {
     }
 
     /// Continue on the approved Birthday screen. The committed date is re-checked against
-    /// `today` first. The next chapter (Pass) is not built, so an eligible result is returned
-    /// for the screen to say so and the flow does not advance. Returns `nil` off the
-    /// birthday scene.
+    /// `today` first; only an eligible committed date (the Birthday gate, unchanged) opens the
+    /// approved Pass. Anything else stays on Birthday. Returns the checked status, or `nil`
+    /// off the birthday scene, so a repeated Continue cannot push Pass twice.
     public mutating func continueFromBirthday(today: CivilDate) -> BirthdayStatus? {
         guard currentScene == .birthday else { return nil }
         draft.birthdayEntry.reevaluate(today: today)
+        if draft.birthdayEntry.canContinue {
+            advance(from: .birthday)
+        }
         return draft.birthdayEntry.status
     }
 
     // MARK: - Demo pass
+
+    /// Back or Leave demo on the approved Pass: returns to Birthday, whose draft is kept.
+    /// Only available on the pass scene, so a repeated Back cannot also leave Birthday.
+    @discardableResult
+    public mutating func leavePass() -> Bool {
+        guard currentScene == .demoPass else { return false }
+        return returnTo(.birthday)
+    }
+
+    /// The legacy onward route (Guest List). The approved Pass never calls it; it remains for
+    /// the DEBUG fixtures of later, not yet approved scenes.
 
     @discardableResult
     public mutating func continueFromPass() -> Bool {

@@ -21,7 +21,11 @@ public struct DemoDraft: Equatable, Sendable {
         switch scene {
         case .welcome, .birthday:
             return true
-        case .demoPass, .guestList:
+        case .demoPass:
+            // The approved Birthday gate: an eligible committed date. The legacy stored date
+            // remains for the DEBUG fixtures of later scenes.
+            return birthdayEntry.canContinue || dateOfBirth != nil
+        case .guestList:
             return dateOfBirth != nil
         case .band:
             return dateOfBirth != nil && profile != nil

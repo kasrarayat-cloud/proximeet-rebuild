@@ -220,7 +220,9 @@ final class BirthdayEntryTests: XCTestCase {
         XCTAssertEqual(flow.draft.birthdayEntry.draft.day, 12)
     }
 
-    func testEligibleContinueDoesNotAdvanceBecausePassIsPending() {
+    /// Intentionally changed with chapter 03: an eligible Continue now opens the approved Pass
+    /// (it used to stay on Birthday with a "Pass is next." notice).
+    func testEligibleContinueOpensThePassThroughTheBirthdayGate() {
         var flow = DemoFlow()
         flow.begin()
         flow.updateBirthday { entry in
@@ -230,8 +232,38 @@ final class BirthdayEntryTests: XCTestCase {
             entry.commit(today: today)
         }
         XCTAssertEqual(flow.continueFromBirthday(today: today), .eligible)
-        XCTAssertEqual(flow.currentScene, .birthday)
+        XCTAssertEqual(flow.currentScene, .demoPass)
         XCTAssertNil(flow.draft.dateOfBirth, "no legacy pass state is created")
+        XCTAssertNil(flow.continueFromBirthday(today: today), "a repeated Continue cannot push Pass twice")
+        XCTAssertEqual(flow.path, [.birthday, .demoPass])
+    }
+
+    func testOnlyAnEligibleCommittedDateOpensThePass() {
+        let cases: [(BirthdayComponents, BirthdayStatus)] = [
+            (BirthdayComponents(day: 12, month: 5, year: 2012), .underMinimumAge),
+            (BirthdayComponents(day: 12, month: 5, year: nil), .incomplete),
+            (BirthdayComponents(day: 31, month: 4, year: 1997), .impossible),
+            (BirthdayComponents(day: 12, month: 5, year: 2090), .future),
+            (BirthdayComponents(day: 12, month: 5, year: 97), .yearOutOfRange),
+        ]
+        for (components, expected) in cases {
+            var flow = DemoFlow()
+            flow.begin()
+            flow.updateBirthday { entry in
+                entry.setDay(components.day)
+                entry.setMonth(components.month)
+                entry.setYear(components.year)
+                entry.commit(today: today)
+            }
+            XCTAssertEqual(flow.continueFromBirthday(today: today), expected)
+            XCTAssertEqual(flow.currentScene, .birthday, "\(components) must not open the Pass")
+        }
+        // An adult date that is still being edited (not committed) cannot continue either.
+        var flow = DemoFlow()
+        flow.begin()
+        flow.updateBirthday { $0.setDay(12); $0.setMonth(5); $0.setYear(1997) }
+        XCTAssertEqual(flow.continueFromBirthday(today: today), .editing)
+        XCTAssertEqual(flow.currentScene, .birthday)
     }
 
     func testBackToWelcomeKeepsTheDraftForTheSameRun() {
