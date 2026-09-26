@@ -851,6 +851,7 @@ pattern = re.compile(r"Test [Cc]ase '(?:-\[)?(?:[\w.]*\.)?(WelcomeReviewTests|Bi
 # before them ("$ ... -destination platform=iOS Simulator,id=<UDID> ...").
 outcomes = {}
 history = {}
+run_history = {}
 durations = {}
 markers = set()
 walk_start = None
@@ -858,18 +859,21 @@ walk_start = None
 
 def scan(path, default_device):
     global walk_start
-    device = default_device
+    device, bundle = default_device, None
     if not os.path.isfile(path):
         return
     for line in open(path, encoding="utf-8", errors="replace"):
         started = re.search(r"^\$ .*-destination platform=iOS Simulator,id=([0-9A-F-]{36})", line)
         if started:
             device = started.group(1)
+            named = re.search(r"-resultBundlePath \S*?(\w+)\.xcresult", line)
+            bundle = named.group(1) if named else None
         match = pattern.search(line)
         if match:
             key = (device, "%s.%s" % (match.group(1), match.group(2)))
             outcomes[key] = match.group(3)
             history.setdefault(key, []).append(match.group(3))
+            run_history.setdefault((bundle, key[1]), []).append(match.group(3))
             if match.group(4):
                 durations[key] = match.group(4)
         for marker in ("WRISTBAND_REVIEW_FLAG_SEEN", "GUEST_LIST_REVIEW_FLAG_SEEN", "PASS_REVIEW_FLAG_SEEN",
@@ -924,19 +928,20 @@ counts = {k: sum(1 for v in outcomes.values() if v == k) for k in ("passed", "fa
 executed = counts["passed"] + counts["failed"]
 exits = {"walkthrough": walk_exit, "wristband_birthday_welcome": main_exit, "smaller": small_exit,
          "device_b_rest": b_exits.get("rest", "not run"), "device_b_keys": b_exits.get("keys", "not run")}
-# A retry is a failed attempt followed by a final pass on the same simulator.
-retried_on = {device for (device, name), runs in history.items() if "failed" in runs[:-1] and runs[-1] == "passed"}
+# A retry is a failed attempt followed by a final pass, within one xcodebuild run (named by its
+# result bundle: two runs can share a simulator).
+retried_in = {bundle for (bundle, name), runs in run_history.items() if "failed" in runs[:-1] and runs[-1] == "passed"}
 retried = sorted("%s[%s] %s" % (name, device if device not in (main_id, b_udid) else ("main" if device == main_id else "deviceB"),
                                 " then ".join(runs))
                  for (device, name), runs in history.items() if "failed" in runs[:-1])
 # xcodebuild exits 65 when any attempt failed, a retried one included. So 65 is accepted only for a
-# run whose simulator shows a test that failed and then passed; the recorded walkthrough (never
-# retried) must exit 0, and any other exit (65 without a retried test, a timeout, a skip for time)
-# fails the stage.
-segments = {"wristband_birthday_welcome": {main_id}, "device_b_rest": {b_udid or main_id},
-            "device_b_keys": {b_udid or main_id}, "smaller": set(small_ids)}
+# run that itself shows a test that failed and then passed; the recorded walkthrough (never retried)
+# must exit 0, and any other exit (65 without a retried test in that run, a timeout, a skip for
+# time) fails the stage.
+segments = {"wristband_birthday_welcome": "WristbandReview", "device_b_rest": "RegressionsB",
+            "device_b_keys": "GuestListHardwareKeysB", "smaller": "KeyboardSmaller"}
 ok = (executed > 0 and counts["failed"] == 0 and not missing
-      and all(str(v) == "0" or (str(v) == "65" and segments.get(k, set()) & retried_on)
+      and all(str(v) == "0" or (str(v) == "65" and segments.get(k) in retried_in)
               for k, v in exits.items()))
 label = {main_id: "main", b_udid: "deviceB"} if b_udid else {main_id: "main"}
 for (device, name), outcome in sorted(outcomes.items(), key=lambda item: (item[0][1], item[0][0])):
