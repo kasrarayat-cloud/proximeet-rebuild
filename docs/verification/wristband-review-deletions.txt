@@ -1,0 +1,6 @@
+# Files removed by earlier approved chapters (Welcome's, and Pass's legacy DemoPassView) and by the approved Wristband, which replaces the legacy BandSelectionView with WristbandView.
+# Files the approved Welcome change deletes relative to 7af76fafaaf51b729e008286570649ec3c79d209; the gate confirms they are absent.
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/Contents.json
+Proximeet/Resources/Assets.xcassets/SocialWorldsWelcome.imageset/social-worlds-welcome.png
+Proximeet/Scenes/DemoPassView.swift
+Proximeet/Scenes/BandSelectionView.swift

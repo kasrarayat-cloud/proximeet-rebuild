@@ -300,3 +300,68 @@ workflows:
       - build/artifacts/guest-list/*.txt
       - build/artifacts/guest-list/*.tsv
       - build/artifacts/guest-list/*.json
+
+  # Wristband (chapter 05) runtime review, with the Guest List keyboard follow-up. Manual start
+  # only: no triggering section, no code signing, Apple credentials, provisioning, archive/IPA,
+  # TestFlight, publishing, secrets or caching. Start it with the run input
+  # WRISTBAND_EXPECTED_COMMIT=<full SHA of the reviewed commit>; the source gate fails without it.
+  # 28 minutes: two under the 30-minute budget per build. The UI stage keeps its own deadline
+  # (scripts/wristband_review.sh) so the packages are always made. The regressions run on a second
+  # iPhone 17 Pro Max created on the build machine for this run and deleted after it.
+  proximeet-wristband-review:
+    name: Proximeet Wristband review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 28
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Wristband revision, its approved assets and the Wristband guard
+        script: bash scripts/wristband_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target, add a second one for the regressions, start booting both
+        script: bash scripts/wristband_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Wristband, Guest List, Pass and Birthday rules included)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: Wristband XCTest review - recorded walkthrough, every change, endpoint, relaunch, largest text; Guest List keyboard on two sizes; regressions
+        script: bash scripts/wristband_review.sh ui-review
+        ignore_failure: true
+      - name: Compact walkthrough video (half size, trimmed to the app; original kept)
+        script: bash scripts/wristband_review.sh compact-video
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/wristband_review.sh verdict
+        ignore_failure: true
+      - name: Package Wristband-Review.zip, Wristband-Screens.zip and the walkthrough downloads
+        script: bash scripts/wristband_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/wristband_review.sh enforce
+    artifacts:
+      - build/artifacts/Wristband-Review.zip
+      - build/artifacts/Wristband-Review.zip.sha256
+      - build/artifacts/Wristband-Screens.zip
+      - build/artifacts/Wristband-walkthrough-compact.zip
+      - build/artifacts/Wristband-walkthrough-compact.mp4
+      - build/artifacts/Wristband-walkthrough-original.zip
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/wristband/*.png
+      - build/artifacts/wristband/*.sha256
+      - build/artifacts/wristband/*.log
+      - build/artifacts/wristband/*.txt
+      - build/artifacts/wristband/*.tsv
+      - build/artifacts/wristband/*.json

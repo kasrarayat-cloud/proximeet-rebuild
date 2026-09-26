@@ -20,6 +20,10 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `guest-list-approved-files.sha256` | SHA-256 of the approved assets: those of the Pass, the Guest List card art, and the four `docs/design/*-approved/` folders |
 | `guest-list-review-files.sha256` | SHA-256 of every other file, except itself |
 | `guest-list-review-deletions.txt` | Files removed by the approved chapters; the Guest List gate confirms they are absent |
+| `wristband-mac-review.md` | The Wristband run: the manual, unsigned simulator workflow `proximeet-wristband-review`, its source gate, steps, the Guest List keyboard follow-up and downloads |
+| `wristband-approved-files.sha256` | SHA-256 of the approved assets: those of the Guest List, the four Wristband artworks, and the five `docs/design/*-approved/` folders |
+| `wristband-review-files.sha256` | SHA-256 of every other file, except itself |
+| `wristband-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `BandSelectionView.swift`; the Wristband gate confirms they are absent |
 
 The harness consists of:
 - `scripts/welcome_review.sh`: the steps checkpoint, destinations, captures, ui-review and verdict;
@@ -29,5 +33,7 @@ The harness consists of:
 - `ProximeetUITests/PassReviewTests.swift`: skipped unless the runner gets `PROXIMEET_PASS_REVIEW=1`;
 - `scripts/guest_list_review.sh`: the Guest List steps, reusing `scripts/compact_video.swift`;
 - `ProximeetUITests/GuestListReviewTests.swift`: skipped unless the runner gets `PROXIMEET_GUEST_LIST_REVIEW=1`;
+- `scripts/wristband_review.sh`: the Wristband steps, with a second iPhone 17 Pro Max for the regressions and a time budget;
+- `ProximeetUITests/WristbandReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WRISTBAND_REVIEW=1`;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.
