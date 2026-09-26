@@ -30,7 +30,9 @@ enum Fixture {
     static let firstName = "Fixture"
     static let interests = ["Bouldering", "Film photography", "Board games"]
 
-    /// Drives a fresh flow through the public API until `target` is the current scene.
+    /// Drives a fresh flow through the public API until `target` is the current scene: the legacy
+    /// route up to Signal and its ready summary; Places through the approved Signal's Continue
+    /// preview, View place and Preview check-in (so `.placeExplanation` needs an eligible `band`).
     static func flow(
         at target: DemoScene,
         band: BandIntent = .social,
@@ -54,8 +56,16 @@ enum Fixture {
             case .band:
                 moved = flow.selectBand(band) && flow.confirmBand()
             case .signal:
-                moved = flow.selectSignal(signal) && flow.confirmSignal()
-            case .readyForCheckIn:
+                if [.places, .placeDetail, .placeExplanation].contains(target) {
+                    moved = flow.selectSignal(signal) && flow.openPlaces()
+                } else {
+                    moved = flow.selectSignal(signal) && flow.confirmSignal()
+                }
+            case .places:
+                moved = flow.openPlaceDetail()
+            case .placeDetail:
+                moved = flow.previewCheckIn()
+            case .readyForCheckIn, .placeExplanation:
                 moved = false
             }
             guard moved else {

@@ -39,7 +39,8 @@ final class SignalReviewTests: XCTestCase {
     /// icon dissolves); the active row again (nothing changes); Back to the Wristband, Dating,
     /// Continue preview (Dating's band, Okay to say hello kept, attached at once); Back to the
     /// card, Edit introduction, a change to the opener, the card, the Wristband (Dating kept),
-    /// Signal (both kept); and "End of this preview." with OK, staying on the choice.
+    /// Signal (both kept); and Continue preview, which opens the approved Places (chapter 07) at Now,
+    /// whose Back returns to this Signal with both values kept.
     func testWalkthroughRealJourney() throws {
         print("SIGNAL_WALKTHROUGH_START \(Date().timeIntervalSince1970)")
         let app = launchWelcome()
@@ -139,13 +140,16 @@ final class SignalReviewTests: XCTestCase {
         assertState(signal, intent: "dating", approach: "okayToSayHello")
         capture("signal-journey-after-edit-kept", app)
 
+        // Continue preview: Places (chapter 07) at Now, replacing the earlier end-of-preview
+        // message; its Back returns to this Signal.
         signal.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 10), "Continue preview shows the end-of-preview message.")
+        let places = app.descendants(matching: .any).matching(identifier: "places.headline").firstMatch
+        waitForLabel(places, "Find your kind of place.")
+        XCTAssertTrue(app.buttons["places.tab.now"].isSelected, "The first entry opens Now.")
         hold(0.8)
-        capture("signal-journey-endpoint", app)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
+        capture("signal-journey-continue-places", app)
+        app.buttons["places.back"].tap()
+        waitForLabel(signal.headline, "A hello, on your terms.")
         assertState(signal, intent: "dating", approach: "okayToSayHello")
         hold(1.0)
     }
@@ -230,7 +234,8 @@ final class SignalReviewTests: XCTestCase {
     }
 
     /// Direct launch (fixture `signal`, Activity, then Dating and Social): rapid changes leave the
-    /// last choice; Continue preview during a change, Back during the first movement, and the app
+    /// last choice; Continue preview during a change (Places opens; its Back returns with the choice
+    /// unchanged), Back during the first movement, and the app
     /// sent to the background during the first movement and resumed, each leave the model and the
     /// drawn state consistent: the attached tag with the chosen icon, the summary and Continue.
     func testRapidChangesAndInterruptionsStayConsistent() throws {
@@ -250,15 +255,15 @@ final class SignalReviewTests: XCTestCase {
         }
         capture("signal-after-rapid-changes-fixture", app)
 
-        // Continue preview during a change: one message, the choice unchanged.
+        // Continue preview during a change: Places opens; its Back returns with the choice unchanged.
         signal.row("chatFirst").tap()
         signal.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 10))
-        XCTAssertEqual(app.alerts.count, 1)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
+        let places = app.descendants(matching: .any).matching(identifier: "places.headline").firstMatch
+        waitForLabel(places, "Find your kind of place.")
+        app.buttons["places.back"].tap()
+        waitForLabel(signal.headline, "A hello, on your terms.")
         hold(0.6)
+        XCTAssertFalse(places.exists, "One Back from Places returns to Signal.")
         assertState(signal, intent: "activity", approach: "chatFirst")
         softly {
             guard let shot = RenderedScreen(app) else { return }
@@ -311,7 +316,8 @@ final class SignalReviewTests: XCTestCase {
     // MARK: - Endpoint and duplicate taps
 
     /// Direct launch (fixture `signal-selected`, Business, Chat first): a double tap on Continue
-    /// preview shows one message and stays; a double tap on either Back stops at the Wristband;
+    /// preview opens Places, and one Back returns to Signal with both values kept (the single push
+    /// is proved in the domain); a double tap on either Back stops at the Wristband;
     /// re-entry keeps both values; nothing claims a Wave, chat, match, verification or visibility.
     func testEndpointDuplicateTapsAndBack() throws {
         let app = launch(fixture: "signal-selected", band: "business", approach: "chatFirst")
@@ -322,13 +328,15 @@ final class SignalReviewTests: XCTestCase {
         assertNothingConferred(app)
 
         signal.primary.doubleTap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 10))
+        let places = app.descendants(matching: .any).matching(identifier: "places.headline").firstMatch
+        waitForLabel(places, "Find your kind of place.")
         hold(0.8)
-        XCTAssertEqual(app.alerts.count, 1, "A double tap shows one message.")
-        capture("signal-endpoint-fixture", app)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
+        capture("signal-continue-places-fixture", app)
+        app.buttons["places.back"].tap()
+        waitForLabel(signal.headline, "A hello, on your terms.")
+        hold(0.6)
+        XCTAssertFalse(places.exists, "After a double tap on Continue preview, one Back returns to Signal (the single push "
+                       + "is proved in the domain: SignalRouteTests testContinuePreviewOpensPlacesOnceAndTheLegacyReadyIsUnreachable).")
         assertState(signal, intent: "business", approach: "chatFirst")
 
         signal.back.doubleTap()

@@ -174,17 +174,25 @@ final class SignalRouteTests: XCTestCase {
         XCTAssertNil(flow.draft.signal)
     }
 
-    // MARK: - The endpoint
+    // MARK: - The endpoint: Places (chapter 07)
 
-    func testContinuePreviewNeverNavigatesAndTheLegacyReadyIsUnreachable() {
+    /// Intentionally changed with chapter 07: Continue preview, once available, opens Places (Now,
+    /// the first time) instead of showing "End of this preview.". The legacy ready summary stays
+    /// unreachable, and a repeated Continue pushes nothing.
+    func testContinuePreviewOpensPlacesOnceAndTheLegacyReadyIsUnreachable() {
         var flow = SignalRoute.onSignal(.dating)
+        XCTAssertFalse(flow.openPlaces(), "no approach, no Places")
         flow.chooseApproach(.okayToSayHello)
-        let before = flow
-        for _ in 0..<3 {
-            XCTAssertTrue(flow.continueSignalPreview())
-        }
+        XCTAssertTrue(flow.continueSignalPreview())
         XCTAssertFalse(flow.confirmSignal(), "the legacy route needs the legacy profile")
-        XCTAssertEqual(flow, before, "Places does not exist; nothing moves")
+        XCTAssertTrue(flow.openPlaces())
+        XCTAssertEqual(flow.path, [.birthday, .demoPass, .guestList, .band, .signal, .places])
+        XCTAssertEqual(flow.placesCategory, .now)
+        XCTAssertFalse(flow.openPlaces(), "a repeated Continue preview pushes nothing")
+        XCTAssertFalse(flow.continueSignalPreview(), "Continue preview belongs to Signal")
+        XCTAssertEqual(flow.path.count, 6)
+        XCTAssertEqual(flow.draft.band, .dating)
+        XCTAssertEqual(flow.draft.signal, .okayToSayHello)
         XCTAssertNil(flow.readiness)
     }
 

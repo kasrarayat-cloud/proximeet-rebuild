@@ -33,7 +33,14 @@ final class AgeGateReturnTests: XCTestCase {
         XCTAssertFalse(flow.continueFromWristband(), state, file: file, line: line)
         XCTAssertFalse(flow.chooseApproach(.okayToSayHello), state, file: file, line: line)
         XCTAssertFalse(flow.continueSignalPreview(), state, file: file, line: line)
-        for tail in [[DemoScene.demoPass], [.demoPass, .guestList], [.demoPass, .guestList, .band, .signal]] {
+        XCTAssertFalse(flow.openPlaces(), "\(state): Places", file: file, line: line)
+        XCTAssertFalse(flow.openPlaceDetail(), "\(state): a venue's detail", file: file, line: line)
+        XCTAssertFalse(flow.previewCheckIn(), "\(state): the check-in explanation", file: file, line: line)
+        for place in [DemoScene.places, .placeDetail, .placeExplanation] {
+            XCTAssertFalse(flow.draft.meetsRequirements(for: place), "\(state): \(place)", file: file, line: line)
+        }
+        for tail in [[DemoScene.demoPass], [.demoPass, .guestList], [.demoPass, .guestList, .band, .signal],
+                     [.demoPass, .guestList, .band, .signal, .places, .placeDetail, .placeExplanation]] {
             XCTAssertFalse(flow.adoptNavigationPath([.birthday] + tail), "\(state): a pushed path", file: file, line: line)
         }
         XCTAssertFalse(flow.draft.meetsRequirements(for: .demoPass), state, file: file, line: line)

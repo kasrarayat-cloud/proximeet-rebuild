@@ -313,7 +313,8 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertEqual(summary.visibility, .notVisibleToAnyone)
         XCTAssertEqual(summary.visibility.notice, "Demo — not visible to anyone")
         XCTAssertEqual(DraftVisibility.allCases, [.notVisibleToAnyone])
-        XCTAssertNil(DemoScene.readyForCheckIn.next, "No check-in, presence or venue scene exists")
+        XCTAssertNil(DemoScene.readyForCheckIn.next, "The legacy summary ends its branch")
+        XCTAssertNil(DemoScene.placeExplanation.next, "Places ends at an explanation: no check-in, presence or Room")
 
         let before = flow
         XCTAssertFalse(flow.begin())

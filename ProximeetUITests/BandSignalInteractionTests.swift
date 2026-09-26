@@ -7,7 +7,7 @@ import XCTest
 ///
 /// Updated for the approved flow: the legacy band and signal screens (`band.confirm`,
 /// `intent.*`, four `signal.*` choices) and the Ready scene with its 3D hero are no longer
-/// reachable from the approved route; Signal's Continue preview ends the preview. Those legacy
+/// reachable from the approved route; Signal's Continue preview opens the approved Places. Those legacy
 /// assertions are retired. The approved screens are covered in full by `WristbandReviewTests` and
 /// `SignalReviewTests` (every state, pixels, endpoint, taps, Reduce Motion, largest text).
 @MainActor
@@ -74,11 +74,13 @@ final class BandSignalInteractionTests: XCTestCase {
         capture("05-chat-first-reselected", app)
 
         continueSignal.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5), "Signal's Continue preview ends the preview.")
-        capture("06-endpoint", app)
-        end.buttons["OK"].tap()
-        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].isSelected, "The message stays on Signal.")
+        let places = app.descendants(matching: .any).matching(identifier: "places.headline").firstMatch
+        XCTAssertTrue(places.waitForExistence(timeout: 10), "Signal's Continue preview opens Places.")
+        XCTAssertTrue(app.buttons["places.tab.now"].isSelected, "The first entry opens Now.")
+        capture("06-places", app)
+        app.buttons["places.back"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].isSelected, "Back returns to Signal with the choice kept.")
     }
 
     /// App-level Reduce Motion preview flag (not the system setting): every change is immediate.
@@ -99,8 +101,9 @@ final class BandSignalInteractionTests: XCTestCase {
         XCTAssertEqual(summary(app), "Activity band · Chat first")
         capture("07-reduced-motion-signal", app)
         app.buttons["signal.primary"].tap()
-        XCTAssertTrue(app.alerts["End of this preview."].waitForExistence(timeout: 5))
-        capture("08-reduced-motion-endpoint", app)
+        let places = app.descendants(matching: .any).matching(identifier: "places.headline").firstMatch
+        XCTAssertTrue(places.waitForExistence(timeout: 10), "Continue preview opens Places.")
+        capture("08-reduced-motion-places", app)
     }
 
     private func summary(_ app: XCUIApplication) -> String {
