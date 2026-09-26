@@ -36,8 +36,8 @@ public struct GuestListDemo: Equatable, Sendable {
         return true
     }
 
-    /// "Continue preview" on the card: the review ends here. Returns whether the end-of-preview
-    /// message should be shown; the stage never changes, and no later chapter exists.
+    /// "Continue preview" on the card. Returns whether the card may move on: the stage never
+    /// changes, and `DemoFlow.continueFromGuestListCard` then opens the approved Wristband.
     public func continuePreview() -> Bool {
         stage == .card
     }

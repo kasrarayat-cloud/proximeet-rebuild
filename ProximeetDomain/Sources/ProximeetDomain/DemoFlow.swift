@@ -153,12 +153,53 @@ public struct DemoFlow: Equatable, Sendable {
         }
     }
 
+    /// The legacy onward route from a saved profile. The approved Guest List never calls it; it
+    /// remains for the DEBUG fixtures of later, not yet approved scenes.
     @discardableResult
     public mutating func continueFromGuestList() -> Bool {
-        advance(from: .guestList)
+        guard draft.profile != nil else { return false }
+        return advance(from: .guestList)
     }
 
-    // MARK: - Band
+    // MARK: - Wristband (approved, chapter 05)
+
+    /// Continue preview on the approved Guest List card: opens the approved Wristband. Only the
+    /// card stage of a previewable introduction on the guest list scene moves on, so a repeated
+    /// tap (the scene is then the band) or the editor does nothing. The introduction and any
+    /// earlier intent are kept.
+    @discardableResult
+    public mutating func continueFromGuestListCard(_ demo: GuestListDemo) -> Bool {
+        guard demo.continuePreview(), draft.introduction.canPreview else { return false }
+        return advance(from: .guestList)
+    }
+
+    /// Chooses the single current intent on the approved Wristband. Returns whether it changed:
+    /// the chosen intent replaces any other, and choosing the current one again does nothing (it
+    /// never clears the choice). Only available on the band scene.
+    @discardableResult
+    public mutating func chooseIntent(_ intent: BandIntent) -> Bool {
+        guard currentScene == .band, draft.band != intent else { return false }
+        draft.band = intent
+        return true
+    }
+
+    /// Continue preview on the approved Wristband: available once an intent is chosen. Returns
+    /// whether the end-of-preview message should be shown; nothing navigates, and no later
+    /// chapter exists.
+    public func continueWristbandPreview() -> Bool {
+        currentScene == .band && draft.band != nil
+    }
+
+    /// Back on the approved Wristband: returns to the Guest List, whose card is still below it.
+    /// The introduction and the intent are kept. Only available on the band scene, so a repeated
+    /// Back cannot also leave the Guest List.
+    @discardableResult
+    public mutating func leaveWristband() -> Bool {
+        guard currentScene == .band else { return false }
+        return returnTo(.guestList)
+    }
+
+    // MARK: - Band (legacy, DEBUG fixtures of later scenes)
 
     /// Replaces any previous band choice. Only available on the band scene.
     @discardableResult
@@ -168,10 +209,12 @@ public struct DemoFlow: Equatable, Sendable {
         return true
     }
 
-    /// Confirms the selected band and moves to the signal scene.
+    /// Confirms the selected band and moves to the (unapproved) signal scene. Legacy route only:
+    /// it needs the legacy profile, so the approved Wristband can never reach Signal.
     @discardableResult
     public mutating func confirmBand() -> Bool {
-        advance(from: .band)
+        guard draft.profile != nil else { return false }
+        return advance(from: .band)
     }
 
     // MARK: - Signal

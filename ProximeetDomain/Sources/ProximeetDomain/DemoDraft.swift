@@ -14,6 +14,8 @@ public struct DemoDraft: Equatable, Sendable {
     /// going Back to Pass, so returning within the same demo run shows it again.
     public internal(set) var introduction = GuestIntroduction()
     public internal(set) var profile: GuestProfile?
+    /// The approved Wristband's single current intent: none until the guest chooses one, then
+    /// exactly one. Kept when going Back to the Guest List card, so returning shows it again.
     public internal(set) var band: BandIntent?
     public internal(set) var signal: ApproachSignal?
 
@@ -33,7 +35,9 @@ public struct DemoDraft: Equatable, Sendable {
             // checked by `DemoFlow.continueFromCompletedPass`.
             return meetsRequirements(for: .demoPass)
         case .band:
-            return dateOfBirth != nil && profile != nil
+            // The approved route: from a previewable Guest List introduction, through the same
+            // Birthday gate. The legacy profile remains for the DEBUG fixtures of later scenes.
+            return meetsRequirements(for: .guestList) && (introduction.canPreview || profile != nil)
         case .signal:
             return meetsRequirements(for: .band) && band != nil
         case .readyForCheckIn:
