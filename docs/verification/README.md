@@ -12,10 +12,16 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `birthday-mac-review.md` | The Birthday run: the manual, unsigned simulator workflow `proximeet-birthday-review`, its source gate, steps and `Birthday-Review.zip` |
 | `birthday-approved-files.sha256` | SHA-256 of the approved assets: Welcome poses, Manrope faces and licence, the Birthday housing, and `docs/design/welcome-approved/` and `docs/design/birthday-approved/` |
 | `birthday-review-files.sha256` | SHA-256 of every other file, except itself |
+| `pass-mac-review.md` | The Pass run: the manual, unsigned simulator workflow `proximeet-pass-review`, its source gate, steps and downloads |
+| `pass-approved-files.sha256` | SHA-256 of the approved assets: Welcome poses, Manrope faces and licence, the Birthday housing, the Pass artwork, and the three `docs/design/*-approved/` folders |
+| `pass-review-files.sha256` | SHA-256 of every other file, except itself |
+| `pass-review-deletions.txt` | Files removed by the approved chapters (Welcome's, and the legacy `DemoPassView.swift`); the Pass gate confirms they are absent |
 
 The harness consists of:
 - `scripts/welcome_review.sh`: the steps checkpoint, destinations, captures, ui-review and verdict;
 - `scripts/birthday_review.sh`: the Birthday steps, including package-review and enforce;
 - `ProximeetUITests/BirthdayReviewTests.swift`: skipped unless the runner gets `PROXIMEET_BIRTHDAY_REVIEW=1`;
+- `scripts/pass_review.sh` and `scripts/compact_video.swift`: the Pass steps and the compact walkthrough video;
+- `ProximeetUITests/PassReviewTests.swift`: skipped unless the runner gets `PROXIMEET_PASS_REVIEW=1`;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.

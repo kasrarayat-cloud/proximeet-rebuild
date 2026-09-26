@@ -166,3 +166,71 @@ workflows:
       - build/artifacts/birthday/*.tsv
       - build/artifacts/birthday/*.json
       - build/artifacts/birthday/*.zip
+
+  # Pass (chapter 03) runtime review. Manual start only, like the Welcome and Birthday reviews:
+  # no triggering section, no code signing, Apple credentials, provisioning, archive/IPA,
+  # TestFlight, publishing, notifications or environment groups. Compile-path steps stop the
+  # build on failure; evidence steps use ignore_failure so later evidence is still collected;
+  # Pass-Review.zip and the separate downloads are packaged, and the last step fails the build
+  # unless every required automated result passed. Run input PASS_EXPECTED_COMMIT (full commit
+  # SHA) pins the exact revision. See docs/verification/pass-mac-review.md.
+  proximeet-pass-review:
+    name: Proximeet Pass review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Pass revision, its approved assets and the Pass guard
+        script: bash scripts/pass_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: List installed destinations and report the iPhone 17 Pro Max target
+        script: bash scripts/pass_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Pass and Birthday rules included)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: Pass fixture captures - intro, Reduce Motion preview flag, largest text, smaller iPhone
+        script: bash scripts/pass_review.sh captures
+        ignore_failure: true
+      - name: Pass XCTest review - recorded walkthrough, guards, Reduce Motion preview, Birthday and Welcome regressions
+        script: bash scripts/pass_review.sh ui-review
+        ignore_failure: true
+      - name: Compact walkthrough video (half size, trimmed to the walkthrough; original kept)
+        script: bash scripts/pass_review.sh compact-video
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/pass_review.sh verdict
+        ignore_failure: true
+      - name: Package Pass-Review.zip, Pass-Screens.zip and the walkthrough downloads
+        script: bash scripts/pass_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/pass_review.sh enforce
+    artifacts:
+      - build/artifacts/Pass-Review.zip
+      - build/artifacts/Pass-Review.zip.sha256
+      - build/artifacts/Pass-Screens.zip
+      - build/artifacts/Pass-walkthrough-compact.zip
+      - build/artifacts/Pass-walkthrough-compact.mp4
+      - build/artifacts/Pass-walkthrough-original.zip
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/pass/*.png
+      - build/artifacts/pass/*.sha256
+      - build/artifacts/pass/*.log
+      - build/artifacts/pass/*.txt
+      - build/artifacts/pass/*.tsv
+      - build/artifacts/pass/*.json
