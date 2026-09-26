@@ -36,7 +36,7 @@ final class WristbandRouteTests: XCTestCase {
         XCTAssertFalse(flow.continueFromGuestList(), "the legacy route needs the legacy profile")
         flow = WristbandRoute.onWristband()
         flow.chooseIntent(.social)
-        XCTAssertFalse(flow.confirmBand(), "the approved Wristband never reaches Signal")
+        XCTAssertFalse(flow.confirmBand(), "the legacy route needs the legacy profile")
         XCTAssertEqual(flow.currentScene, .band)
     }
 
@@ -45,7 +45,7 @@ final class WristbandRouteTests: XCTestCase {
     func testAFreshWristbandHasNoIntentAndNoContinue() {
         let flow = WristbandRoute.onWristband()
         XCTAssertNil(flow.draft.band, "no default, nothing inferred from the introduction")
-        XCTAssertFalse(flow.continueWristbandPreview())
+        XCTAssertFalse(flow.canContinueFromWristband)
         XCTAssertEqual(WristbandSummary(choice: flow.draft.band),
                        WristbandSummary(choice: nil))
         XCTAssertEqual(WristbandSummary(choice: nil).title, "Your moment. Your choice.")
@@ -61,8 +61,8 @@ final class WristbandRouteTests: XCTestCase {
                 let changed = flow.chooseIntent(target)
                 XCTAssertEqual(flow.draft.band, target, "\(String(describing: start)) → \(target)")
                 XCTAssertEqual(changed, start != target, "\(String(describing: start)) → \(target) reports a change only when it is one")
-                XCTAssertTrue(flow.continueWristbandPreview())
-                XCTAssertEqual(flow.currentScene, .band, "nothing advances")
+                XCTAssertTrue(flow.canContinueFromWristband)
+                XCTAssertEqual(flow.currentScene, .band, "nothing advances on its own")
             }
         }
     }
@@ -89,7 +89,8 @@ final class WristbandRouteTests: XCTestCase {
         var flow = WristbandRoute.onGuestList(named: "Alex")
         let before = flow
         XCTAssertFalse(flow.chooseIntent(.dating))
-        XCTAssertFalse(flow.continueWristbandPreview())
+        XCTAssertFalse(flow.canContinueFromWristband)
+        XCTAssertFalse(flow.continueFromWristband())
         XCTAssertFalse(flow.leaveWristband())
         XCTAssertEqual(flow, before)
     }
@@ -159,8 +160,8 @@ final class WristbandRouteTests: XCTestCase {
         var flow = WristbandRoute.onWristband()
         let birthday = flow.draft.birthdayEntry
         for intent in BandIntent.allCases { flow.chooseIntent(intent) }
-        XCTAssertTrue(flow.continueWristbandPreview())
-        XCTAssertEqual(flow.path, [.birthday, .demoPass, .guestList, .band], "no later scene")
+        XCTAssertTrue(flow.canContinueFromWristband)
+        XCTAssertEqual(flow.path, [.birthday, .demoPass, .guestList, .band], "choosing opens no later scene")
         XCTAssertNil(flow.draft.dateOfBirth)
         XCTAssertEqual(flow.draft.birthdayEntry, birthday)
         XCTAssertNil(flow.draft.profile)

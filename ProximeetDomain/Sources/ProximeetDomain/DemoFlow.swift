@@ -183,11 +183,19 @@ public struct DemoFlow: Equatable, Sendable {
         return true
     }
 
-    /// Continue preview on the approved Wristband: available once an intent is chosen. Returns
-    /// whether the end-of-preview message should be shown; nothing navigates, and no later
-    /// chapter exists.
-    public func continueWristbandPreview() -> Bool {
+    /// Whether Continue preview on the approved Wristband is available: only once an intent is
+    /// chosen, so Signal can never open without one.
+    public var canContinueFromWristband: Bool {
         currentScene == .band && draft.band != nil
+    }
+
+    /// Continue preview on the approved Wristband: opens the approved Signal carrying the chosen
+    /// intent. Without an intent, or off the band scene (a repeated tap), it does nothing. The
+    /// introduction, the intent and any earlier approach are kept.
+    @discardableResult
+    public mutating func continueFromWristband() -> Bool {
+        guard canContinueFromWristband else { return false }
+        return advance(from: .band)
     }
 
     /// Back on the approved Wristband: returns to the Guest List, whose card is still below it.
@@ -209,15 +217,44 @@ public struct DemoFlow: Equatable, Sendable {
         return true
     }
 
-    /// Confirms the selected band and moves to the (unapproved) signal scene. Legacy route only:
-    /// it needs the legacy profile, so the approved Wristband can never reach Signal.
+    /// Confirms the selected band and moves to the signal scene. Legacy route only: it needs the
+    /// legacy profile; the approved Wristband uses `continueFromWristband()`.
     @discardableResult
     public mutating func confirmBand() -> Bool {
         guard draft.profile != nil else { return false }
         return advance(from: .band)
     }
 
-    // MARK: - Signal
+    // MARK: - Signal (approved, chapter 06)
+
+    /// Chooses the single current approach on the approved Signal. Returns whether it changed:
+    /// the chosen approach replaces the other, and choosing the current one again does nothing (it
+    /// never clears the choice). Only available on the signal scene, which always carries an
+    /// intent. Nothing is sent, accepted, opened or granted.
+    @discardableResult
+    public mutating func chooseApproach(_ approach: ApproachSignal) -> Bool {
+        guard currentScene == .signal, draft.band != nil, draft.signal != approach else { return false }
+        draft.signal = approach
+        return true
+    }
+
+    /// Continue preview on the approved Signal: available once an approach is chosen. Returns
+    /// whether the end-of-preview message should be shown; nothing navigates, and Places does not
+    /// exist.
+    public func continueSignalPreview() -> Bool {
+        currentScene == .signal && draft.band != nil && draft.signal != nil
+    }
+
+    /// Back on the approved Signal: returns to the Wristband, still below it, with the intent and
+    /// the approach kept. Only available on the signal scene, so a repeated Back cannot also leave
+    /// the Wristband.
+    @discardableResult
+    public mutating func leaveSignal() -> Bool {
+        guard currentScene == .signal else { return false }
+        return returnTo(.band)
+    }
+
+    // MARK: - Signal (legacy, DEBUG fixtures of later scenes)
 
     /// Replaces any previous signal choice. Only available on the signal scene.
     @discardableResult
@@ -227,10 +264,12 @@ public struct DemoFlow: Equatable, Sendable {
         return true
     }
 
-    /// Confirms the selected signal and moves to the ready summary.
+    /// Confirms the selected signal and moves to the (unapproved) ready summary. Legacy route
+    /// only: it needs the legacy profile, so the approved Signal can never reach it.
     @discardableResult
     public mutating func confirmSignal() -> Bool {
-        advance(from: .signal)
+        guard draft.profile != nil else { return false }
+        return advance(from: .signal)
     }
 
     // MARK: - Navigation

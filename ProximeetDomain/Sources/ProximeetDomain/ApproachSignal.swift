@@ -1,30 +1,37 @@
-/// How a guest would prefer to be approached. In this demo it is a draft choice only;
-/// nothing is enforced and nobody else can see it.
+/// Chapter 06, the approved Signal: how a guest would prefer a hello to begin. It is the draft's
+/// one optional approach (`DemoDraft.signal`): none on a fresh run, then exactly one of these.
+///
+/// A preference, not continuing consent: either person can change their mind. Choosing it sends or
+/// accepts no Wave, opens no chat, creates no match and grants no permission to approach or
+/// message. Nobody else can see it in this demo.
 public enum ApproachSignal: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case comeSayHi
     case chatFirst
-    case withMyCrew
-    case justLooking
+    case okayToSayHello
 
     public var id: String { rawValue }
 
-    /// The label machined into the tag.
+    /// The choice's name, as the row and the summary show it.
     public var title: String {
         switch self {
-        case .comeSayHi: return "Come say hi"
         case .chatFirst: return "Chat first"
-        case .withMyCrew: return "With my crew"
-        case .justLooking: return "Just looking"
+        case .okayToSayHello: return "Okay to say hello"
         }
     }
 
-    /// Brief neutral description of the preference.
+    /// The approved explanation under the name.
     public var summary: String {
         switch self {
-        case .comeSayHi: return "Happy for someone to walk over and say hello."
-        case .chatFirst: return "Would rather exchange a few messages before meeting."
-        case .withMyCrew: return "Out with friends right now. Keep it relaxed."
-        case .justLooking: return "Getting a feel for the place for now."
+        case .chatFirst: return "Start with a Wave. Chat after you both agree."
+        case .okayToSayHello: return "Open to a brief hello. No pressure to continue."
         }
+    }
+}
+
+/// The Signal summary line for the carried intent and the current approach, or for none.
+public struct SignalSummary: Equatable, Sendable {
+    public let title: String
+
+    public init(intent: BandIntent, approach: ApproachSignal?) {
+        title = "\(intent.title) band · \(approach?.title ?? "Choose your approach")"
     }
 }

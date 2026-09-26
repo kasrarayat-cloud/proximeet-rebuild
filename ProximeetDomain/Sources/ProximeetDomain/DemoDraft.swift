@@ -17,6 +17,9 @@ public struct DemoDraft: Equatable, Sendable {
     /// The approved Wristband's single current intent: none until the guest chooses one, then
     /// exactly one. Kept when going Back to the Guest List card, so returning shows it again.
     public internal(set) var band: BandIntent?
+    /// The approved Signal's single current approach: none until the guest chooses one, then
+    /// exactly one. Separate from the intent and kept when the intent changes, when going Back to
+    /// the Wristband and when earlier chapters are edited.
     public internal(set) var signal: ApproachSignal?
 
     public init() {}
@@ -28,8 +31,10 @@ public struct DemoDraft: Equatable, Sendable {
             return true
         case .demoPass:
             // The approved Birthday gate: an eligible committed date. The legacy stored date
-            // remains for the DEBUG fixtures of later scenes.
-            return birthdayEntry.canContinue || dateOfBirth != nil
+            // counts only while the approved entry is untouched (the DEBUG fixtures of later,
+            // legacy scenes), so an old adult date can never stand in for an entry the guest has
+            // since changed to an under-18, incomplete or impossible one.
+            return birthdayEntry.canContinue || (birthdayEntry.status == .empty && dateOfBirth != nil)
         case .guestList:
             // Through the Pass, so through the same Birthday gate. Completing the Pass demo is
             // checked by `DemoFlow.continueFromCompletedPass`.

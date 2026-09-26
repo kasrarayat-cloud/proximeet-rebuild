@@ -45,7 +45,7 @@ final class DemoFlowInvariantTests: XCTestCase {
         case 4: return .continueFromGuestList
         case 5: return .selectBand(BandIntent.allCases[rng.next(below: 4)])
         case 6: return .confirmBand
-        case 7: return .selectSignal(ApproachSignal.allCases[rng.next(below: 4)])
+        case 7: return .selectSignal(ApproachSignal.allCases[rng.next(below: ApproachSignal.allCases.count)])
         case 8: return .confirmSignal
         case 9: return .goBack
         case 10: return .returnTo(DemoScene.allCases[rng.next(below: DemoScene.allCases.count)])

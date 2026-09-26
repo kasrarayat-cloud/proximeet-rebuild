@@ -29,13 +29,13 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertFalse(flow.continueFromGuestList())
         XCTAssertFalse(flow.selectBand(.social))
         XCTAssertFalse(flow.confirmBand())
-        XCTAssertFalse(flow.selectSignal(.comeSayHi))
+        XCTAssertFalse(flow.selectSignal(.okayToSayHello))
         XCTAssertFalse(flow.confirmSignal())
         XCTAssertEqual(flow, before, "Rejected actions must not change any state")
 
         var atBand = Fixture.flow(at: .band)
         let bandBefore = atBand
-        XCTAssertFalse(atBand.selectSignal(.justLooking))
+        XCTAssertFalse(atBand.selectSignal(.okayToSayHello))
         XCTAssertFalse(atBand.confirmSignal())
         XCTAssertEqual(atBand.saveProfile(firstName: "Other", interests: ["A", "B", "C"]), .unavailable)
         XCTAssertEqual(atBand, bandBefore)
@@ -124,7 +124,7 @@ final class DemoFlowTests: XCTestCase {
             }
         }
         XCTAssertEqual(BandIntent.allCases.count, 4)
-        XCTAssertEqual(ApproachSignal.allCases.count, 4)
+        XCTAssertEqual(ApproachSignal.allCases.count, 2)
     }
 
     func testRepeatedSelectionsKeepOnlyTheLatestChoice() {
@@ -135,14 +135,14 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertEqual(flow.draft.band, .dating)
         XCTAssertTrue(flow.confirmBand())
 
-        for signal in [ApproachSignal.comeSayHi, .justLooking, .withMyCrew] {
+        for signal in [ApproachSignal.okayToSayHello, .chatFirst, .okayToSayHello] {
             XCTAssertTrue(flow.selectSignal(signal))
         }
-        XCTAssertEqual(flow.draft.signal, .withMyCrew)
+        XCTAssertEqual(flow.draft.signal, .okayToSayHello)
         XCTAssertTrue(flow.confirmSignal())
 
         XCTAssertEqual(flow.readiness?.band, .dating)
-        XCTAssertEqual(flow.readiness?.signal, .withMyCrew)
+        XCTAssertEqual(flow.readiness?.signal, .okayToSayHello)
     }
 
     func testRepeatedConfirmationDoesNotAdvanceTwice() {
@@ -160,7 +160,7 @@ final class DemoFlowTests: XCTestCase {
     // MARK: - Back navigation and edits
 
     func testBackNavigationRetainsTheDraftAtEveryStep() {
-        var flow = Fixture.flow(at: .readyForCheckIn, band: .activity, signal: .justLooking)
+        var flow = Fixture.flow(at: .readyForCheckIn, band: .activity, signal: .okayToSayHello)
         let completeDraft = flow.draft
 
         while flow.currentScene != .welcome {
@@ -180,7 +180,7 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertTrue(flow.confirmBand())
         XCTAssertTrue(flow.confirmSignal())
         XCTAssertEqual(flow.readiness?.band, .activity)
-        XCTAssertEqual(flow.readiness?.signal, .justLooking)
+        XCTAssertEqual(flow.readiness?.signal, .okayToSayHello)
         XCTAssertEqual(flow.readiness?.profile.firstName, Fixture.firstName)
     }
 
@@ -196,25 +196,25 @@ final class DemoFlowTests: XCTestCase {
     }
 
     func testBandEditAppearsInSummary() {
-        var flow = Fixture.flow(at: .readyForCheckIn, band: .social, signal: .comeSayHi)
+        var flow = Fixture.flow(at: .readyForCheckIn, band: .social, signal: .okayToSayHello)
         XCTAssertTrue(flow.returnTo(.band))
         XCTAssertTrue(flow.selectBand(.business))
         XCTAssertTrue(flow.confirmBand())
-        XCTAssertEqual(flow.draft.signal, .comeSayHi, "Signal is retained through a band edit")
+        XCTAssertEqual(flow.draft.signal, .okayToSayHello, "Signal is retained through a band edit")
         XCTAssertTrue(flow.confirmSignal())
 
         XCTAssertEqual(flow.readiness?.band, .business)
-        XCTAssertEqual(flow.readiness?.signal, .comeSayHi)
+        XCTAssertEqual(flow.readiness?.signal, .okayToSayHello)
     }
 
     func testSignalEditAppearsInSummary() {
-        var flow = Fixture.flow(at: .readyForCheckIn, band: .dating, signal: .comeSayHi)
+        var flow = Fixture.flow(at: .readyForCheckIn, band: .dating, signal: .okayToSayHello)
         XCTAssertTrue(flow.returnTo(.signal))
-        XCTAssertTrue(flow.selectSignal(.withMyCrew))
+        XCTAssertTrue(flow.selectSignal(.chatFirst))
         XCTAssertTrue(flow.confirmSignal())
 
         XCTAssertEqual(flow.readiness?.band, .dating)
-        XCTAssertEqual(flow.readiness?.signal, .withMyCrew)
+        XCTAssertEqual(flow.readiness?.signal, .chatFirst)
     }
 
     func testProfileEditOnSummaryAppearsImmediately() {
@@ -322,7 +322,7 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertFalse(flow.confirmBand())
         XCTAssertFalse(flow.confirmSignal())
         XCTAssertFalse(flow.selectBand(.dating))
-        XCTAssertFalse(flow.selectSignal(.justLooking))
+        XCTAssertFalse(flow.selectSignal(.okayToSayHello))
         XCTAssertEqual(flow, before)
     }
 
@@ -361,13 +361,13 @@ final class DemoFlowTests: XCTestCase {
         XCTAssertEqual(flow.draft.band, .activity)
         XCTAssertTrue(flow.confirmBand())
         XCTAssertEqual(flow.currentScene, .signal)
-        flow.selectSignal(.comeSayHi)
+        flow.selectSignal(.okayToSayHello)
         XCTAssertTrue(flow.confirmSignal())
         XCTAssertEqual(flow.currentScene, .readyForCheckIn)
 
         // The same inputs always give the same state, whenever they are applied.
         XCTAssertEqual(
-            Fixture.flow(at: .readyForCheckIn, band: .activity, signal: .comeSayHi),
+            Fixture.flow(at: .readyForCheckIn, band: .activity, signal: .okayToSayHello),
             flow
         )
     }
