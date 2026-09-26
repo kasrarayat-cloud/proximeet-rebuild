@@ -27,7 +27,8 @@
 #                 Guest List tests that send hardware key events. Then, on the smaller iPhone, the
 #                 keyboard Done/Back check again and supplementary fixture captures. The compact
 #                 video is made in the background once the recording ends. Every xcodebuild is
-#                 bounded by time; a failed test is retried once and reported as such. Zero
+#                 bounded by time; a failed test other than the recorded walkthrough is retried
+#                 once and reported as such. Zero
 #                 executed tests, or any final failure or skip of a required test, fails the stage
 #   compact-video half-size re-encode of the recording, trimmed to the app
 #   verdict       automated results, kept apart from outstanding manual review
@@ -92,6 +93,7 @@ BOOTED_BY_US=""
 DEVICE_B_CREATED=""
 B_PID=""
 COMPACT_PID=""
+ENCODER_PID=""
 LAUNCH_PID=""
 
 STAGE="${1:-}"
@@ -183,6 +185,10 @@ finish() {
     if [ -n "$COMPACT_PID" ]; then
         kill -TERM "$COMPACT_PID" 2>/dev/null || true
         COMPACT_PID=""
+    fi
+    if [ -n "$ENCODER_PID" ]; then
+        kill -TERM "$ENCODER_PID" 2>/dev/null || true
+        ENCODER_PID=""
     fi
     for udid in $STATUS_BARS; do
         xcrun simctl status_bar "$udid" clear >/dev/null 2>&1 || true
@@ -814,10 +820,14 @@ stage_ui_review() {
     fi
     if [ -n "$COMPACT_PID" ]; then
         waited=0
-        while kill -0 "$COMPACT_PID" 2>/dev/null && [ "$waited" -lt 240 ]; do
+        while kill -0 "$COMPACT_PID" 2>/dev/null && [ "$waited" -lt 360 ] && [ "$(remaining)" -gt 0 ]; do
             sleep 0.5
             waited=$((waited + 1))
         done
+        if kill -0 "$COMPACT_PID" 2>/dev/null; then
+            note "WARNING: the compact video is still being made at the deadline; the workflow's own step retries it."
+            kill -TERM "$COMPACT_PID" 2>/dev/null || true
+        fi
         wait "$COMPACT_PID" 2>/dev/null || true
         COMPACT_PID=""
     fi
@@ -914,20 +924,26 @@ counts = {k: sum(1 for v in outcomes.values() if v == k) for k in ("passed", "fa
 executed = counts["passed"] + counts["failed"]
 exits = {"walkthrough": walk_exit, "wristband_birthday_welcome": main_exit, "smaller": small_exit,
          "device_b_rest": b_exits.get("rest", "not run"), "device_b_keys": b_exits.get("keys", "not run")}
-# 65 is xcodebuild's "a test failed": with a retry, a test that failed once and then passed may still
-# report it, and a final failure is caught by the counts. Any other non-zero exit (a timeout, a
-# crash, a skip for time) fails the stage.
-ok = (executed > 0 and counts["failed"] == 0 and not missing
-      and all(str(v) in ("0", "65") for k, v in exits.items()))
+# A retry is a failed attempt followed by a final pass on the same simulator.
+retried_on = {device for (device, name), runs in history.items() if "failed" in runs[:-1] and runs[-1] == "passed"}
 retried = sorted("%s[%s] %s" % (name, device if device not in (main_id, b_udid) else ("main" if device == main_id else "deviceB"),
                                 " then ".join(runs))
-                 for (device, name), runs in history.items() if len(runs) > 1)
+                 for (device, name), runs in history.items() if "failed" in runs[:-1])
+# xcodebuild exits 65 when any attempt failed, a retried one included. So 65 is accepted only for a
+# run whose simulator shows a test that failed and then passed; the recorded walkthrough (never
+# retried) must exit 0, and any other exit (65 without a retried test, a timeout, a skip for time)
+# fails the stage.
+segments = {"wristband_birthday_welcome": {main_id}, "device_b_rest": {b_udid or main_id},
+            "device_b_keys": {b_udid or main_id}, "smaller": set(small_ids)}
+ok = (executed > 0 and counts["failed"] == 0 and not missing
+      and all(str(v) == "0" or (str(v) == "65" and segments.get(k, set()) & retried_on)
+              for k, v in exits.items()))
 label = {main_id: "main", b_udid: "deviceB"} if b_udid else {main_id: "main"}
 for (device, name), outcome in sorted(outcomes.items(), key=lambda item: (item[0][1], item[0][0])):
     runs = history.get((device, name), [outcome])
     lines.append("%s[%s]=%s%s%s" % (name, label.get(device, "smaller:" + device), outcome,
                                     (" (%s s)" % durations[(device, name)]) if (device, name) in durations else "",
-                                    (" after a retry: " + " then ".join(runs)) if len(runs) > 1 else ""))
+                                    (" after a retry: " + " then ".join(runs)) if "failed" in runs[:-1] else ""))
 lines += ["discovered=%d" % len(outcomes), "executed=%d" % executed,
           "passed=%(passed)d" % counts, "failed=%(failed)d" % counts, "skipped=%(skipped)d" % counts,
           "required_passed=" + ("yes" if not missing else "no (" + "; ".join(missing) + ")"),
@@ -938,8 +954,8 @@ lines += ["discovered=%d" % len(outcomes), "executed=%d" % executed,
 lines += ["xcodebuild_exit_%s=%s" % item for item in sorted(exits.items())]
 lines += ["result=" + ("PASS" if ok else "FAIL")]
 open(out_path, "w").write("\n".join(lines) + "\n")
-print("executed %d of %d discovered (passed %d, failed %d, skipped %d); required passed: %s; exits %s; %s"
-      % (executed, len(outcomes), counts["passed"], counts["failed"], counts["skipped"],
+print("executed %d of %d discovered (passed %d, failed %d, skipped %d; %d retried after a failure); required passed: %s; exits %s; %s"
+      % (executed, len(outcomes), counts["passed"], counts["failed"], counts["skipped"], len(retried),
          "yes" if not missing else "no", ",".join("%s:%s" % item for item in sorted(exits.items())),
          "PASS" if ok else "FAIL"))
 PY
@@ -986,6 +1002,7 @@ stage_compact_video() {
     note "Trim start: ${start}s (walkthrough start $marker, recording start $started)."
     xcrun swift scripts/compact_video.swift "$movie" "$compact" "$start" > "$OUT/compact-video.out" 2>> "$LOG" &
     pid=$!
+    ENCODER_PID=$pid
     while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 360 ]; do
         sleep 0.5
         waited=$((waited + 1))
@@ -997,6 +1014,7 @@ stage_compact_video() {
     elif wait "$pid"; then
         status=0
     fi
+    ENCODER_PID=""
     cat "$OUT/compact-video.out" >> "$LOG" 2>/dev/null || true
     if [ "$status" -eq 0 ] && [ -s "$compact" ]; then
         printf 'result=RE-ENCODED\nmethod=AVFoundation export: %s\n' "$(tail -n 1 "$OUT/compact-video.out")" > "$OUT/compact-video.txt"

@@ -307,7 +307,7 @@ workflows:
   # WRISTBAND_EXPECTED_COMMIT=<full SHA of the reviewed commit>; the source gate fails without it.
   # 28 minutes: two under the 30-minute budget per build. The UI stage keeps its own deadline
   # (scripts/wristband_review.sh) so the packages are always made. The regressions run on a second
-  # iPhone 17 Pro Max created on the build machine for this run and deleted after it.
+  # iPhone 17 Pro Max, cloned on the build machine from the booted selected one and deleted after it.
   proximeet-wristband-review:
     name: Proximeet Wristband review (manual, unsigned simulator)
     instance_type: mac_mini_m2
@@ -323,7 +323,7 @@ workflows:
         script: bash scripts/codemagic_verify.sh validate
       - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
         script: bash scripts/codemagic_verify.sh select-simulator
-      - name: Destinations - report the iPhone 17 Pro Max target, add a second one for the regressions, start booting both
+      - name: Destinations - report the iPhone 17 Pro Max target, start the first boots of it and of a smaller iPhone
         script: bash scripts/wristband_review.sh destinations
         ignore_failure: true
       - name: App compilation - Proximeet Debug for the simulator, code signing disabled

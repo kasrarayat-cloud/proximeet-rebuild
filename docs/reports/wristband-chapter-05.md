@@ -153,8 +153,8 @@ delivery message, not in this file.
 11. **Parallel regressions.** To fit the 28-minute limit, the Guest List tests and the Pass
     walkthrough run on a second iPhone 17 Pro Max, a clone of the selected one made after its first
     boot and deleted after the run, while the Wristband, Birthday and Welcome tests and three Pass
-    tests run on the selected one. Both are 440 × 956. A failed test is retried once and reported
-    as retried. Welcome's informational largest-text test is no longer run.
+    tests run on the selected one. Both are 440 × 956. A failed test other than the recorded
+    walkthrough is retried once and reported as retried. Welcome's informational largest-text test is no longer run.
 12. **Tile geometry.** Figma gives each name an 89-pt column and moves a selected tile's content
     1.5 pt in. The app keeps both on the reference phone (the check at x 146.5 in a selected
     tile), but the column is a maximum, not a minimum, the check is always laid out and only

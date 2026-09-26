@@ -51,11 +51,13 @@ reviewed revision:
   `enforce` fails the build unless the verdict is PASS.
 
 `ui-review` keeps its own deadline, 24 minutes after the gate began, and bounds every
-`xcodebuild` and every wait by it, so the verdict and the downloads are always made inside the 28
-minutes. XCTest's own per-test time allowance is on (300 s, at most 360 s). A failed test is run
-once more (`-retry-tests-on-failure -test-iterations 2`); every attempt is parsed and listed as
-"retried" in the results and the verdict, and only a test's final outcome counts. The recorded
-walkthrough is never retried.
+`xcodebuild` and the long waits by it, leaving about four minutes for the attachment exports, the
+verdict, the downloads and publishing within the 28 minutes (build 1's UI stage ended 35 s after
+its deadline, on those unbounded short steps). XCTest's own per-test time allowance is on (300 s, at most 360 s). A failed test other
+than the recorded walkthrough is run once more (`-retry-tests-on-failure -test-iterations 2`);
+every attempt is parsed and listed as "retried" in the results and the verdict, and only a test's
+final outcome counts. xcodebuild's exit 65 is accepted only for a run with a test that failed and
+then passed; the walkthrough must exit 0.
 
 It runs in this order:
 
