@@ -20,11 +20,26 @@ final class DemoSession {
 
     // MARK: - Read-only state
 
-    /// Bound to `NavigationStack`. The domain only accepts pops, so system back gestures
-    /// stay in sync while forward navigation always goes through a validated action.
+    /// The domain's path. The domain only accepts pops, so forward navigation always goes through
+    /// a validated action.
     var path: [DemoScene] {
         get { flow.path }
         set { flow.adoptNavigationPath(newValue) }
+    }
+
+    /// Places' inner stages: `PlacesView` shows them itself (dissolves and the ticket expansion),
+    /// so the navigation stack never pushes them.
+    static let placesStages: Set<DemoScene> = [.placeDetail, .placeExplanation]
+
+    /// Bound to `NavigationStack`: the domain path without Places' inner stages. A pop proposed
+    /// by the stack (a system back gesture from Places) is a pop of the domain path, which drops
+    /// the inner stages with it; nothing longer or different is ever adopted.
+    var navigationPath: [DemoScene] {
+        get { flow.path.filter { !Self.placesStages.contains($0) } }
+        set {
+            guard newValue != navigationPath else { return }
+            flow.adoptNavigationPath(newValue)
+        }
     }
 
     var draft: DemoDraft { flow.draft }
@@ -118,12 +133,77 @@ final class DemoSession {
         flow.chooseApproach(approach)
     }
 
-    /// Whether Continue preview may show the end-of-preview message.
+    /// Whether Continue preview is available: an intent and an approach, on Signal.
     var canContinueSignal: Bool { flow.continueSignalPreview() }
+
+    /// Continue preview on Signal: opens Places at the retained category (Now the first time).
+    @discardableResult
+    func openPlaces() -> Bool {
+        flow.openPlaces()
+    }
 
     /// Back on Signal: returns to the Wristband, with the intent and the approach kept.
     func leaveSignal() {
         flow.leaveSignal()
+    }
+
+    // MARK: - Approved Places
+
+    /// The retained category: Now until the guest chooses another. Memory only.
+    var placesCategory: PlaceCategory { flow.placesCategory }
+
+    /// The retained category's venue: the one browsing and the detail show.
+    var placeVenue: Venue { flow.placeVenue }
+
+    /// What the actual intent may do at that venue, derived each time it is read.
+    var placeEligibility: PlaceEligibility? { flow.placeEligibility }
+
+    /// A category tab; the selected tab does nothing. Returns whether it changed.
+    @discardableResult
+    func choosePlaceCategory(_ category: PlaceCategory) -> Bool {
+        flow.choosePlaceCategory(category)
+    }
+
+    /// View place: the retained category's venue detail, whatever the intent.
+    @discardableResult
+    func openPlaceDetail() -> Bool {
+        flow.openPlaceDetail()
+    }
+
+    /// Preview check-in: only an eligible actual intent at Common Ground opens the explanation.
+    @discardableResult
+    func previewCheckIn() -> Bool {
+        flow.previewCheckIn()
+    }
+
+    /// Back on browsing: the actual Signal, everything kept.
+    @discardableResult
+    func leavePlaces() -> Bool {
+        flow.leavePlaces()
+    }
+
+    /// Back on a detail: browsing at the originating category.
+    @discardableResult
+    func leavePlaceDetail() -> Bool {
+        flow.leavePlaceDetail()
+    }
+
+    /// Back on the explanation: Common Ground's detail.
+    @discardableResult
+    func backToPlace() -> Bool {
+        flow.backToPlace()
+    }
+
+    /// Explore other places on the explanation: browsing at Now.
+    @discardableResult
+    func exploreOtherPlaces() -> Bool {
+        flow.exploreOtherPlaces()
+    }
+
+    /// Pops a stale route back to the last scene still allowed (a missing intent to the
+    /// Wristband, a missing approach to Signal). A valid route is left alone.
+    func reconcileRoute() {
+        flow.reconcileRoute()
     }
 
     #if DEBUG

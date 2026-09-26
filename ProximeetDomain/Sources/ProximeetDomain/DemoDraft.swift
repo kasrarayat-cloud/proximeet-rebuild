@@ -47,6 +47,16 @@ public struct DemoDraft: Equatable, Sendable {
             return meetsRequirements(for: .band) && band != nil
         case .readyForCheckIn:
             return meetsRequirements(for: .signal) && signal != nil
+        case .places, .placeDetail:
+            // The approved Signal's Continue preview: the Birthday gate, the introduction, the
+            // actual intent and the actual approach, all still valid. Browsing and details stay
+            // open to every intent.
+            return meetsRequirements(for: .signal) && signal != nil
+        case .placeExplanation:
+            // Only an eligible actual intent at the only open session (Common Ground) may read
+            // its explanation.
+            guard meetsRequirements(for: .placeDetail), let band else { return false }
+            return PlaceEligibility(venue: CheckInExplanation.venue, intent: band).canPreviewCheckIn
         }
     }
 }

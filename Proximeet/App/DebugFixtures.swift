@@ -7,13 +7,19 @@ import ProximeetDomain
 ///     -ProximeetFixture welcome | birthday | birthday-adult | birthday-under18 | pass |
 ///                       guest-list | guest-list-filled | guest-list-card | guest-list-name-only |
 ///                       wristband | wristband-social | wristband-dating | wristband-business |
-///                       wristband-activity | signal | signal-selected | band | band-selected | ready
+///                       wristband-activity | signal | signal-selected | places | place-detail |
+///                       place-explanation | band | band-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
 ///     -ProximeetFixtureSignal chatFirst | okayToSayHello
+///     -ProximeetFixtureCategory now | later | upcoming
 ///
 /// `signal` and `signal-selected` open the approved Signal through the same gates as the real
 /// route; they need an explicit `-ProximeetFixtureBand` (and `signal-selected` an explicit
-/// `-ProximeetFixtureSignal`): no intent or approach is ever assumed.
+/// `-ProximeetFixtureSignal`): no intent or approach is ever assumed. `places`, `place-detail`
+/// and `place-explanation` continue from `signal-selected` through Signal's Continue preview (the
+/// category, Now unless given, through its tab; the detail through View place; the explanation
+/// through Preview check-in, which only an eligible intent at Common Ground opens: otherwise the
+/// fixture stays on the detail, as the app would). They need an explicit band and approach too.
 ///     -ProximeetReduceMotionPreview YES
 ///
 /// The last one is an app-level presentation override for captures; it does not change
@@ -25,9 +31,14 @@ enum DebugLaunch {
         else { return nil }
         let band = value(after: "-ProximeetFixtureBand", in: arguments).flatMap(BandIntent.init(rawValue:))
         let signal = value(after: "-ProximeetFixtureSignal", in: arguments).flatMap(ApproachSignal.init(rawValue:))
+        let category = value(after: "-ProximeetFixtureCategory", in: arguments).flatMap(PlaceCategory.init(rawValue:))
         if stage == .signal || stage == .signalSelected {
             guard let band, stage == .signal || signal != nil else { return nil }
             return PreviewFixtures.session(at: stage, band: band, signal: signal ?? .chatFirst)
+        }
+        if PreviewFixtures.Stage.placesStages.contains(stage) {
+            guard let band, let signal else { return nil }
+            return PreviewFixtures.session(at: stage, band: band, signal: signal, category: category ?? .now)
         }
         return PreviewFixtures.session(at: stage, band: band ?? .social, signal: signal ?? .chatFirst)
     }
@@ -78,10 +89,19 @@ enum PreviewFixtures {
         case signal
         /// The approved Signal for the given intent with the given approach chosen.
         case signalSelected = "signal-selected"
+        /// The approved Places, browsing the given category (through Signal's Continue preview).
+        case places
+        /// The given category's venue detail (through View place).
+        case placeDetail = "place-detail"
+        /// Common Ground's check-in explanation (through Preview check-in; eligible intents only).
+        case placeExplanation = "place-explanation"
         /// Legacy, unapproved later scenes, reached through the legacy route for their captures.
         case band
         case bandSelected = "band-selected"
         case ready
+
+        /// The approved Places stages.
+        static let placesStages: Set<Stage> = [.places, .placeDetail, .placeExplanation]
     }
 
     static let firstName = "Alex"
@@ -98,17 +118,20 @@ enum PreviewFixtures {
     static func session(
         at stage: Stage,
         band: BandIntent = .social,
-        signal: ApproachSignal = .chatFirst
+        signal: ApproachSignal = .chatFirst,
+        category: PlaceCategory = .now
     ) -> DemoSession {
-        let session = DemoSession(flow: flow(at: stage, band: band, signal: signal))
-        // The Guest List below a Wristband or Signal fixture shows its card too, as on the real route.
+        let session = DemoSession(flow: flow(at: stage, band: band, signal: signal, category: category))
+        // The Guest List below a Wristband, Signal or Places fixture shows its card too, as on the
+        // real route.
         session.fixtureOpensGuestListCard = [.guestListCard, .guestListNameOnly, .wristband, .wristbandSocial,
                                              .wristbandDating, .wristbandBusiness, .wristbandActivity,
-                                             .signal, .signalSelected].contains(stage)
+                                             .signal, .signalSelected].contains(stage) || Stage.placesStages.contains(stage)
         return session
     }
 
-    static func flow(at stage: Stage, band: BandIntent, signal: ApproachSignal) -> DemoFlow {
+    static func flow(at stage: Stage, band: BandIntent, signal: ApproachSignal,
+                     category: PlaceCategory = .now) -> DemoFlow {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         // Midday UTC, so the fixture birthday is 17 May in every time zone within ±11 h.
@@ -126,7 +149,7 @@ enum PreviewFixtures {
             return flow
         case .birthdayAdult, .birthdayUnder18, .pass, .guestList, .guestListFilled, .guestListCard, .guestListNameOnly,
              .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity,
-             .signal, .signalSelected:
+             .signal, .signalSelected, .places, .placeDetail, .placeExplanation:
             // The approved Figma example dates, entered and checked through the domain.
             let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
             flow.updateBirthday { entry in
@@ -151,7 +174,7 @@ enum PreviewFixtures {
             case .guestListNameOnly:
                 flow.editIntroduction { $0.name = exampleIntroduction.name }
             case .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity,
-                 .signal, .signalSelected:
+                 .signal, .signalSelected, .places, .placeDetail, .placeExplanation:
                 // Through the card's Continue preview, as a guest would reach it.
                 flow.editIntroduction { $0 = exampleIntroduction }
                 var card = GuestListDemo()
@@ -162,12 +185,24 @@ enum PreviewFixtures {
                 if let intent = intents[stage] {
                     flow.chooseIntent(intent)
                 }
-                if stage == .signal || stage == .signalSelected {
+                if stage == .signal || stage == .signalSelected || Stage.placesStages.contains(stage) {
                     // Through the Wristband's Continue preview, with the given intent.
                     flow.chooseIntent(band)
                     flow.continueFromWristband()
-                    if stage == .signalSelected {
+                    if stage != .signal {
                         flow.chooseApproach(signal)
+                    }
+                }
+                if Stage.placesStages.contains(stage) {
+                    // Through Signal's Continue preview, the category's tab, View place and
+                    // Preview check-in: each only where the app itself allows it.
+                    flow.openPlaces()
+                    flow.choosePlaceCategory(stage == .placeExplanation ? .now : category)
+                    if stage != .places {
+                        flow.openPlaceDetail()
+                    }
+                    if stage == .placeExplanation {
+                        flow.previewCheckIn()
                     }
                 }
             default:

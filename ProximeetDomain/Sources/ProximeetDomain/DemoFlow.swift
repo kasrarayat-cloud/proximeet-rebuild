@@ -9,20 +9,28 @@ public enum ProfileSaveOutcome: Equatable, Sendable {
 }
 
 /// The in-memory demo journey:
-/// Welcome → Birthday → Demo Pass → Guest List → Band → Signal → Ready for check-in.
+/// Welcome → Birthday → Demo Pass → Guest List → Band → Signal → Places (browse → a venue's detail
+/// → Common Ground's check-in explanation). The legacy ready summary after Signal remains only
+/// for the DEBUG fixtures of the legacy route.
 ///
 /// Every transition is a synchronous value mutation. Nothing here reads the clock, waits
 /// for animation, stores data, or talks to any service. The only time input is the
 /// reference date injected through `BirthdayEligibility`.
 ///
 /// Invariants:
-/// - `path` is always a prefix of the journey after Welcome, which is the root.
-/// - Every scene in `path` has its requirements met by `draft`.
+/// - `path` is always a prefix of one journey after Welcome, which is the root: the approved
+///   journey into Places or the legacy one (`DemoScene.approvedJourney`, `legacyJourney`).
+/// - Every scene in `path` has its requirements met by `draft`, and the check-in explanation is
+///   only above Common Ground's detail.
 /// - `readiness` is non-nil only on the ready scene.
 public struct DemoFlow: Equatable, Sendable {
     /// Scenes pushed above Welcome, in order. Suitable for driving a navigation stack.
     public private(set) var path: [DemoScene] = []
     public private(set) var draft = DemoDraft()
+    /// The Places category retained for this demo run: Now until the guest chooses another, then
+    /// kept when going Back to Signal (or further) and on re-entry. Browsing state only, in
+    /// memory; a new run (a relaunch or `reset()`) starts at Now again.
+    public private(set) var placesCategory: PlaceCategory = .now
 
     public init() {}
 
@@ -238,9 +246,8 @@ public struct DemoFlow: Equatable, Sendable {
         return true
     }
 
-    /// Continue preview on the approved Signal: available once an approach is chosen. Returns
-    /// whether the end-of-preview message should be shown; nothing navigates, and Places does not
-    /// exist.
+    /// Whether Continue preview on the approved Signal is available: on Signal, with the carried
+    /// intent and a chosen approach. `openPlaces()` is the action itself.
     public func continueSignalPreview() -> Bool {
         currentScene == .signal && draft.band != nil && draft.signal != nil
     }
@@ -252,6 +259,106 @@ public struct DemoFlow: Equatable, Sendable {
     public mutating func leaveSignal() -> Bool {
         guard currentScene == .signal else { return false }
         return returnTo(.band)
+    }
+
+    // MARK: - Places (approved, chapter 07)
+
+    /// Continue preview on the approved Signal: opens Places browsing at the retained category
+    /// (Now the first time). Needs the actual intent and approach and the Birthday gate; a repeated
+    /// tap (the scene is then Places) pushes nothing. Nothing is reserved, checked or shared.
+    @discardableResult
+    public mutating func openPlaces() -> Bool {
+        guard continueSignalPreview(), draft.meetsRequirements(for: .places) else { return false }
+        path.append(.places)
+        return true
+    }
+
+    /// A category tab on Places browsing. Returns whether it changed: the selected tab does
+    /// nothing. Every category stays browsable for every intent.
+    @discardableResult
+    public mutating func choosePlaceCategory(_ category: PlaceCategory) -> Bool {
+        guard currentScene == .places, placesCategory != category else { return false }
+        placesCategory = category
+        return true
+    }
+
+    /// The venue of the retained category: the one browsing and the detail show.
+    public var placeVenue: Venue { placesCategory.venue }
+
+    /// What the actual intent may do at that venue; `nil` only without an intent, which no Places
+    /// scene allows.
+    public var placeEligibility: PlaceEligibility? {
+        draft.band.map { PlaceEligibility(venue: placeVenue, intent: $0) }
+    }
+
+    /// View place (the ticket) on Places browsing: opens that venue's detail, whatever the intent.
+    @discardableResult
+    public mutating func openPlaceDetail() -> Bool {
+        guard currentScene == .places, draft.meetsRequirements(for: .placeDetail) else { return false }
+        path.append(.placeDetail)
+        return true
+    }
+
+    /// Preview check-in on a detail: opens Common Ground's explanation, and only when the session is
+    /// open in the snapshot and permits the actual intent (Social or Business). Every other detail
+    /// keeps it disabled; the destination is guarded here, not only by the button.
+    @discardableResult
+    public mutating func previewCheckIn() -> Bool {
+        guard currentScene == .placeDetail,
+              placeVenue == CheckInExplanation.venue,
+              placeEligibility?.canPreviewCheckIn == true,
+              draft.meetsRequirements(for: .placeExplanation)
+        else { return false }
+        path.append(.placeExplanation)
+        return true
+    }
+
+    /// Back (the header's or the bottom one) on Places browsing: returns to the actual Signal with
+    /// the intent, the approach and the category kept. A repeated Back cannot also leave Signal.
+    @discardableResult
+    public mutating func leavePlaces() -> Bool {
+        guard currentScene == .places else { return false }
+        return returnTo(.signal)
+    }
+
+    /// Back (the header's or "Back to places") on a detail: returns to browsing at the originating
+    /// category, never reset to Now.
+    @discardableResult
+    public mutating func leavePlaceDetail() -> Bool {
+        guard currentScene == .placeDetail else { return false }
+        return returnTo(.places)
+    }
+
+    /// Back (the header's or "Back to place") on the explanation: returns to Common Ground's detail.
+    @discardableResult
+    public mutating func backToPlace() -> Bool {
+        guard currentScene == .placeExplanation else { return false }
+        return returnTo(.placeDetail)
+    }
+
+    /// "Explore other places" on the explanation: returns to Places browsing at Now, explicitly.
+    @discardableResult
+    public mutating func exploreOtherPlaces() -> Bool {
+        guard currentScene == .placeExplanation else { return false }
+        placesCategory = .now
+        return returnTo(.places)
+    }
+
+    /// Whether `scene` may be shown now: its requirements in the draft and, for the explanation,
+    /// Common Ground as the retained venue.
+    public func allows(_ scene: DemoScene) -> Bool {
+        guard draft.meetsRequirements(for: scene) else { return false }
+        return scene != .placeExplanation || placeVenue == CheckInExplanation.venue
+    }
+
+    /// Trims a stale route: pops to the last scene before the first one that is no longer allowed,
+    /// so no destination is shown without its requirements. A missing intent returns to the
+    /// Wristband and a missing approach to Signal, their own choice screens. Returns whether
+    /// anything was popped.
+    @discardableResult
+    public mutating func reconcileRoute() -> Bool {
+        guard let invalid = path.firstIndex(where: { !allows($0) }) else { return false }
+        return adoptNavigationPath(Array(path.prefix(invalid)))
     }
 
     // MARK: - Signal (legacy, DEBUG fixtures of later scenes)

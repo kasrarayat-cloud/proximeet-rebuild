@@ -12,8 +12,9 @@ import ProximeetDomain
 /// the choice; the chosen row does nothing. Nothing advances on its own.
 ///
 /// Back (header or bottom) returns to the actual Wristband below, with the intent and the
-/// approach kept. Continue preview, once an approach is chosen, only shows "End of this preview."
-/// and stays: Places is not implemented.
+/// approach kept. Continue preview, once an approach is chosen, opens the approved Places (chapter
+/// 07) at its retained category, Now the first time; it replaced the earlier "End of this
+/// preview." message.
 ///
 /// An approach is a preference, not continuing consent. Choosing one sends or accepts no Wave,
 /// opens no chat, creates no match and grants no permission to approach or message. The band
@@ -24,7 +25,6 @@ struct SignalView: View {
     @Environment(DemoSession.self) private var session
     @Environment(\.scenePhase) private var scenePhase
     @Adaptive private var adaptive
-    @State private var isShowingEndOfPreview = false
     /// Bumped, without animation, to end a decorative movement at once: when Reduce Motion
     /// changes or the app becomes active again. The tag is then redrawn at its model pose.
     @State private var motionEpoch = 0
@@ -79,9 +79,6 @@ struct SignalView: View {
         .background(WristbandStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
         .toolbar(.hidden, for: .navigationBar)
-        .alert("End of this preview.", isPresented: $isShowingEndOfPreview) {
-            Button("OK", role: .cancel) {}
-        }
         .onChange(of: session.approach) { _, approach in
             // Concise: the new choice only, never the whole screen again.
             if let approach {
@@ -181,9 +178,8 @@ struct SignalView: View {
     private func actions(bottomInset: CGFloat) -> some View {
         VStack(spacing: 11) {
             Button("Continue preview") {
-                if session.canContinueSignal {
-                    isShowingEndOfPreview = true
-                }
+                // Opens Places once; a repeated tap finds Places already open and pushes nothing.
+                session.openPlaces()
             }
             .buttonStyle(WristbandPrimaryStyle())
             .disabled(session.approach == nil)

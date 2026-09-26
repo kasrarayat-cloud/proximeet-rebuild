@@ -1,0 +1,138 @@
+{
+  "status": "Founder approved 2026-09-25 UTC; bounded Places implementation handoff prepared",
+  "tool": "built-in image_gen",
+  "venues": "All names, scenes and schedules are fictional demo fixtures.",
+  "use_case": "product-mockup",
+  "prompts": [
+    {
+      "key": "common-ground",
+      "name": "Common Ground",
+      "prompt": "Use case: product-mockup. Asset type: premium miniature architectural venue illustration for Proximeet's 'A Place Opens' iPhone interface. Isolated physical architectural diorama of a fictional social venue on a thin ivory rectangular stone plinth, roof removed and front two walls open so the whole welcoming interior is visible. Three-quarter axonometric view from above, near orthographic, balanced composition with full model visible and transparent margin. Sophisticated collectible architectural model photographed for a design museum, photoreal textures and finely crafted details, not cartoon, not toy plastic, not a real venue photograph. Calm studio lighting from upper left, beautiful fine contact shadows within the model, naturally shaded wood, matte plaster, fabric, brushed metal, a few plants. Crisp silhouette and readable structure at phone scale. Transparent background; no floor or scenery outside the plinth. No people, no words, no logos, no signage, no watermarks, no interface, no extra floating objects. Square canvas. Scene: an intimate neighborhood café with a warm limestone arch on the left, pale plaster back walls, a finely detailed walnut espresso counter along the right rear, three small circular café tables with coral and ivory upholstered chairs, a brass pendant, a leafy indoor olive tree. A narrow cyan ceramic tile accent on the counter ties the palette to Proximeet. The feeling is conversation, daylight fading into a warmly lit early evening. Architectural restraint, tactile hospitality, miniature 3D still life. A simple low step at the front makes the model feel like an invitation to enter."
+    },
+    {
+      "key": "afterglow",
+      "name": "Afterglow",
+      "prompt": "Use case: product-mockup. Asset type: premium miniature architectural venue illustration for Proximeet's 'A Place Opens' iPhone interface. Isolated physical architectural diorama of a fictional social venue on a thin ivory rectangular stone plinth, roof removed and front two walls open so the whole welcoming interior is visible. Three-quarter axonometric view from above, near orthographic, balanced composition with full model visible and transparent margin. Sophisticated collectible architectural model photographed for a design museum, photoreal textures and finely crafted details, not cartoon, not toy plastic, not a real venue photograph. Calm studio lighting from upper left, beautiful fine contact shadows within the model, naturally shaded wood, matte plaster, fabric, brushed metal, a few plants. Crisp silhouette and readable structure at phone scale. Transparent background; no floor or scenery outside the plinth. No people, no words, no logos, no signage, no watermarks, no interface, no extra floating objects. Square canvas. Scene: a small sophisticated vinyl listening lounge with a curved pale-plaster rear wall, dark walnut shelving containing a few abstract vinyl sleeves with no text, a central low record-player console, a curved orchid-purple upholstered banquette, two cream lounge chairs, three tiny round brass side tables, amber globe lamps and a sculptural plant. Quiet mood of music and conversation. Orchid purple is the restrained main accent; warm reflected light, no neon. A beautiful architectural model with precise craftsmanship and plenty of visual breathing room."
+    },
+    {
+      "key": "fieldwork",
+      "name": "Fieldwork",
+      "prompt": "Use case: product-mockup. Asset type: premium miniature architectural venue illustration for Proximeet's 'A Place Opens' iPhone interface. Isolated physical architectural diorama of a fictional social venue on a thin ivory rectangular stone plinth, roof removed and front two walls open so the whole welcoming interior is visible. Three-quarter axonometric view from above, near orthographic, balanced composition with full model visible and transparent margin. Sophisticated collectible architectural model photographed for a design museum, photoreal textures and finely crafted details, not cartoon, not toy plastic, not a real venue photograph. Calm studio lighting from upper left, beautiful fine contact shadows within the model, naturally shaded wood, matte plaster, fabric, brushed metal, a few plants. Crisp silhouette and readable structure at phone scale. Transparent background; no floor or scenery outside the plinth. No people, no words, no logos, no signage, no watermarks, no interface, no extra floating objects. Square canvas. Scene: an airy creative workshop / ceramics studio with tall slim pale-plaster window frames along the back, one big blonde-oak communal worktable at center, four amber upholstered stools, a compact potter's wheel in the left corner, clay bowls and ceramic vases on clean built-in shelves, folded linen aprons on simple brass hooks, one leafy plant. Warm amber and ivory palette with tiny blue ceramic objects. A calm place to make something together. High-end architectural model, uncluttered readable geometry, authentic wood and clay textures."
+    }
+  ],
+  "assets": {
+    "common-ground": {
+      "original": "generated_images/exec-f03e538e-de2f-45bb-9998-f139909e2f99.png",
+      "original_dimensions": [
+        1254,
+        1254
+      ],
+      "crop": [
+        46,
+        83,
+        1211,
+        1218
+      ],
+      "delivery": "proximeet-work/places/common-ground-delivery.png",
+      "delivery_dimensions": [
+        288,
+        281
+      ],
+      "palette_colors": 192,
+      "delivery_bytes": 29540,
+      "alpha_preserved": true,
+      "asset_in_bundle": "assets/common-ground.png",
+      "reference_in_bundle": "reference/common-ground-delivery.png"
+    },
+    "afterglow": {
+      "original": "generated_images/exec-5c29506a-47d7-4bdc-95b4-e33da0037bd8.png",
+      "original_dimensions": [
+        1254,
+        1254
+      ],
+      "crop": [
+        5,
+        105,
+        1249,
+        1186
+      ],
+      "delivery": "proximeet-work/places/afterglow-delivery.png",
+      "delivery_dimensions": [
+        288,
+        250
+      ],
+      "palette_colors": 192,
+      "delivery_bytes": 24107,
+      "alpha_preserved": true,
+      "asset_in_bundle": "assets/afterglow.png",
+      "reference_in_bundle": "reference/afterglow-delivery.png"
+    },
+    "fieldwork": {
+      "original": "generated_images/exec-83459ffc-723f-433f-ab38-32a75919e4cf.png",
+      "original_dimensions": [
+        1254,
+        1254
+      ],
+      "crop": [
+        8,
+        39,
+        1247,
+        1163
+      ],
+      "delivery": "proximeet-work/places/fieldwork-delivery.png",
+      "delivery_dimensions": [
+        288,
+        261
+      ],
+      "palette_colors": 192,
+      "delivery_bytes": 27500,
+      "alpha_preserved": true,
+      "asset_in_bundle": "assets/fieldwork.png",
+      "reference_in_bundle": "reference/fieldwork-delivery.png"
+    }
+  },
+  "delivery_note": "Indexed transparent PNGs optimized for Figma transfer. Use full-size RGBA originals supplied in the approved handoff for native implementation.",
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "figma_page": "58:479",
+  "figma_board": "60:455",
+  "screens": 7,
+  "review_size": [
+    1480,
+    1670
+  ],
+  "native_ui": true,
+  "is_3d_rig": false,
+  "motion": "240ms schedule dissolve,500ms2Dticket expansion; authoring/resting poses verified; no video/runtime measurement",
+  "figma_art_hashes": {
+    "common-ground": "8834dc94d5743ca513c57f524e8bf62e206b094c",
+    "afterglow": "6a2f5c47e39373333ffe987cdb44a17d313df580",
+    "fieldwork": "8e37a5dbdf1ee817ba411e603532f403f74de2da"
+  },
+  "validation": {
+    "fonts": [
+      "Manrope"
+    ],
+    "frameCount": 7,
+    "sceneBindingsInScreens": 6,
+    "minimumInteractiveTarget": [
+      44,
+      44
+    ],
+    "bodyMinimumFontSize": 14,
+    "postFixScreenshot": "passed; mode-chip contrast and truthful Later-caption fixed",
+    "audit": "verification.json",
+    "motion": "240ms DISSOLVE and500ms SMART_ANIMATE settings read back; no runtime/video performance claim"
+  },
+  "approval": {
+    "quote": "thats perfect i approve",
+    "local_datetime": "2026-09-24T21:05:00-07:00",
+    "utc_date": "2026-09-25",
+    "scope": "Seven app states, fictional fixed-snapshot discovery and explanation-only check-in; no permissions, verification result, presence or Room entry.",
+    "figma_annotation": "64:566"
+  },
+  "handoff": {
+    "bundle": "PROXIMEET_PLACES_APPROVED_HANDOFF.zip",
+    "prompt": "PROXIMEET_PLACES_CLAUDE_PROMPT.md",
+    "layout_spec": "PLACES_LAYOUT_SPEC.json"
+  }
+}

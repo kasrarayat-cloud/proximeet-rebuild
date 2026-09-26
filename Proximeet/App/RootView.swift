@@ -6,7 +6,7 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var session = session
-        NavigationStack(path: $session.path) {
+        NavigationStack(path: $session.navigationPath) {
             WelcomeView()
                 .navigationDestination(for: DemoScene.self) { scene in
                     SceneDestination(scene: scene)
@@ -37,6 +37,9 @@ private struct SceneDestination: View {
             SignalView()
         case .readyForCheckIn:
             ReadyForCheckInView()
+        case .places, .placeDetail, .placeExplanation:
+            // One destination: Places shows its detail and explanation stages itself.
+            PlacesView()
         }
     }
 }
