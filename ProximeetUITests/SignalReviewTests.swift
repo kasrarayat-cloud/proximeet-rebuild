@@ -667,17 +667,24 @@ final class SignalReviewTests: XCTestCase {
 
     /// Short, momentum-free drags in the page margin until `element` lies between the status bar
     /// and the top of the action bar. The last row ends exactly at the bar's top when the page is
-    /// scrolled to its end, so both edges allow 1 pt; each drag (about 115 pt on the reference
-    /// phone) is shorter than a row's slack, so it cannot step over the window and back.
+    /// scrolled to its end, so both edges allow 1 pt. An element taller than the window counts once
+    /// its top is in view. Each drag is at most half the range of tops that count (and at most
+    /// 115 pt), so it cannot step over that range and back on any phone.
     private func scrollIntoView(_ element: XCUIElement, _ signal: SignalScreen, _ app: XCUIApplication) -> Bool {
-        let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.30))
-        let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0.42))
-        for _ in 0..<28 {
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0))
+        for _ in 0..<40 {
             let frame = element.frame, top: CGFloat = 62, bottom = signal.primary.frame.minY - 13
-            let low = frame.maxY > bottom + 1, high = frame.minY < top - 1
+            let slack = (bottom - top) - frame.height
+            // The range of tops that counts as in view, and a drag of at most half of it.
+            let fits = slack > 2
+            let lowestTop = fits ? bottom + 1 - frame.height : bottom - 44
+            let low = frame.minY > lowestTop, high = frame.minY < top - 1
             if !low && !high {
                 return true
             }
+            let step = max(12, min(115, (lowestTop - (top - 1)) / 2))
+            let upper = origin.withOffset(CGVector(dx: 0, dy: top + 40))
+            let lower = origin.withOffset(CGVector(dx: 0, dy: top + 40 + step))
             if low {
                 lower.press(forDuration: 0.05, thenDragTo: upper, withVelocity: .slow, thenHoldForDuration: 0.2)
             } else {

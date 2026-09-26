@@ -43,7 +43,7 @@
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  build/artifacts/Signal-Review.zip (signal) or Signal-Regressions-Review.zip
 #                 (regressions), with an offline index.html; the signal scope also makes
-#                 Signal-Screens.zip, Signal-walkthrough-compact.zip/.mp4 and
+#                 Signal-Screens.zip, Signal-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
 #                 Signal-walkthrough-original.zip; each archive's SHA-256
 #   enforce       fail the build unless the verdict says PASS (run last)
 #
@@ -1539,7 +1539,8 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 .note{color:#ccc;max-width:780px}</style></head><body>
 <h1>Proximeet Signal: iOS Simulator review, scope “%s”</h1>
 <p><b>%s</b></p>
-<p class="note">Source <code>%s</code>. Real captures from %s (%s, %s; the smaller iPhone where a caption says so).
+<p class="note">Source <code>%s</code>. Real captures from %s (%s, %s; the smaller iPhone where a caption says so or
+names a width other than 440 pt).
 The approved design they are compared with is unchanged. The tests were split across two builds on this same commit: “signal” and
 “regressions”. This page shows one of them, and every result names the device it ran on. Captures named “journey” come
 from the real route, driven by real taps and typing. Captures marked FIXTURE or DIRECT LAUNCH open a prepared state

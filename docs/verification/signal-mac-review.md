@@ -190,7 +190,7 @@ Signal scope:
 
   Every file name says whether it is `XCTest-journey`, `XCTest-FIXTURE-direct-launch` or
   `simctl-FIXTURE-direct-launch`.
-- `Signal-walkthrough-compact.zip` (and the same MP4 loose). The compact journey, a labelled
+- `Signal-walkthrough-compact.zip` (and, only when it was re-encoded, the same MP4 loose). The compact journey, a labelled
   half-size re-encode trimmed to the app, or a labelled fallback copy.
 - `Signal-walkthrough-original.zip`: the unedited simulator recording.
 - `Signal-Review.zip`: an offline `Signal-Review/index.html`. It has:
