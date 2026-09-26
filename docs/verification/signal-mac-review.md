@@ -19,11 +19,17 @@ builds on the same pinned commit:
 | Scope | Selected iPhone 17 Pro Max | Device B (a clone of it) | Smaller iPhone |
 | --- | --- | --- | --- |
 | `signal` | the recorded journey, then the twelve states, first choices, rapid changes and interruptions, the endpoint | the age-gate journey, relaunch, Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests`, and both Guest List keyboard tests | the keyboard Done/Back check, Signal's largest-text test, and three direct-launch captures |
-| `regressions` | the Wristband (7), Pass (4), Birthday (2) and Welcome (all 4) tests | the Guest List's on-screen-keyboard tests (7), then its hardware-key tests (3) | not used |
+| `regressions` | the Wristband (7), Pass (4) and Birthday (2) tests, the two walkthroughs first | the Guest List's paste test first, its on-screen-keyboard tests (7) with the names test, Welcome (all 4), a time-gated repeat of the paste test, and last its hardware Tab test | not used |
 
 Between them the two builds cover all 41 UI test methods, in 43 executions: the keyboard check
 and Signal's largest-text test run on two sizes. Each verdict names its build and scope. The final report lists which build
 supplied each result, and counts both builds and their minutes.
+
+**The regression correction (after build `6ab7ee20`).** The `regressions` scope's runs, their order,
+devices and result bundles come from `signal-regressions-recovery-manifest.tsv`. It holds the same 27
+required tests as before, plus one planned repeat. That scope has no automatic retries, and its runs
+stop gracefully. It packages `Signal-Regression-Recovery.zip`. The signal scope is unchanged. See
+`docs/reports/signal-regression-correction.md`.
 
 ## 1. The source gate
 
@@ -76,7 +82,13 @@ checkout is exactly the reviewed revision:
 long wait is bounded by that deadline, leaving about four minutes for the exports, the verdict,
 the downloads and publishing.
 
-Retries work like this:
+In the `regressions` scope the deadline is 23.5 minutes (1410 s) after the gate began. There are no
+retries, and at its bound an xcodebuild gets SIGINT, then SIGKILL 75 s later, so it can close its
+result bundle. Every execution counts. Any failure, skip, interruption, missing execution, second
+execution in one run, or run exit other than 0 fails the verdict. The planned repeat runs only with
+time for it and the run after it; if it runs, it must pass.
+
+In the `signal` scope, retries work like this:
 - XCTest's per-test time allowance is on: 300 s, at most 360 s.
 - A failed test other than the recorded journey runs once more
   (`-retry-tests-on-failure -test-iterations 2`).
@@ -212,7 +224,20 @@ Signal scope:
 
   Its relative links are checked when it is made. Its SHA-256 is in `Signal-Review.zip.sha256`.
 
-Regressions scope: `Signal-Regressions-Review.zip`, the same page for the earlier chapters' tests.
+Regressions scope: `Signal-Regression-Recovery.zip`, with its SHA-256 beside it. Its offline
+`Signal-Regression-Recovery/index.html` links only to files inside the archive, which holds:
+
+- the source revision and its comparison with `1085af3d`;
+- both manifests and their comparison;
+- every execution with its device, run, outcome and duration;
+- the paste, Wristband-walkthrough and Month-drag evidence;
+- the failure evidence;
+- every screenshot and note;
+- the raw `.xcresult` bundles and xcresulttool JSON;
+- the logs;
+- `SHA256SUMS.txt`.
+
+Before the correction, this scope made `Signal-Regressions-Review.zip`.
 
 Both scopes: `Proximeet-Debug-iphonesimulator-<sha>.zip`, the unsigned simulator app. It cannot be
 installed on an iPhone.

@@ -1,0 +1,39 @@
+# Source comparison: the Signal regression correction's tree against 1085af3d7be62ef3fc463016446aa87c76b976f3
+# (signal/approved-20260926T131402Z, the revision of Signal build 6ab7e942 and regression build 6ab7ee20).
+# Every file of the correction's tree (git ls-files --cached --others --exclude-standard) and of 1085af3d,
+# compared by SHA-256 of its bytes. The correction's own commit SHA is recorded by the source gate of the build
+# (results/source-checkpoint.txt, git_head) and cannot be written into this file, which is part of that commit.
+
+## Product files (the app's sources, resources, assets, fonts, project configuration and the domain package)
+
+All 104 product files are byte-identical to 1085af3d: no app, asset, font, project or domain change.
+
+## Per category: files compared, identical, changed, added or removed
+
+CI workflow (codemagic.yaml)                                              1 compared     0 identical    1 changed    0 added/removed
+UI tests (ProximeetUITests)                                               7 compared     5 identical    2 changed    0 added/removed
+app assets (asset catalog)                                               30 compared    30 identical    0 changed    0 added/removed
+app resources and configuration (other files under Proximeet/)            3 compared     3 identical    0 changed    0 added/removed
+app sources (Swift)                                                      28 compared    28 identical    0 changed    0 added/removed
+approved design handoffs (docs/design)                                   67 compared    67 identical    0 changed    0 added/removed
+documentation and source-gate manifests (docs)                           52 compared    46 identical    2 changed    4 added/removed
+domain code and its tests (ProximeetDomain)                              27 compared    27 identical    0 changed    0 added/removed
+fonts (Manrope, in the asset catalog)                                    12 compared    12 identical    0 changed    0 added/removed
+other                                                                    11 compared    11 identical    0 changed    0 added/removed
+project configuration (Proximeet.xcodeproj)                               4 compared     4 identical    0 changed    0 added/removed
+review scripts                                                           16 compared    13 identical    1 changed    2 added/removed
+
+## Every difference (status, category, path, SHA-256 at 1085af3d, SHA-256 now)
+
+changed	UI tests (ProximeetUITests)	ProximeetUITests/BirthdayReviewTests.swift	dfb399574f4aeca55d3fccf9f450a536ce0ca81ee7f6dee35462312a05ed2cdb	d1f70e7e5da41646a0e55038f8680e18d7d359144190694a2a2618cf70f21b10
+changed	UI tests (ProximeetUITests)	ProximeetUITests/GuestListReviewTests.swift	61f1192724ffb47d1f7b96446ab0a7b7f718c82bff6045f8d0493ae84c7dc180	b4600adc41460e0993ee0db84d2fb448b5a8f9a966c4fd6291aa8602a4df53a4
+changed	CI workflow (codemagic.yaml)	codemagic.yaml	10d8473e50b21c120a9a1099ec24f588861c27f5ca19813ac36793db54b91e85	0c2ef3172038da57491fbc80601a50d1222fd9726428ff5afe02cf23247622a2
+added	documentation and source-gate manifests (docs)	docs/reports/signal-regression-correction.md	-	9abbe845bf55c836bcade0c285f67977512bf51297bedf25e759d65c9bffcd38
+changed	documentation and source-gate manifests (docs)	docs/verification/signal-mac-review.md	d1c0f775e152d4f6ba2efc088585e78296f79db92022dd9a7d88dbad099e968d	094a1eff3415f5d949bf8220861a410045a8332f271237ece757fb1556824f8c
+added	documentation and source-gate manifests (docs)	docs/verification/signal-regressions-original-manifest.txt	-	70911befe442d44f4cc6835ce898130c0b56cc952a6cb25b972d1bf991c85ee5
+added	documentation and source-gate manifests (docs)	docs/verification/signal-regressions-recovery-manifest.tsv	-	c50d124e09724f966a2699b7f6d7dd0d4010790fe4782790f72251158c493100
+added	documentation and source-gate manifests (docs)	docs/verification/signal-regressions-recovery-source-comparison.txt	-	this file (it cannot hold its own hash)
+changed	documentation and source-gate manifests (docs)	docs/verification/signal-review-files.sha256	22f893be2587a9152e9145aeebc7a22f1462e685eed47be014ac9ff80db9f085	the source gate's manifest, regenerated after every edit (it lists this file's hash)
+added	review scripts	scripts/signal_regression_recovery.py	-	98c047f02300ea9a65751333ba995f4a3c44d85023e40aab67d4c031eef7004a
+added	review scripts	scripts/signal_regressions_results.py	-	e8a206192449f2ab4fcfb422cf1fb013d14f8b729d5e69aabfc9b4c9dd9eff67
+changed	review scripts	scripts/signal_review.sh	7223c0856fc4bc7bdf6edb599f82a0f608b6b16f985b4e3e0d655e2eb3bb65da	b5f98df35678ef01fdcc18aecbb2c3f67a54021bfed5282ba3f570892e43fc44
