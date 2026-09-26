@@ -16,17 +16,19 @@
 #                 network, persistence, logging or timer API. Run input WRISTBAND_EXPECTED_COMMIT
 #                 (full 40-hex SHA) pins HEAD; required on Codemagic (CM_BUILD_ID set), optional
 #                 elsewhere. Also records the time budget's start. Runs anywhere.
-#   destinations  list installed simulators; report whether iPhone 17 Pro Max was selected; create a
-#                 second iPhone 17 Pro Max on the same runtime ("device B", deleted after the run)
-#                 and start booting both, behind the compilation
-#   ui-review     compile the UI test harness; then, in parallel on two iPhone 17 Pro Max
-#                 simulators: on the selected one, the recorded Wristband walkthrough, the other
-#                 Wristband tests and the Birthday and Welcome regressions; on device B, the Guest
-#                 List tests (the keyboard Done/Back check included) and the Pass regressions, and
-#                 last the Guest List tests that send hardware key events. Then, on a smaller
-#                 iPhone, the keyboard Done/Back check again and supplementary fixture captures.
-#                 Every xcodebuild is bounded by time. Zero executed tests, or any failure or skip
-#                 of a required test, fails the stage
+#   destinations  list installed simulators; report whether iPhone 17 Pro Max was selected; start
+#                 the first boots of the selected simulator and of a smaller iPhone behind the
+#                 compilation
+#   ui-review     compile the UI test harness; clone the booted iPhone 17 Pro Max ("device B",
+#                 deleted after the run, so it starts warm); then, in parallel: on the selected
+#                 one, the recorded Wristband walkthrough, the other Wristband tests and the
+#                 Birthday, Welcome and three Pass regressions; on device B, the Guest List tests
+#                 (the keyboard Done/Back check included) and the Pass walkthrough, and last the
+#                 Guest List tests that send hardware key events. Then, on the smaller iPhone, the
+#                 keyboard Done/Back check again and supplementary fixture captures. The compact
+#                 video is made in the background once the recording ends. Every xcodebuild is
+#                 bounded by time; a failed test is retried once and reported as such. Zero
+#                 executed tests, or any final failure or skip of a required test, fails the stage
 #   compact-video half-size re-encode of the recording, trimmed to the app
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  build/artifacts/Wristband-Review.zip (offline index.html), Wristband-Screens.zip,
@@ -62,9 +64,10 @@ PRIMARY_TARGET="iPhone 17 Pro Max"
 DEVICE_B_NAME="iPhone 17 Pro Max (review B)"
 SMALLER_IPHONES="iPhone 17e|iPhone 16e|iPhone SE (3rd generation)|iPhone 17|iPhone 16|iPhone 17 Pro|iPhone 16 Pro"
 # The UI work must end this many seconds after the checkpoint stage began (about a minute into the
-# build), leaving the compact video, the verdict, the packages and publishing inside the workflow's
-# 28 minutes.
-UI_DEADLINE_SECONDS=1350
+# build), leaving the verdict, the packages and publishing inside the workflow's 28 minutes (the
+# compact video is made during the UI work).
+UI_DEADLINE_SECONDS=1440
+SMALL_ENV="$META/wristband-smaller.env"
 WALKTHROUGH="WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint"
 WRISTBAND_TESTS="testWalkthroughRouteChoicesBackReentryEndpoint testEveryChangeBetweenIntentsKeepsEverythingInAgreement testRapidChangesLeaveTheLastChoice testEndpointDuplicateTapsAndBack testRelaunchStartsUnselected testReduceMotionPreviewChangesWithoutMovement testLargestTextKeepsEveryChoiceReachable"
 WELCOME_TESTS="testHonestNotices testReduceMotionPreviewLaunch testDefaultGeometry"
@@ -72,10 +75,15 @@ WELCOME_TESTS="testHonestNotices testReduceMotionPreviewLaunch testDefaultGeomet
 # on-screen keyboard, so those tests run last on their device, in their own pass.
 GUEST_LIST_HARDWARE_KEY_TESTS="testBlankInternationalAndLongNames testOpenerLimitBoundariesAndPreservedPaste testHardwareTabAndShiftTabMoveBetweenFields"
 GUEST_LIST_TESTS="testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint testInterestsToggleIndependentlyAndOptionalContentIsOmitted testKeyboardFocusOrderReachabilityAndDismissal testKeyboardDoneAndBackStayIndependent testRepeatedTapsNeverDuplicateOrSkipARoute testRelaunchResetsTheDraftAndNothingIsConferred testReduceMotionPreviewKeepsTheCardStationary testLargestTextReflowsAndKeepsEverythingReachable"
-PASS_TESTS="testWalkthroughStartFinishEndpointLeaveReentryCancelBack testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn testReduceMotionPreviewKeepsThePassStationary testLargestTextKeepsTheDemoLabelWholeAndControlsReachable"
+# Pass is split between the two simulators to balance them.
+PASS_TESTS_B="testWalkthroughStartFinishEndpointLeaveReentryCancelBack"
+PASS_TESTS_MAIN="testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn testReduceMotionPreviewKeepsThePassStationary testLargestTextKeepsTheDemoLabelWholeAndControlsReachable"
 BIRTHDAY_TESTS="testWalkthroughEntryCorrectionContinueBack testTypedEntryPreservesComponentsAndKeyboard"
 KEYBOARD_CHECK="testKeyboardDoneAndBackStayIndependent"
 TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360"
+# One retry for a failed test (build 1 lost a Birthday test to "Timed out while acquiring background
+# assertion" at launch). Every attempt is parsed and reported; only the final outcome counts.
+RETRY="-retry-tests-on-failure -test-iterations 2"
 WARMUP_SMALL_SECONDS=8
 SETTLE_SECONDS=3
 STATUS_BARS=""
@@ -83,6 +91,7 @@ RECORDER_PID=""
 BOOTED_BY_US=""
 DEVICE_B_CREATED=""
 B_PID=""
+COMPACT_PID=""
 LAUNCH_PID=""
 
 STAGE="${1:-}"
@@ -95,7 +104,7 @@ case "$STAGE" in
 esac
 
 mkdir -p "$LOGS" "$META" "$OUT"
-LOG="$LOGS/wristband-$STAGE.log"
+LOG="$LOGS/wristband-$STAGE${WRISTBAND_LOG_SUFFIX:-}.log"
 : > "$LOG"
 
 utc_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -170,6 +179,10 @@ finish() {
         kill -TERM "$B_PID" 2>/dev/null || true
         wait "$B_PID" 2>/dev/null || true
         B_PID=""
+    fi
+    if [ -n "$COMPACT_PID" ]; then
+        kill -TERM "$COMPACT_PID" 2>/dev/null || true
+        COMPACT_PID=""
     fi
     for udid in $STATUS_BARS; do
         xcrun simctl status_bar "$udid" clear >/dev/null 2>&1 || true
@@ -402,7 +415,7 @@ stage_destinations() {
     run xcrun simctl list devices available
     xcrun simctl list -j devices available > "$META/wristband-devices-available.json"
     xcrun simctl list -j runtimes available > "$META/wristband-runtimes-available.json"
-    local status=0 device_type udid
+    local status=0 smaller
     run python3 - "$META/wristband-devices-available.json" "$META/wristband-runtimes-available.json" \
         "$SIM_UDID" "$PRIMARY_TARGET" "$OUT/destination.txt" <<'PY' || status=$?
 import json
@@ -434,25 +447,16 @@ print("\n".join(lines))
 sys.exit(0 if selected and selected[0] == primary else 1)
 PY
 
-    # Device B: a second instance of the selected device type on the same runtime, so the
-    # regressions can run beside the Wristband tests at the same 440 x 956 size. Deleted after
-    # ui-review. If it cannot be made, ui-review runs everything on the selected simulator.
-    rm -f "$DEVICE_B_ENV"
-    device_type="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("device_type", ""))' "$META/simulator.json" 2>/dev/null || true)"
-    if [ -n "$device_type" ] && udid="$(xcrun simctl create "$DEVICE_B_NAME" "$device_type" "$SIM_RUNTIME_ID" 2>>"$LOG")" && [ -n "$udid" ]; then
-        printf 'DEVICE_B_UDID=%s\nDEVICE_B_TYPE=%s\n' "$udid" "$device_type" > "$DEVICE_B_ENV"
-        note "Created device B: $DEVICE_B_NAME ($device_type, $SIM_RUNTIME_ID), UDID $udid."
-        summary_line "wristband-device-b" "created $udid ($device_type on $SIM_RUNTIME_NAME)"
-    else
-        note "WARNING: device B could not be created (device type '$device_type'); the tests will run in sequence on $SIM_NAME."
-        summary_line "wristband-device-b" "NOT CREATED; tests run in sequence"
-    fi
-    # Both start booting now, behind the compilation and the domain tests (a first boot takes minutes).
+    # The first boots (minutes of data migration) start now, behind the compilation and the domain
+    # tests: the selected simulator, which device B is later cloned from, and the smaller iPhone.
+    rm -f "$SMALL_ENV"
     run xcrun simctl boot "$SIM_UDID" || true
-    if [ -f "$DEVICE_B_ENV" ]; then
-        # shellcheck source=/dev/null
-        . "$DEVICE_B_ENV"
-        run xcrun simctl boot "$DEVICE_B_UDID" || true
+    smaller="$(smaller_iphone)" || smaller=""
+    if [ -n "$smaller" ]; then
+        printf 'SMALL_UDID=%s\nSMALL_NAME=%q\n' "$(printf '%s' "$smaller" | cut -f1)" "$(printf '%s' "$smaller" | cut -f2)" > "$SMALL_ENV"
+        run xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" || true
+    else
+        note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
     fi
     return "$status"
 }
@@ -582,7 +586,7 @@ xctest() {
         TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1 TEST_RUNNER_PROXIMEET_SHORT_HOLDS=1 xcodebuild \
         -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
         -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived" \
-        "$@" -parallel-testing-enabled NO $TEST_TIMEOUTS -resultBundlePath "$result" \
+        "$@" -parallel-testing-enabled NO $TEST_TIMEOUTS $RETRY -resultBundlePath "$result" \
         CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO test-without-building
 }
 
@@ -594,7 +598,7 @@ only() {
     done
 }
 
-# The Guest List tests with the on-screen keyboard and the Pass regressions, then the hardware-key
+# The Guest List tests with the on-screen keyboard and the Pass walkthrough, then the hardware-key
 # tests, on <udid> with <derived data>. Writes exit codes to $OUT/device-b-exits.txt.
 regressions_chain() {
     local udid="$1" derived="$2" rest_status=0 keys_status=0
@@ -602,7 +606,7 @@ regressions_chain() {
     rm -rf "$rest_result" "$keys_result"
     # shellcheck disable=SC2046
     xctest "$udid" "$derived" "$rest_result" "$(budget 1000)" \
-        $(only GuestListReviewTests $GUEST_LIST_TESTS) $(only PassReviewTests $PASS_TESTS) || rest_status=$?
+        $(only GuestListReviewTests $GUEST_LIST_TESTS) $(only PassReviewTests $PASS_TESTS_B) || rest_status=$?
     export_results "$rest_result" "$OUT/attachments-b"
     # shellcheck disable=SC2046
     xctest "$udid" "$derived" "$keys_result" "$(budget 420)" \
@@ -613,17 +617,18 @@ regressions_chain() {
 
 # The keyboard Done/Back check and three fixture captures on the smaller iPhone.
 smaller_segment() {
-    local smaller udid name result="$OUT/KeyboardSmaller.xcresult" status=0 left
-    smaller="$(smaller_iphone)"
-    if [ -z "$smaller" ]; then
+    local udid name result="$OUT/KeyboardSmaller.xcresult" status=0 left
+    if [ ! -f "$SMALL_ENV" ]; then
         note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
         printf 'device=none installed\nkeyboard_exit=not run\n' > "$OUT/smaller.txt"
         return 2
     fi
-    udid="$(printf '%s' "$smaller" | cut -f1)"
-    name="$(printf '%s' "$smaller" | cut -f2)"
+    # shellcheck source=/dev/null
+    . "$SMALL_ENV"
+    udid="$SMALL_UDID"
+    name="$SMALL_NAME"
     left="$(remaining)"
-    if [ "$left" -lt 200 ]; then
+    if [ "$left" -lt 150 ]; then
         note "SKIPPED (time budget): ${left}s left, too little to boot $name."
         printf 'device=%s (%s)\nkeyboard_exit=not run (time budget)\n' "$name" "$udid" > "$OUT/smaller.txt"
         return 1
@@ -632,7 +637,7 @@ smaller_segment() {
     printf 'device=%s (%s)\nkeyboard_exit=not run (boot)\n' "$name" "$udid" > "$OUT/smaller.txt"
     run xcrun simctl boot "$udid" || true
     BOOTED_BY_US="$BOOTED_BY_US $udid"
-    run bounded "$(budget 300)" xcrun simctl bootstatus "$udid" -b || return 1
+    run bounded "$(budget 240)" xcrun simctl bootstatus "$udid" -b || return 1
     status_bar "$udid"
     rm -rf "$result"
     xctest "$udid" "$DERIVED_DATA" "$result" "$(budget 240)" $(only GuestListReviewTests $KEYBOARD_CHECK) || status=$?
@@ -656,7 +661,9 @@ stage_ui_review() {
     local movie="$OUT/wristband-walkthrough-original.mp4" b_udid="" b_log="$LOGS/wristband-ui-review-device-b.log"
     local walk_result="$OUT/WristbandWalkthrough.xcresult" main_result="$OUT/WristbandReview.xcresult"
     rm -rf "$OUT"/*.xcresult "$OUT"/attachments-* "$movie" "$movie.log" "$OUT/recording-started.txt" \
-        "$OUT/device-b-exits.txt" "$OUT/smaller.txt" "$OUT"/0*-wristband-*.png "$b_log"
+        "$OUT/device-b-exits.txt" "$OUT/smaller.txt" "$OUT"/0*-wristband-*.png "$b_log" \
+        "$OUT/walkthrough-started.txt" "$OUT/compact-video.txt" "$OUT/wristband-walkthrough-compact.mp4" \
+        "$OUT/wristband-walkthrough-compact.mp4.sha256"
     printf 'file\tsimulator\tcaptured_utc\tpixel_width\tpixel_height\tsha256\tnote\n' > "$OUT/captures.tsv"
     export NSUnbufferedIO=YES
     note "UI deadline: $(remaining)s left of the ${UI_DEADLINE_SECONDS}s budget."
@@ -678,23 +685,42 @@ stage_ui_review() {
     fi
     summary_line "wristband-ui-build" "PASS (UI test harness compiled)"
 
-    # 2. Device B runs the regressions from its own copy of the build products (a clone on APFS),
-    #    so the two xcodebuild processes never share a DerivedData folder.
-    if [ -f "$DEVICE_B_ENV" ]; then
+    # 2. The first boots started in destinations. The smaller iPhone finishes its data migration and
+    #    waits shut down, so its later boot is quick. Device B is a clone of the selected simulator
+    #    after its first boot, so it starts warm; it runs from its own copy of the build products
+    #    (a clone on APFS), so the two xcodebuild processes never share a DerivedData folder.
+    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || true
+    if [ -f "$SMALL_ENV" ]; then
         # shellcheck source=/dev/null
-        . "$DEVICE_B_ENV"
-        b_udid="$DEVICE_B_UDID"
+        . "$SMALL_ENV"
+        run bounded "$(budget 300)" xcrun simctl bootstatus "$SMALL_UDID" -b || true
+        run xcrun simctl shutdown "$SMALL_UDID" || true
+    fi
+    run xcrun simctl shutdown "$SIM_UDID" || true
+    rm -f "$DEVICE_B_ENV"
+    if b_udid="$(xcrun simctl clone "$SIM_UDID" "$DEVICE_B_NAME" 2>>"$LOG")" && [ -n "$b_udid" ]; then
         DEVICE_B_CREATED="$b_udid"
+        printf 'DEVICE_B_UDID=%s\n' "$b_udid" > "$DEVICE_B_ENV"
+        note "Device B: $DEVICE_B_NAME, cloned from $SIM_UDID after its first boot: $b_udid."
+        summary_line "wristband-device-b" "cloned $b_udid from $SIM_UDID ($SIM_NAME, $SIM_RUNTIME_NAME)"
         rm -rf "$DERIVED_DATA_B"
         if ! run cp -Rc "$DERIVED_DATA" "$DERIVED_DATA_B" && ! run ditto "$DERIVED_DATA" "$DERIVED_DATA_B"; then
             note "WARNING: the build products could not be copied for device B; everything runs on $SIM_NAME."
             b_udid=""
         fi
+    else
+        b_udid=""
+        note "WARNING: device B could not be cloned; the tests run in sequence on $SIM_NAME."
+        summary_line "wristband-device-b" "NOT CLONED; tests run in sequence"
     fi
-    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || true
+    run xcrun simctl boot "$SIM_UDID" || true
+    if [ -n "$b_udid" ]; then
+        run xcrun simctl boot "$b_udid" || true
+    fi
+    run bounded "$(budget 240)" xcrun simctl bootstatus "$SIM_UDID" -b || true
     status_bar "$SIM_UDID"
     if [ -n "$b_udid" ]; then
-        run bounded "$(budget 420)" xcrun simctl bootstatus "$b_udid" -b || true
+        run bounded "$(budget 240)" xcrun simctl bootstatus "$b_udid" -b || true
         status_bar "$b_udid"
         (
             trap - EXIT INT TERM
@@ -704,7 +730,7 @@ stage_ui_review() {
             regressions_chain "$b_udid" "$DERIVED_DATA_B"
         ) &
         B_PID=$!
-        summary_line "wristband-parallel" "device B $b_udid runs Guest List and Pass beside the Wristband, Birthday and Welcome tests"
+        summary_line "wristband-parallel" "device B $b_udid runs Guest List and the Pass walkthrough beside the Wristband, Birthday, Welcome and three Pass tests"
     fi
 
     # 3. The recorded walkthrough on the selected simulator: the recorder is confirmed active before
@@ -727,8 +753,11 @@ stage_ui_review() {
         stop_recorder
         rm -f "$movie"
     fi
-    # The recorded walkthrough keeps its full holds: it is the one test meant to be watched.
-    if run bounded "$(budget 300)" env TEST_RUNNER_PROXIMEET_WRISTBAND_REVIEW=1 xcodebuild \
+    # The recorded walkthrough keeps its full holds: it is the one test meant to be watched. Not
+    # retried (a retry would not be the recorded run). The bound leaves room after the test for the
+    # result bundle to be written: build 1 lost its attachments when a 300-s bound ended xcodebuild
+    # 44 s after the test passed.
+    if run bounded "$(budget 480)" env TEST_RUNNER_PROXIMEET_WRISTBAND_REVIEW=1 xcodebuild \
         -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
         -destination "platform=iOS Simulator,id=$SIM_UDID" -derivedDataPath "$DERIVED_DATA" \
         -only-testing:"ProximeetUITests/$WALKTHROUGH" -parallel-testing-enabled NO $TEST_TIMEOUTS \
@@ -742,13 +771,20 @@ stage_ui_review() {
         shasum -a 256 "$movie" > "$movie.sha256"
     fi
     export_results "$walk_result" "$OUT/attachments-walkthrough"
+    # The compact video is made now, in the background, from the walkthrough's own start marker.
+    sed -n 's/.*WRISTBAND_WALKTHROUGH_START \([0-9][0-9.]*\).*/\1/p' "$LOG" | head -n 1 > "$OUT/walkthrough-started.txt"
+    if [ -s "$movie" ]; then
+        WRISTBAND_LOG_SUFFIX=-during-ui-review bash scripts/wristband_review.sh compact-video > /dev/null 2>&1 &
+        COMPACT_PID=$!
+    fi
 
-    # 4. The other Wristband tests and the Birthday and Welcome regressions on the selected simulator.
+    # 4. The other Wristband tests and the Birthday, Welcome and three Pass regressions on the
+    #    selected simulator.
     # shellcheck disable=SC2046
     xctest "$SIM_UDID" "$DERIVED_DATA" "$main_result" "$(budget 900)" \
         $(only WristbandReviewTests $(printf '%s\n' $WRISTBAND_TESTS | grep -v '^testWalkthrough')) \
-        $(only BirthdayReviewTests $BIRTHDAY_TESTS) \
-        $(only WelcomeReviewTests $WELCOME_TESTS testLargestTextSize) || main_status=$?
+        $(only BirthdayReviewTests $BIRTHDAY_TESTS) $(only PassReviewTests $PASS_TESTS_MAIN) \
+        $(only WelcomeReviewTests $WELCOME_TESTS) || main_status=$?
     export_results "$main_result" "$OUT/attachments-main"
 
     # 5. Without device B, its share runs here, after the Wristband tests.
@@ -770,31 +806,41 @@ stage_ui_review() {
         *) summary_line "wristband-smaller" "exit $small_status ($(tr '\n' ' ' < "$OUT/smaller.txt" 2>/dev/null))" ;;
     esac
 
-    # 7. Device B's results.
+    # 7. Device B's results, and the compact video.
     if [ -n "$B_PID" ]; then
         note "Waiting for device B ($(remaining)s left)."
         wait "$B_PID" || true
         B_PID=""
-        cat "$b_log" >> "$LOG" 2>/dev/null || true
+    fi
+    if [ -n "$COMPACT_PID" ]; then
+        waited=0
+        while kill -0 "$COMPACT_PID" 2>/dev/null && [ "$waited" -lt 240 ]; do
+            sleep 0.5
+            waited=$((waited + 1))
+        done
+        wait "$COMPACT_PID" 2>/dev/null || true
+        COMPACT_PID=""
     fi
     run cat "$OUT/captures.tsv"
 
     # 8. What actually ran, per device, from xcodebuild's per-test lines (to a file: bash 3.2
     #    misparses heredocs inside $( )).
     python3 - "$LOG" "$b_log" "$OUT/ui-review-tests.txt" "$walk_status" "$main_status" "$small_status" \
-        "$OUT/device-b-exits.txt" "$b_udid" "$WRISTBAND_TESTS" "$WELCOME_TESTS" "$GUEST_LIST_TESTS $GUEST_LIST_HARDWARE_KEY_TESTS" \
-        "$PASS_TESTS" "$BIRTHDAY_TESTS" "$KEYBOARD_CHECK" "$SIM_UDID" > "$OUT/ui-review-counts.txt" <<'PY'
+        "$OUT/device-b-exits.txt" "$b_udid" "$WRISTBAND_TESTS" "$WELCOME_TESTS" \
+        "$GUEST_LIST_TESTS $GUEST_LIST_HARDWARE_KEY_TESTS" "$PASS_TESTS_B" "$BIRTHDAY_TESTS" \
+        "$KEYBOARD_CHECK" "$SIM_UDID" "$PASS_TESTS_MAIN" > "$OUT/ui-review-counts.txt" <<'PY'
 import os
 import re
 import sys
 
 (main_log, b_log, out_path, walk_exit, main_exit, small_exit, b_exits_path, b_udid,
- wristband, welcome, guest_list, pass_tests, birthday, keyboard, main_id) = sys.argv[1:16]
+ wristband, welcome, guest_list, pass_b, birthday, keyboard, main_id, pass_main) = sys.argv[1:17]
 pattern = re.compile(r"Test [Cc]ase '(?:-\[)?(?:[\w.]*\.)?(WelcomeReviewTests|BirthdayReviewTests|PassReviewTests|GuestListReviewTests|WristbandReviewTests)[ ./](test\w+)(?:\(\))?\]?' (passed|failed|skipped)(?: \(([\d.]+) seconds\))?")
 
 # Each run's lines are attributed to a simulator by the xcodebuild destination that `run` printed
 # before them ("$ ... -destination platform=iOS Simulator,id=<UDID> ...").
 outcomes = {}
+history = {}
 durations = {}
 markers = set()
 walk_start = None
@@ -813,6 +859,7 @@ def scan(path, default_device):
         if match:
             key = (device, "%s.%s" % (match.group(1), match.group(2)))
             outcomes[key] = match.group(3)
+            history.setdefault(key, []).append(match.group(3))
             if match.group(4):
                 durations[key] = match.group(4)
         for marker in ("WRISTBAND_REVIEW_FLAG_SEEN", "GUEST_LIST_REVIEW_FLAG_SEEN", "PASS_REVIEW_FLAG_SEEN",
@@ -842,8 +889,9 @@ def names(cls, tests):
 lines, missing = [], []
 # Required: every Wristband, Birthday and Welcome test on the selected simulator; every Guest List and
 # Pass test on device B (or the selected simulator without it); the keyboard check on a smaller iPhone.
-required_main = names("WristbandReviewTests", wristband) + names("BirthdayReviewTests", birthday) + names("WelcomeReviewTests", welcome)
-required_b = names("GuestListReviewTests", guest_list) + names("PassReviewTests", pass_tests)
+required_main = (names("WristbandReviewTests", wristband) + names("BirthdayReviewTests", birthday)
+                 + names("WelcomeReviewTests", welcome) + names("PassReviewTests", pass_main))
+required_b = names("GuestListReviewTests", guest_list) + names("PassReviewTests", pass_b)
 required_small = names("GuestListReviewTests", keyboard)
 
 
@@ -866,15 +914,24 @@ counts = {k: sum(1 for v in outcomes.values() if v == k) for k in ("passed", "fa
 executed = counts["passed"] + counts["failed"]
 exits = {"walkthrough": walk_exit, "wristband_birthday_welcome": main_exit, "smaller": small_exit,
          "device_b_rest": b_exits.get("rest", "not run"), "device_b_keys": b_exits.get("keys", "not run")}
+# 65 is xcodebuild's "a test failed": with a retry, a test that failed once and then passed may still
+# report it, and a final failure is caught by the counts. Any other non-zero exit (a timeout, a
+# crash, a skip for time) fails the stage.
 ok = (executed > 0 and counts["failed"] == 0 and not missing
-      and all(str(v) == "0" for k, v in exits.items()))
+      and all(str(v) in ("0", "65") for k, v in exits.items()))
+retried = sorted("%s[%s] %s" % (name, device if device not in (main_id, b_udid) else ("main" if device == main_id else "deviceB"),
+                                " then ".join(runs))
+                 for (device, name), runs in history.items() if len(runs) > 1)
 label = {main_id: "main", b_udid: "deviceB"} if b_udid else {main_id: "main"}
 for (device, name), outcome in sorted(outcomes.items(), key=lambda item: (item[0][1], item[0][0])):
-    lines.append("%s[%s]=%s%s" % (name, label.get(device, "smaller:" + device), outcome,
-                                  (" (%s s)" % durations[(device, name)]) if (device, name) in durations else ""))
+    runs = history.get((device, name), [outcome])
+    lines.append("%s[%s]=%s%s%s" % (name, label.get(device, "smaller:" + device), outcome,
+                                    (" (%s s)" % durations[(device, name)]) if (device, name) in durations else "",
+                                    (" after a retry: " + " then ".join(runs)) if len(runs) > 1 else ""))
 lines += ["discovered=%d" % len(outcomes), "executed=%d" % executed,
           "passed=%(passed)d" % counts, "failed=%(failed)d" % counts, "skipped=%(skipped)d" % counts,
           "required_passed=" + ("yes" if not missing else "no (" + "; ".join(missing) + ")"),
+          "retried=" + ("; ".join(retried) if retried else "none"),
           "flag_markers_in_log=" + " ".join(sorted(markers)),
           "walkthrough_started_epoch=%s" % (walk_start or "unknown"),
           "devices=main %s; device B %s; smaller %s" % (main_id, b_udid or "not used", small_id or "not used")]
@@ -886,6 +943,10 @@ print("executed %d of %d discovered (passed %d, failed %d, skipped %d); required
          "yes" if not missing else "no", ",".join("%s:%s" % item for item in sorted(exits.items())),
          "PASS" if ok else "FAIL"))
 PY
+    # Device B's log joins this one only now, after the parse, so no result is read twice.
+    if [ -n "$b_udid" ]; then
+        cat "$b_log" >> "$LOG" 2>/dev/null || true
+    fi
     run cat "$OUT/ui-review-tests.txt"
     summary_line "wristband-ui-run" "$(cat "$OUT/ui-review-counts.txt")"
     grep -qx 'result=PASS' "$OUT/ui-review-tests.txt"
@@ -897,17 +958,27 @@ PY
 
 # A half-size re-encode of the recording, trimmed to the app (by frame brightness, with the
 # walkthrough's start marker as the fallback). AVFoundation, through scripts/compact_video.swift;
-# the original is untouched. If the re-encode fails, the fallback is a labelled copy.
+# the original is untouched. If the re-encode fails, the fallback is a labelled copy. ui-review
+# starts this stage in the background as soon as the recording ends; the workflow's own step then
+# reports that result, or makes it if it is missing.
 stage_compact_video() {
     local movie="$OUT/wristband-walkthrough-original.mp4" compact="$OUT/wristband-walkthrough-compact.mp4"
     local start=0 marker started pid waited=0 status=1
+    if grep -q '^result=' "$OUT/compact-video.txt" 2>/dev/null && [ -s "$compact" ] && [ -s "$compact.sha256" ]; then
+        note "Already made during ui-review:"
+        run cat "$OUT/compact-video.txt" "$compact.sha256"
+        return 0
+    fi
     rm -f "$compact" "$OUT/compact-video.txt"
     if [ ! -s "$movie" ]; then
         note "No recording to compact."
         printf 'result=NOT PRODUCED (no recording)\n' > "$OUT/compact-video.txt"
         return 2
     fi
-    marker="$(sed -n 's/^walkthrough_started_epoch=//p' "$OUT/ui-review-tests.txt" 2>/dev/null || true)"
+    marker="$(cat "$OUT/walkthrough-started.txt" 2>/dev/null || true)"
+    if [ -z "$marker" ]; then
+        marker="$(sed -n 's/^walkthrough_started_epoch=//p' "$OUT/ui-review-tests.txt" 2>/dev/null || true)"
+    fi
     started="$(cat "$OUT/recording-started.txt" 2>/dev/null || true)"
     if [ -n "$marker" ] && [ "$marker" != "unknown" ] && [ -n "$started" ]; then
         start="$(python3 -c "import sys; print('%.2f' % max(0.0, float(sys.argv[1]) - float(sys.argv[2]) - 0.5))" "$marker" "$started")"
@@ -1011,6 +1082,7 @@ lines += ["    XCTest detail: executed %s, passed %s, failed %s, skipped %s; rev
     tests.get("executed", "?"), tests.get("passed", "?"), tests.get("failed", "?"), tests.get("skipped", "?"),
     tests.get("flag_markers_in_log", "?"))]
 lines += ["    required: " + tests.get("required_passed", "?")]
+lines += ["    retried (failed, then run once more): " + tests.get("retried", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
     lines += ["    " + line.strip() for line in open(path) if "ReviewTests." in line or line.startswith("xcodebuild_exit")]

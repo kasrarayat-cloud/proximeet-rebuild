@@ -43,34 +43,45 @@ reviewed revision:
 
 - `codemagic_verify.sh metadata`, then `wristband_review.sh checkpoint`, then `codemagic_verify.sh
   validate` and `select-simulator`. These stop the build on failure.
-- `wristband_review.sh destinations` reports the iPhone 17 Pro Max target and creates a second
-  iPhone 17 Pro Max on the same runtime ("device B", deleted when the review ends). Both start
-  booting here, behind the compilation.
+- `wristband_review.sh destinations` reports the iPhone 17 Pro Max target and starts the first
+  boots (minutes of data migration) of the selected simulator and of a smaller iPhone (the first
+  installed of iPhone 17e, 16e, SE, 17, 16, 17 Pro, 16 Pro), behind the compilation.
 - `codemagic_verify.sh build`, `package` and `domain-tests`.
 - `wristband_review.sh ui-review`, `compact-video`, `verdict`, `package-review` and `enforce`.
   `enforce` fails the build unless the verdict is PASS.
 
-`ui-review` keeps its own deadline, 22.5 minutes after the gate began, and bounds every
-`xcodebuild` and every wait by it, so the video, the verdict and the downloads are always made
-inside the 28 minutes. XCTest's own per-test time allowance is on (300 s, at most 360 s).
+`ui-review` keeps its own deadline, 24 minutes after the gate began, and bounds every
+`xcodebuild` and every wait by it, so the verdict and the downloads are always made inside the 28
+minutes. XCTest's own per-test time allowance is on (300 s, at most 360 s). A failed test is run
+once more (`-retry-tests-on-failure -test-iterations 2`); every attempt is parsed and listed as
+"retried" in the results and the verdict, and only a test's final outcome counts. The recorded
+walkthrough is never retried.
 
 It runs in this order:
 
-1. `build-for-testing`, then an APFS clone of the build products for device B.
+1. `build-for-testing`. The smaller iPhone finishes its first boot and waits shut down. The
+   selected simulator, once booted, is shut down and cloned ("device B", deleted when the review
+   ends), so B starts warm; both boot, and B gets an APFS clone of the build products.
 2. In parallel:
    - **The selected iPhone 17 Pro Max.** The recorder starts and must print "Recording started".
      `WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint` runs alone, recorded,
-     with its full pauses. Then the other `WristbandReviewTests` and the `BirthdayReviewTests`
-     and `WelcomeReviewTests` regressions.
+     with its full pauses, and with room after it for its result bundle to be written. The compact
+     video is then made in the background. Then the other `WristbandReviewTests`, the
+     `BirthdayReviewTests` and `WelcomeReviewTests` regressions, and three `PassReviewTests`
+     (rapid taps, Reduce Motion preview, largest text).
    - **Device B.** The on-screen-keyboard `GuestListReviewTests` (the new
-     `testKeyboardDoneAndBackStayIndependent` included) and `PassReviewTests`; then, last and in
-     their own pass, the Guest List tests that send hardware key events. The Guest List tests are
-     not recorded here, so they run with `PROXIMEET_SHORT_HOLDS=1`: each of their pauses is at
+     `testKeyboardDoneAndBackStayIndependent` included) and the Pass walkthrough; then, last and
+     in their own pass, the Guest List tests that send hardware key events. The Guest List tests
+     are not recorded here, so they run with `PROXIMEET_SHORT_HOLDS=1`: each of their pauses is at
      most 0.6 s, still longer than any 220 ms change. The Pass, Birthday and Welcome tests are
      unchanged and keep their own pauses.
-3. The selected simulator shuts down, and a smaller iPhone (the first installed of iPhone 17e,
-   16e, SE, 17, 16, 17 Pro, 16 Pro) runs `testKeyboardDoneAndBackStayIndependent` again, then
-   three supplementary fixture captures (empty, Social, Activity).
+3. The selected simulator shuts down, and the smaller iPhone boots (quickly, its first boot done)
+   to run `testKeyboardDoneAndBackStayIndependent` again, then three supplementary fixture
+   captures (empty, Social, Activity).
+
+Build 1 (`6ab77b78`) created device B fresh, booted the smaller iPhone only at the end and
+bounded the recorded walkthrough at 300 s: it lost the walkthrough's attachments and ran out of
+time for two required checks. This order is the correction.
 
 Without device B the same tests run in sequence on the selected simulator, if the time allows.
 
@@ -131,9 +142,10 @@ The Guest List tests keep their checks. Only the endpoint changed, intentionally
 preview on the card opens the Wristband, whose Back returns to the card. `PassReviewTests`,
 `BirthdayReviewTests` and `WelcomeReviewTests` are unchanged.
 
-Every required test must be discovered, executed and passed on its device (the Wristband,
-Birthday and Welcome tests on the selected simulator, the Guest List and Pass tests on device B,
-the keyboard check also on the smaller iPhone); a skip fails the stage. The review flags are
+Every required test must be discovered, executed and finally passed on its device (the
+Wristband, Birthday and Welcome tests and three Pass tests on the selected simulator, the Guest
+List tests and the Pass walkthrough on device B, the keyboard check also on the smaller iPhone); a
+skip fails the stage. Welcome's informational largest-text test is no longer run. The review flags are
 `TEST_RUNNER_PROXIMEET_{WRISTBAND,GUEST_LIST,PASS,BIRTHDAY,WELCOME}_REVIEW=1`.
 
 ## 3. Starting it

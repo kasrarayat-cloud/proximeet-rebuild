@@ -150,9 +150,11 @@ delivery message, not in this file.
     under-18 date blocks the route as before, but the introduction and the intent stay in memory
     for the run, as the introduction already did in chapter 04. Not changed here; worth a
     decision with Signal.
-11. **Parallel regressions.** To fit the 28-minute limit, the Guest List and Pass tests run on a
-    second iPhone 17 Pro Max on the same runtime, created for the run and deleted after it, while
-    the Wristband, Birthday and Welcome tests run on the selected one. Both are 440 × 956.
+11. **Parallel regressions.** To fit the 28-minute limit, the Guest List tests and the Pass
+    walkthrough run on a second iPhone 17 Pro Max, a clone of the selected one made after its first
+    boot and deleted after the run, while the Wristband, Birthday and Welcome tests and three Pass
+    tests run on the selected one. Both are 440 × 956. A failed test is retried once and reported
+    as retried. Welcome's informational largest-text test is no longer run.
 12. **Tile geometry.** Figma gives each name an 89-pt column and moves a selected tile's content
     1.5 pt in. The app keeps both on the reference phone (the check at x 146.5 in a selected
     tile), but the column is a maximum, not a minimum, the check is always laid out and only
