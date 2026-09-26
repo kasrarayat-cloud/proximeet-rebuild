@@ -195,7 +195,11 @@ Signal scope:
 
   Every file name says whether it is `XCTest-journey`, `XCTest-FIXTURE-direct-launch` or
   `simctl-FIXTURE-direct-launch`.
-- `Signal-walkthrough-compact.zip` (and, only when it was re-encoded, the same MP4 loose). The compact journey, a labelled
+- `Signal-walkthrough-compact.zip` (and, only when it was re-encoded, the same MP4 loose). It is
+  trimmed to the journey test's own start (its marker) and end (plus XCTest's duration), so no
+  frame has to be scanned. On a host without a hardware scaler the older brightness scan did not
+  finish in 180 s in builds `6ab7dbf0` and `6ab7e2b4`, so the encode may now run until 30 s past
+  the UI deadline. The compact journey, a labelled
   half-size re-encode trimmed to the app, or a labelled fallback copy.
 - `Signal-walkthrough-original.zip`: the unedited simulator recording.
 - `Signal-Review.zip`: an offline `Signal-Review/index.html`. It has:

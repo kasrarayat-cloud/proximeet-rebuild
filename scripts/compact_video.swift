@@ -1,14 +1,16 @@
 // Proximeet — makes the compact walkthrough video on the Codemagic Mac (no ffmpeg there).
 //
-//     xcrun swift scripts/compact_video.swift <source.mp4> <target.mp4> [start-seconds]
+//     xcrun swift scripts/compact_video.swift <source.mp4> <target.mp4> [start-seconds [end-seconds]]
 //
 // Re-encodes the simulator recording at half its pixel size with AVFoundation's export session,
-// trimmed to the app itself: from the first dark frame (the app's black launch screen; the home
-// screen before it is bright) to the last dark frame before the home screen returns. The app's
-// screens are near-black, so frame brightness finds them without any timing. If no dark frame
-// is found, `start-seconds` (the walkthrough test's own start marker) is used instead. The
-// original recording is never modified. Exits non-zero on any failure; the caller then labels
-// the fallback copy as such.
+// trimmed to the app itself. Given both `start-seconds` and `end-seconds` (the walkthrough test's
+// own start marker and its start plus XCTest's duration, in recording time), it trims to them
+// directly. Otherwise it finds the app by frame brightness: from the first dark frame (the app's
+// black launch screen; the home screen before it is bright) to the last dark frame before the
+// home screen returns; if no dark frame is found, `start-seconds` is used. The brightness scan
+// decodes a frame every 0.25 s and is slow on a host without a hardware scaler (Signal build
+// 6ab7dbf0 ran out of time), so the timed trim is preferred. The original recording is never
+// modified. Exits non-zero on any failure; the caller then labels the fallback copy as such.
 import AVFoundation
 import Foundation
 
@@ -20,6 +22,7 @@ guard arguments.count >= 3 else {
 let source = URL(fileURLWithPath: arguments[1])
 let target = URL(fileURLWithPath: arguments[2])
 let requestedStart = arguments.count > 3 ? max(0, Double(arguments[3]) ?? 0) : 0
+let requestedEnd = arguments.count > 4 ? Double(arguments[4]) : nil
 
 let asset = AVURLAsset(url: source)
 guard let track = asset.tracks(withMediaType: .video).first else {
@@ -62,9 +65,10 @@ generator.requestedTimeToleranceAfter = CMTime(seconds: 0.1, preferredTimescale:
 // Measured on build 6ab71ced's recording: the home screen averages about 166, every app frame
 // at most 60.5 (Welcome's hero), the app's black launch frame about 4.
 let step = 0.25, dark = 100.0, total = duration.seconds
+let timed = requestedEnd.map { $0 > requestedStart + 1 && requestedStart < total } ?? false
 var samples: [(time: Double, isDark: Bool)] = []
 var t = 0.0
-while t < total {
+while !timed && t < total {
     if let level = brightness(at: t, generator: generator) {
         samples.append((t, level < dark))
     }
@@ -72,8 +76,10 @@ while t < total {
 }
 let firstDark = samples.first(where: { $0.isDark })?.time
 let lastDark = samples.last(where: { $0.isDark })?.time
-let startSeconds = firstDark.map { max(0, $0 - step) } ?? min(requestedStart, max(0, total - 1))
-let endSeconds = lastDark.map { min(total, $0 + 2 * step) } ?? total
+let startSeconds = timed ? requestedStart
+    : (firstDark.map { max(0, $0 - step) } ?? min(requestedStart, max(0, total - 1)))
+let endSeconds = timed ? min(total, requestedEnd ?? total)
+    : (lastDark.map { min(total, $0 + 2 * step) } ?? total)
 let start = CMTime(seconds: startSeconds, preferredTimescale: 600)
 let end = endSeconds > startSeconds + 1 ? CMTime(seconds: endSeconds, preferredTimescale: 600) : duration
 
@@ -113,5 +119,6 @@ guard export.status == .completed else {
 print(String(
     format: "compact video: %.0f x %.0f, %.2f s to %.2f s of %.2f s (%@)",
     render.width, render.height, start.seconds, end.seconds, duration.seconds,
-    firstDark == nil ? "start from the test's marker; no dark frame found" : "trimmed to the first and last app frames"
+    timed ? "trimmed to the walkthrough test's own start and end"
+        : (firstDark == nil ? "start from the test's marker; no dark frame found" : "trimmed to the first and last app frames")
 ))

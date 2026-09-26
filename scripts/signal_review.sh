@@ -770,7 +770,7 @@ stage_ui_review() {
     local movie="$OUT/signal-walkthrough-original.mp4" walk_status=0
     rm -rf "$OUT"/*.xcresult "$OUT"/attachments-* "$movie" "$movie.log" "$OUT/recording-started.txt" \
         "$OUT/runs.txt" "$OUT/smaller.txt" "$OUT"/0*-signal-*.png "$b_log" \
-        "$OUT/walkthrough-started.txt" "$OUT/compact-video.txt" "$OUT/signal-walkthrough-compact.mp4" \
+        "$OUT/walkthrough-started.txt" "$OUT/walkthrough-duration.txt" "$OUT/compact-video.txt" "$OUT/signal-walkthrough-compact.mp4" \
         "$OUT/signal-walkthrough-compact.mp4.sha256"
     : > "$OUT/runs.txt"
     printf 'file\tsimulator\tcaptured_utc\tpixel_width\tpixel_height\tsha256\tnote\n' > "$OUT/captures.tsv"
@@ -881,6 +881,8 @@ stage_ui_review() {
         export_results "$OUT/SignalJourney.xcresult" "$OUT/attachments-SignalJourney"
         # The compact video is made now, in the background, from the journey's own start marker.
         sed -n 's/.*SIGNAL_WALKTHROUGH_START \([0-9][0-9.]*\).*/\1/p' "$LOG" | head -n 1 > "$OUT/walkthrough-started.txt"
+        sed -n "s/.*testWalkthroughRealJourney]' [a-z]* (\([0-9][0-9.]*\) seconds).*/\1/p" "$LOG" | tail -n 1 \
+            > "$OUT/walkthrough-duration.txt"
         if [ -s "$movie" ]; then
             SIGNAL_LOG_SUFFIX=-during-ui-review SIGNAL_REVIEW_SCOPE="$SCOPE" bash scripts/signal_review.sh compact-video > /dev/null 2>&1 &
             COMPACT_PID=$!
@@ -919,7 +921,7 @@ stage_ui_review() {
     fi
     if [ -n "$COMPACT_PID" ]; then
         waited=0
-        while kill -0 "$COMPACT_PID" 2>/dev/null && [ "$waited" -lt 360 ] && [ "$(remaining)" -gt 0 ]; do
+        while kill -0 "$COMPACT_PID" 2>/dev/null && [ "$(remaining)" -gt -30 ]; do
             sleep 0.5
             waited=$((waited + 1))
         done
@@ -1062,7 +1064,7 @@ PY
 
 stage_compact_video() {
     local movie="$OUT/signal-walkthrough-original.mp4" compact="$OUT/signal-walkthrough-compact.mp4"
-    local start=0 marker started pid waited=0 status=1
+    local start=0 end="" took marker started pid waited=0 status=1 cap
     if [ "$SCOPE" != "signal" ]; then
         note "Scope $SCOPE records nothing; there is no walkthrough to compact."
         printf 'result=NOT APPLICABLE (scope %s records nothing)\n' "$SCOPE" > "$OUT/compact-video.txt"
@@ -1084,23 +1086,35 @@ stage_compact_video() {
         marker="$(sed -n 's/^walkthrough_started_epoch=//p' "$OUT/ui-review-tests.txt" 2>/dev/null || true)"
     fi
     started="$(cat "$OUT/recording-started.txt" 2>/dev/null || true)"
+    took="$(cat "$OUT/walkthrough-duration.txt" 2>/dev/null || true)"
     if [ -n "$marker" ] && [ "$marker" != "unknown" ] && [ -n "$started" ]; then
         start="$(python3 -c "import sys; print('%.2f' % max(0.0, float(sys.argv[1]) - float(sys.argv[2]) - 0.5))" "$marker" "$started")"
+        if [ -n "$took" ]; then
+            end="$(python3 -c "import sys; print('%.2f' % (float(sys.argv[1]) - float(sys.argv[2]) + float(sys.argv[3]) + 1.5))" "$marker" "$started" "$took")"
+        fi
     fi
-    note "Trim start: ${start}s (walkthrough start $marker, recording start $started)."
-    xcrun swift scripts/compact_video.swift "$movie" "$compact" "$start" > "$OUT/compact-video.out" 2>> "$LOG" &
-    pid=$!
-    ENCODER_PID=$pid
-    while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 360 ]; do
-        sleep 0.5
-        waited=$((waited + 1))
-    done
-    if kill -0 "$pid" 2>/dev/null; then
-        note "WARNING: the re-encode did not finish within 180 s; stopping it."
-        kill -TERM "$pid" 2>/dev/null || true
-        wait "$pid" 2>/dev/null || true
-    elif wait "$pid"; then
-        status=0
+    # Bounded by the UI deadline (30 s past it at most), so the verdict, the packages and
+    # publishing still fit in the workflow's 28 minutes.
+    cap=$(( $(remaining) + 30 ))
+    note "Trim: ${start}s to ${end:-the last app frame}s (walkthrough start $marker, duration ${took:-unknown}, recording start $started); up to ${cap}s to encode."
+    if [ "$cap" -lt 45 ]; then
+        note "WARNING: no time left to re-encode."
+    else
+        # shellcheck disable=SC2086
+        xcrun swift scripts/compact_video.swift "$movie" "$compact" "$start" $end > "$OUT/compact-video.out" 2>> "$LOG" &
+        pid=$!
+        ENCODER_PID=$pid
+        while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt $((cap * 2)) ]; do
+            sleep 0.5
+            waited=$((waited + 1))
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+            note "WARNING: the re-encode did not finish within ${cap} s; stopping it."
+            kill -TERM "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+        elif wait "$pid"; then
+            status=0
+        fi
     fi
     ENCODER_PID=""
     cat "$OUT/compact-video.out" >> "$LOG" 2>/dev/null || true
@@ -1673,9 +1687,9 @@ if compact:
     reencoded = compact_note == "RE-ENCODED"
     if reencoded:
         inner = "Signal-walkthrough-compact-RE-ENCODED.mp4"
-        label = ("Compact walkthrough: RE-ENCODED. A half-size AVFoundation re-encode, not the original encoding, trimmed "
-                 "to the app by frame brightness (the journey's start marker is the fallback). The unedited recording is "
-                 "in Signal-walkthrough-original.zip.\n")
+        method = kv(os.path.join(out, "compact-video.txt")).get("method", "AVFoundation export")
+        label = ("Compact walkthrough: RE-ENCODED. A half-size AVFoundation re-encode, not the original encoding (%s). "
+                 "The unedited recording is in Signal-walkthrough-original.zip.\n" % method)
     else:
         inner = "Signal-walkthrough-FALLBACK-COPY-not-re-encoded-not-trimmed.mp4"
         label = ("Compact walkthrough: %s. The re-encode did not complete, so this is a plain copy of the unedited "
