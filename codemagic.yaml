@@ -365,3 +365,67 @@ workflows:
       - build/artifacts/wristband/*.txt
       - build/artifacts/wristband/*.tsv
       - build/artifacts/wristband/*.json
+
+  proximeet-signal-review:
+    name: Proximeet Signal review (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 28
+    environment:
+      xcode: "26.6"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Signal revision and scope, its approved assets, the Signal and intent colour guards
+        script: bash scripts/signal_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target, start the first boots (and a smaller iPhone's, signal scope)
+        script: bash scripts/signal_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: Signal XCTest review for the run's scope (signal - recorded journey, twelve states, integration; regressions - earlier chapters)
+        script: bash scripts/signal_review.sh ui-review
+        ignore_failure: true
+      - name: Compact walkthrough video (half size, trimmed to the app; original kept; signal scope)
+        script: bash scripts/signal_review.sh compact-video
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/signal_review.sh verdict
+        ignore_failure: true
+      - name: Package Signal-Review.zip (or Signal-Regressions-Review.zip), Signal-Screens.zip and the walkthrough downloads
+        script: bash scripts/signal_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/signal_review.sh enforce
+    artifacts:
+      - build/artifacts/Signal-Review.zip
+      - build/artifacts/Signal-Review.zip.sha256
+      - build/artifacts/Signal-Regressions-Review.zip
+      - build/artifacts/Signal-Regressions-Review.zip.sha256
+      - build/artifacts/Signal-Screens.zip
+      - build/artifacts/Signal-Screens.zip.sha256
+      - build/artifacts/Signal-walkthrough-compact.zip
+      - build/artifacts/Signal-walkthrough-compact.zip.sha256
+      - build/artifacts/Signal-walkthrough-compact.mp4
+      - build/artifacts/Signal-walkthrough-compact.mp4.sha256
+      - build/artifacts/Signal-walkthrough-original.zip
+      - build/artifacts/Signal-walkthrough-original.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/signal/*.png
+      - build/artifacts/signal/*.sha256
+      - build/artifacts/signal/*.log
+      - build/artifacts/signal/*.txt
+      - build/artifacts/signal/*.tsv
+      - build/artifacts/signal/*.json

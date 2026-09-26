@@ -1,0 +1,64 @@
+{
+  "status": "Founder approved 2026-09-25 UTC; bounded Signal implementation handoff prepared",
+  "tool": "built-in image_gen",
+  "use_case": "product-mockup",
+  "asset": "Separate decorative blank steel tag; native icons/text outside raster",
+  "hardware": "Not a functional wearable specification",
+  "prompt": "Use case: product-mockup. Asset type: isolated small machined signal tag for the Proximeet iOS Social Objects visual design. Primary request: an exquisitely detailed single small blank brushed stainless-steel tag with a short oval steel connecting loop centered on its top edge, like premium jewelry hardware for a woven wristband. Shape: a broad rounded rectangle, about 1.25 times wider than tall; bevelled polished edges, satin silver front face, extremely subtle machining lines, thin dark graphite recessed perimeter. The top connecting loop is visibly hollow and compact, narrow enough to attach to a wristband clasp. The tag's broad flat face must be completely blank so native symbols can later be overlaid. Camera: front-facing almost orthographic, tiny glimpse of top/right thickness, centered and upright. Soft studio key light from upper left with a fine bright edge and calm darker right metal reflection, suited to a near-black UI. Entire tag and loop visible with generous transparent margin. Materials match a fine stainless clasp, premium tactile industrial design, physically plausible metal. No scenery, no band, no hand, no chain, no text, no logo, no icon, no engraving, no extra objects, no ground shadow. Genuinely transparent background. Square image. The main face should be broad and shallow rather than long like a military dog tag.",
+  "original": "generated_images/exec-7e2d5ee6-48f9-49bb-8226-12d3f67f9b5b.png",
+  "original_dimensions": [
+    1254,
+    1254
+  ],
+  "crop": [
+    41,
+    154,
+    1216,
+    1060
+  ],
+  "delivery": "proximeet-work/signal/tag-delivery.png",
+  "delivery_dimensions": [
+    176,
+    136
+  ],
+  "delivery_bytes": 29257,
+  "alpha_preserved": true,
+  "native_symbol": true,
+  "asset_is_3d_rig": false,
+  "figma_file": "9ZkCIlu9AqAD1f92UDuMAF",
+  "figma_page": "50:190",
+  "figma_board": "54:411",
+  "figma_tag_hash": "72bcf287bbc68bad75d4ed2e350a3546f97b7027",
+  "states": 12,
+  "motion": "500 ms Smart Animate first-selection 2D tag settle; 220 ms preference dissolve; motion settings read back, no video/device validation",
+  "approval": {
+    "quote": "approve go next",
+    "local_datetime": "2026-09-24T20:03:00-07:00",
+    "utc_date": "2026-09-25",
+    "scope": "Twelve app states, carried intent, two approach preferences and bounded 2D tag motion; physical Pulse hardware remains separate.",
+    "figma_annotation": "58:478"
+  },
+  "handoff": {
+    "bundle": "PROXIMEET_SIGNAL_APPROVED_HANDOFF.zip",
+    "prompt": "PROXIMEET_SIGNAL_CLAUDE_PROMPT.md",
+    "layout_spec": "SIGNAL_LAYOUT_SPEC.json",
+    "tag_asset_in_bundle": "assets/signal-tag.png",
+    "tag_reference_in_bundle": "reference/tag-delivery.png"
+  },
+  "approved_band_reuse": {
+    "chapter": "Wristband",
+    "unchanged_originals": true,
+    "common_crop_xyxy": [
+      22,
+      335,
+      1235,
+      920
+    ],
+    "assets": [
+      "assets/wristband-social.png",
+      "assets/wristband-dating.png",
+      "assets/wristband-business.png",
+      "assets/wristband-activity.png"
+    ]
+  }
+}

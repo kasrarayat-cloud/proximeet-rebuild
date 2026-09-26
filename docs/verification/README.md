@@ -24,6 +24,10 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `wristband-approved-files.sha256` | SHA-256 of the approved assets: those of the Guest List, the four Wristband artworks, and the five `docs/design/*-approved/` folders |
 | `wristband-review-files.sha256` | SHA-256 of every other file, except itself |
 | `wristband-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `BandSelectionView.swift`; the Wristband gate confirms they are absent |
+| `signal-mac-review.md` | The Signal run: the manual, unsigned simulator workflow `proximeet-signal-review`, its two scopes on one commit, source gate, steps, integration checks and downloads |
+| `signal-approved-files.sha256` | SHA-256 of the approved assets: those of the Wristband, the blank Signal tag, and the six `docs/design/*-approved/` folders |
+| `signal-review-files.sha256` | SHA-256 of every other file, except itself |
+| `signal-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `SignalSelectionView.swift`; the Signal gate confirms they are absent |
 
 The harness consists of:
 - `scripts/welcome_review.sh`: the steps checkpoint, destinations, captures, ui-review and verdict;
@@ -35,5 +39,8 @@ The harness consists of:
 - `ProximeetUITests/GuestListReviewTests.swift`: skipped unless the runner gets `PROXIMEET_GUEST_LIST_REVIEW=1`;
 - `scripts/wristband_review.sh`: the Wristband steps, with a second iPhone 17 Pro Max for the regressions and a time budget;
 - `ProximeetUITests/WristbandReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WRISTBAND_REVIEW=1`;
+- `scripts/signal_review.sh`: the Signal steps, with a `signal` and a `regressions` scope (`SIGNAL_REVIEW_SCOPE`) run as two builds on one commit;
+- `ProximeetUITests/SignalReviewTests.swift`: skipped unless the runner gets `PROXIMEET_SIGNAL_REVIEW=1`;
+- `ProximeetUITests/BandSignalInteractionTests.swift`: ungated; the approved Wristband → Signal interaction;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.
