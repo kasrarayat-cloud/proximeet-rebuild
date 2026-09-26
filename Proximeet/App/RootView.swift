@@ -34,7 +34,7 @@ private struct SceneDestination: View {
         case .band:
             WristbandView()
         case .signal:
-            SignalSelectionView()
+            SignalView()
         case .readyForCheckIn:
             ReadyForCheckInView()
         }

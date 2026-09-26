@@ -42,13 +42,12 @@ extension BandIntent {
 }
 
 extension ApproachSignal {
-    /// Figma "Icon / wave", "chat", "people", "eye".
+    /// Legacy SF Symbols for the legacy, DEBUG-only Ready scene and 3D hero. The approved Signal
+    /// draws the handoff's own vector icons (`SignalPaths`) instead.
     var symbolName: String {
         switch self {
-        case .comeSayHi: return "hand.raised"
         case .chatFirst: return "bubble.left"
-        case .withMyCrew: return "person.2"
-        case .justLooking: return "eye"
+        case .okayToSayHello: return "hand.raised"
         }
     }
 }

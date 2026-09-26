@@ -1,115 +1,110 @@
 import XCTest
 
-/// Drives real SwiftUI controls and the real domain transitions. The DEBUG fixture only
-/// skips unrelated onboarding setup; no test-only selection or animation API is used.
+/// Real taps across the approved Wristband → Signal interaction (chapters 05 and 06). Ungated, so
+/// the original `proximeet-simulator-verification` workflow's interaction reel records the
+/// approved screens. The DEBUG fixture `wristband` only skips the earlier chapters; it reaches the
+/// Wristband through the same gates as the real route.
+///
+/// Updated for the approved flow: the legacy band and signal screens (`band.confirm`,
+/// `intent.*`, four `signal.*` choices) and the Ready scene with its 3D hero are no longer
+/// reachable from the approved route; Signal's Continue preview ends the preview. Those legacy
+/// assertions are retired. The approved screens are covered in full by `WristbandReviewTests` and
+/// `SignalReviewTests` (every state, pixels, endpoint, taps, Reduce Motion, largest text).
 @MainActor
 final class BandSignalInteractionTests: XCTestCase {
+    private static let intents = ["social", "dating", "business", "activity"]
+    private static let approaches = ["chatFirst", "okayToSayHello"]
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
     func testBandSignalInteraction() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ProximeetFixture", "band"]
+        app.launchArguments = ["-ProximeetFixture", "wristband"]
         app.launch()
-        let confirmBand = app.buttons["band.confirm"]
-        XCTAssertTrue(confirmBand.waitForExistence(timeout: 10))
-        XCTAssertFalse(confirmBand.isEnabled, "A displayed cyan preview must not silently select Social.")
-        try waitForModel(app)
+        let continueBand = app.buttons["wristband.primary"]
+        XCTAssertTrue(continueBand.waitForExistence(timeout: 10))
+        XCTAssertFalse(continueBand.isEnabled, "No intent is chosen for the guest.")
+        holdForCapture(0.7)
         capture("01-band-unselected", app)
 
-        for intent in ["social", "dating", "business", "activity"] {
-            let choice = app.buttons["intent.\(intent)"]
+        for intent in Self.intents {
+            let choice = app.buttons["wristband.intent.\(intent)"]
             choice.tap()
-            XCTAssertEqual(choice.value as? String, "Selected")
-            XCTAssertTrue(confirmBand.isEnabled)
-            for other in ["social", "dating", "business", "activity"] where other != intent {
-                XCTAssertEqual(app.buttons["intent.\(other)"].value as? String, "Not selected")
+            XCTAssertTrue(choice.isSelected)
+            XCTAssertTrue(continueBand.isEnabled)
+            for other in Self.intents where other != intent {
+                XCTAssertFalse(app.buttons["wristband.intent.\(other)"].isSelected)
             }
+            holdForCapture(0.5)
             capture("02-band-\(intent)", app)
         }
-        app.buttons["intent.social"].tap()
-        confirmBand.tap()
+        app.buttons["wristband.intent.social"].tap()
+        continueBand.tap()
 
-        let confirmSignal = app.buttons["signal.confirm"]
-        XCTAssertTrue(confirmSignal.waitForExistence(timeout: 5))
-        XCTAssertFalse(confirmSignal.isEnabled)
-        try waitForModel(app)
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Social band"))
+        let continueSignal = app.buttons["signal.primary"]
+        XCTAssertTrue(continueSignal.waitForExistence(timeout: 5))
+        XCTAssertFalse(continueSignal.isEnabled, "No approach is chosen for the guest.")
+        XCTAssertEqual(summary(app), "Social band · Choose your approach", "The chosen intent is carried.")
+        holdForCapture(0.7)
         capture("03-signal-empty", app)
 
-        for signal in ["comeSayHi", "chatFirst", "withMyCrew", "justLooking"] {
-            let choice = app.buttons["signal.\(signal)"]
+        for approach in Self.approaches {
+            let choice = app.buttons["signal.approach.\(approach)"]
             choice.tap()
-            XCTAssertEqual(choice.value as? String, "Selected")
-            XCTAssertTrue(confirmSignal.isEnabled)
-            for other in ["comeSayHi", "chatFirst", "withMyCrew", "justLooking"] where other != signal {
-                XCTAssertEqual(app.buttons["signal.\(other)"].value as? String, "Not selected")
+            XCTAssertTrue(choice.isSelected)
+            XCTAssertTrue(continueSignal.isEnabled)
+            for other in Self.approaches where other != approach {
+                XCTAssertFalse(app.buttons["signal.approach.\(other)"].isSelected)
             }
-            // Snapshot attachment after the decorative seat; state was asserted above.
             holdForCapture(0.7)
-            capture("04-signal-\(signal)", app)
+            capture("04-signal-\(approach)", app)
         }
 
-        // Reselection while the plate is travelling must replace the draft immediately.
-        app.buttons["signal.chatFirst"].tap()
-        app.buttons["signal.comeSayHi"].tap()
-        XCTAssertEqual(app.buttons["signal.comeSayHi"].value as? String, "Selected")
-        XCTAssertEqual(app.buttons["signal.chatFirst"].value as? String, "Not selected")
-        app.buttons["signal.chatFirst"].tap()
-        XCTAssertEqual(app.buttons["signal.chatFirst"].value as? String, "Selected")
+        // Reselection while the tag is still moving replaces the draft immediately.
+        app.buttons["signal.approach.chatFirst"].tap()
+        app.buttons["signal.approach.okayToSayHello"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.okayToSayHello"].isSelected)
+        XCTAssertFalse(app.buttons["signal.approach.chatFirst"].isSelected)
+        app.buttons["signal.approach.chatFirst"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].isSelected)
+        XCTAssertEqual(summary(app), "Social band · Chat first")
         holdForCapture(0.7)
         capture("05-chat-first-reselected", app)
-        confirmSignal.tap()
-        XCTAssertTrue(app.buttons["Change signal"].waitForExistence(timeout: 5))
-        try waitForModel(app)
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Social band"))
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Chat first"))
-        capture("06-ready", app)
+
+        continueSignal.tap()
+        let end = app.alerts["End of this preview."]
+        XCTAssertTrue(end.waitForExistence(timeout: 5), "Signal's Continue preview ends the preview.")
+        capture("06-endpoint", app)
+        end.buttons["OK"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].isSelected, "The message stays on Signal.")
     }
 
+    /// App-level Reduce Motion preview flag (not the system setting): every change is immediate.
     func testReducedMotionStillUpdatesImmediately() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ProximeetFixture", "band", "-ProximeetReduceMotionPreview", "YES"]
+        app.launchArguments = ["-ProximeetFixture", "wristband", "-ProximeetReduceMotionPreview", "YES"]
         app.launch()
-        XCTAssertTrue(app.buttons["intent.activity"].waitForExistence(timeout: 10))
-        app.buttons["intent.activity"].tap()
-        XCTAssertEqual(app.buttons["intent.activity"].value as? String, "Selected")
-        app.buttons["band.confirm"].tap()
-        XCTAssertTrue(app.buttons["signal.withMyCrew"].waitForExistence(timeout: 5))
-        app.buttons["signal.withMyCrew"].tap()
-        XCTAssertEqual(app.buttons["signal.withMyCrew"].value as? String, "Selected")
-        app.buttons["signal.justLooking"].tap()
-        XCTAssertEqual(app.buttons["signal.justLooking"].value as? String, "Selected")
-        XCTAssertTrue(app.buttons["signal.confirm"].isEnabled)
-        try waitForModel(app)
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Activity band"))
+        XCTAssertTrue(app.buttons["wristband.intent.activity"].waitForExistence(timeout: 10))
+        app.buttons["wristband.intent.activity"].tap()
+        XCTAssertTrue(app.buttons["wristband.intent.activity"].isSelected)
+        app.buttons["wristband.primary"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.okayToSayHello"].waitForExistence(timeout: 5))
+        app.buttons["signal.approach.okayToSayHello"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.okayToSayHello"].isSelected)
+        app.buttons["signal.approach.chatFirst"].tap()
+        XCTAssertTrue(app.buttons["signal.approach.chatFirst"].isSelected)
+        XCTAssertTrue(app.buttons["signal.primary"].isEnabled)
+        XCTAssertEqual(summary(app), "Activity band · Chat first")
         capture("07-reduced-motion-signal", app)
-        app.buttons["signal.confirm"].tap()
-        XCTAssertTrue(app.buttons["Change signal"].waitForExistence(timeout: 5))
-        try waitForModel(app)
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Activity band"))
-        XCTAssertTrue(app.otherElements["signature.hero"].label.contains("Just looking"))
-        capture("08-reduced-motion-ready", app)
+        app.buttons["signal.primary"].tap()
+        XCTAssertTrue(app.alerts["End of this preview."].waitForExistence(timeout: 5))
+        capture("08-reduced-motion-endpoint", app)
     }
 
-    private func waitForModel(_ app: XCUIApplication) throws {
-        let hero = app.otherElements["signature.hero"]
-        XCTAssertTrue(hero.waitForExistence(timeout: 5))
-        let ready = NSPredicate(format: "value == %@", "3D model ready")
-        let expectation = XCTNSPredicateExpectation(predicate: ready, object: hero)
-        // Build 3 rendered the model while a slow simulator AX snapshot still reported
-        // loading. Keep the readiness contract, but bound cold-start sampling separately
-        // from the complete interaction test's execution allowance.
-        let result = XCTWaiter.wait(for: [expectation], timeout: 90)
-        if result != .completed {
-            capture("model-readiness-failure", app)
-            let diagnostics = XCTAttachment(string: hero.debugDescription)
-            diagnostics.name = "model-readiness-accessibility"
-            diagnostics.lifetime = .keepAlways
-            add(diagnostics)
-            XCTFail("The actual bundled USDZ must load; observed hero value: \(String(describing: hero.value)). A loading or fallback view does not pass.")
-        }
+    private func summary(_ app: XCUIApplication) -> String {
+        app.descendants(matching: .any).matching(identifier: "signal.summary").firstMatch.label
     }
 
     private func capture(_ name: String, _ app: XCUIApplication) {
@@ -120,7 +115,7 @@ final class BandSignalInteractionTests: XCTestCase {
     }
 
     private func holdForCapture(_ seconds: TimeInterval) {
-        let settled = expectation(description: "Decorative render frame settled")
+        let settled = expectation(description: "Decorative movement settled")
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { settled.fulfill() }
         wait(for: [settled], timeout: seconds + 1)
     }

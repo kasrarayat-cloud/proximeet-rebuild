@@ -13,15 +13,17 @@ import ProximeetDomain
 ///
 /// Back (header or bottom) returns to the actual Guest List card, still below this screen, with
 /// the introduction and the intent kept in memory for this run. Continue preview, once an intent
-/// is chosen, only shows "End of this preview." and stays: Signal is not implemented.
+/// is chosen, opens the approved Signal (chapter 06) carrying that intent; without one it is
+/// disabled, so Signal never opens without an intent.
 ///
 /// An intent verifies nothing, shows the guest to no one and grants no permission to approach or
 /// message. The four bands are the approved raster decoration (`WristbandArt`, the original
 /// 1254² artworks cropped to [22, 335, 1235, 920]); every word, icon, check and control is native.
+/// `WristbandStyle.color(for:)` and `WristbandArt` are the canonical intent mapping, which Signal
+/// reuses; so do its header, text and action components.
 struct WristbandView: View {
     @Environment(DemoSession.self) private var session
     @Adaptive private var adaptive
-    @State private var isShowingEndOfPreview = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -66,9 +68,6 @@ struct WristbandView: View {
         .background(WristbandStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
         .toolbar(.hidden, for: .navigationBar)
-        .alert("End of this preview.", isPresented: $isShowingEndOfPreview) {
-            Button("OK", role: .cancel) {}
-        }
         .onChange(of: session.intent) { _, intent in
             // Concise: the new choice only, never the whole screen again.
             if let intent {
@@ -173,9 +172,7 @@ struct WristbandView: View {
     private func actions(bottomInset: CGFloat) -> some View {
         VStack(spacing: 11) {
             Button("Continue preview") {
-                if session.canContinueWristband {
-                    isShowingEndOfPreview = true
-                }
+                session.continueFromWristband()
             }
             .buttonStyle(WristbandPrimaryStyle())
             .disabled(session.intent == nil)
@@ -237,7 +234,7 @@ private struct WristbandHero: View {
 }
 
 /// One band, fitted without stretching.
-private struct WristbandBand: View {
+struct WristbandBand: View {
     let intent: BandIntent
 
     var body: some View {
@@ -253,7 +250,7 @@ private struct WristbandBand: View {
 /// The four original artworks, unchanged in the bundle, cropped once to the approved common
 /// silhouette box [22, 335, 1235, 920] with their alpha kept.
 @MainActor
-private enum WristbandArt {
+enum WristbandArt {
     nonisolated static let crop = CGRect(x: 22, y: 335, width: 1213, height: 585)
 
     static let shared: [BandIntent: UIImage] = {
@@ -426,7 +423,7 @@ private struct WristbandCheck: View {
 }
 
 /// The header's back arrow (Figma 14 × 12 at 39, 80), stroked 1.8 pt, white.
-private struct WristbandBackArrow: View {
+struct WristbandBackArrow: View {
     var body: some View {
         Canvas { context, _ in
             let path = FigmaPath.make(WristbandPaths.backArrow)
@@ -538,25 +535,26 @@ private struct WristbandHeadline: View {
 
 /// Text at its Figma size and line height (`size`, `lineHeight`), following Dynamic Type from
 /// there and wrapping rather than shrinking.
-private struct WristbandText: View {
+struct WristbandText: View {
     let text: String
     let face: Manrope
     let size: CGFloat
     let lineHeight: CGFloat
     let color: Color
+    var alignment: TextAlignment = .leading
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     var body: some View {
         Text(text)
             .manrope(face, size: size * scale, designSize: size, lineHeight: lineHeight)
             .foregroundStyle(color)
-            .multilineTextAlignment(.leading)
+            .multilineTextAlignment(alignment)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
 
 /// Body copy that follows Dynamic Type from its Figma size, on its line pitch (scaled).
-private struct WristbandBodyText: View {
+struct WristbandBodyText: View {
     let text: String
     let size: CGFloat
     let lineHeight: CGFloat
@@ -579,7 +577,7 @@ private struct WristbandBodyText: View {
 }
 
 /// "Proximeet" Bold 22 on Figma's 32-pt line, centred on the header row.
-private struct WristbandWordmark: View {
+struct WristbandWordmark: View {
     @ScaledMetric(relativeTo: .title2) private var size: CGFloat = 22
 
     var body: some View {
@@ -593,7 +591,8 @@ private struct WristbandWordmark: View {
 
 /// The persistent DEMO label: Bold 11/24, 0.9 tracking, cyan, in a 128 × 32 outline (radius 8,
 /// cyan at 45 %).
-private struct WristbandDemoBadge: View {
+struct WristbandDemoBadge: View {
+    var identifier = "wristband.demoBadge"
     @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 11
 
     var body: some View {
@@ -610,7 +609,7 @@ private struct WristbandDemoBadge: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Demo"))
-            .accessibilityIdentifier("wristband.demoBadge")
+            .accessibilityIdentifier(identifier)
     }
 }
 
@@ -618,7 +617,7 @@ private struct WristbandDemoBadge: View {
 
 /// 376 × 60, radius 18. Enabled: #F6F7F2 with #050606 SemiBold 18/24. Disabled: #1F2424 with
 /// #737D7A. The label's 24-pt line sits at y 17 of the button, as in Figma.
-private struct WristbandPrimaryStyle: ButtonStyle {
+struct WristbandPrimaryStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         WristbandPrimaryBody(configuration: configuration)
     }
@@ -646,7 +645,7 @@ private struct WristbandPrimaryBody: View {
 }
 
 /// 376 × 44 text action: Medium 16/24, white, centred.
-private struct WristbandSecondaryStyle: ButtonStyle {
+struct WristbandSecondaryStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         WristbandSecondaryBody(configuration: configuration)
     }

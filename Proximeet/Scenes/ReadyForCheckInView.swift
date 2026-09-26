@@ -142,12 +142,12 @@ private struct SummaryRow: View {
 #if DEBUG
 #Preview("Ready · fixture") {
     NavigationStack { ReadyForCheckInView() }
-        .environment(PreviewFixtures.session(at: .ready, band: .business, signal: .comeSayHi))
+        .environment(PreviewFixtures.session(at: .ready, band: .business, signal: .okayToSayHello))
 }
 
 #Preview("Ready · largest text") {
     NavigationStack { ReadyForCheckInView() }
-        .environment(PreviewFixtures.session(at: .ready, band: .social, signal: .justLooking))
+        .environment(PreviewFixtures.session(at: .ready, band: .social, signal: .chatFirst))
         .dynamicTypeSize(.accessibility5)
 }
 #endif

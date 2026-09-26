@@ -36,7 +36,7 @@ final class WristbandReviewTests: XCTestCase {
     /// The real route with a typed introduction; the empty Wristband; each of the four choices;
     /// the chosen tile again (nothing changes); Back to the actual Guest List card; editing the
     /// introduction and returning with the intent kept; the bottom Back and re-entry; and
-    /// Continue preview's "End of this preview." with OK, staying on the choice.
+    /// Continue preview opening Signal (chapter 06) with the chosen intent, whose Back returns here.
     func testWalkthroughRouteChoicesBackReentryEndpoint() throws {
         print("WRISTBAND_WALKTHROUGH_START \(Date().timeIntervalSince1970)")
         let app = launchWelcome()
@@ -114,13 +114,16 @@ final class WristbandReviewTests: XCTestCase {
         assertState(band, selected: "activity")
         hold(0.6)
 
+        // Continue preview now opens Signal (chapter 06), carrying Activity; its Back returns here.
         band.primary.tap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5), "Continue preview shows the end-of-preview message.")
+        let signal = app.descendants(matching: .any).matching(identifier: "signal.summary").firstMatch
+        XCTAssertTrue(signal.waitForExistence(timeout: 5), "Continue preview opens Signal.")
+        XCTAssertEqual(signal.label, "Activity band · Choose your approach", "Signal carries the chosen intent.")
+        XCTAssertEqual(app.alerts.count, 0, "No end-of-preview message on the Wristband any more.")
         hold(0.8)
-        capture("wristband-endpoint", app)
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
+        capture("wristband-continue-signal", app)
+        app.buttons["signal.back"].tap()
+        waitForLabel(band.headline, "Choose your kind of hello.")
         assertState(band, selected: "activity")
         hold(1.0)
     }
@@ -205,9 +208,9 @@ final class WristbandReviewTests: XCTestCase {
 
     // MARK: - Endpoint, duplicate taps and Back
 
-    /// Starts from the DEBUG fixture `wristband-business`. A double tap on Continue preview shows
-    /// one message; OK stays on Business. A double tap on either Back stops at the Guest List card;
-    /// re-entry keeps Business. Nothing claims verification, visibility or consent.
+    /// Starts from the DEBUG fixture `wristband-business`. A double tap on Continue preview opens
+    /// Signal once (its Back returns here, Business kept). A double tap on either Back stops at the
+    /// Guest List card; re-entry keeps Business. Nothing claims verification, visibility or consent.
     func testEndpointDuplicateTapsAndBack() throws {
         let app = launch(fixture: "wristband-business")
         let band = Wristband(app: app)
@@ -217,13 +220,14 @@ final class WristbandReviewTests: XCTestCase {
         assertNothingConferred(app, allowingAlert: false)
 
         band.primary.doubleTap()
-        let end = app.alerts["End of this preview."]
-        XCTAssertTrue(end.waitForExistence(timeout: 5))
+        let signalBack = app.buttons["signal.back"]
+        XCTAssertTrue(signalBack.waitForExistence(timeout: 5), "Continue preview opens Signal.")
         hold(0.8)
-        XCTAssertEqual(app.alerts.count, 1, "A double tap shows one message.")
-        end.buttons["OK"].tap()
-        waitForAbsence(end)
         XCTAssertEqual(app.alerts.count, 0)
+        signalBack.tap()
+        waitForLabel(band.headline, "Choose your kind of hello.")
+        hold(0.8)
+        XCTAssertEqual(band.headline.label, "Choose your kind of hello.", "A double tap pushed Signal once: one Back returns here.")
         assertState(band, selected: "business")
 
         band.back.doubleTap()
@@ -439,7 +443,7 @@ final class WristbandReviewTests: XCTestCase {
         if !allowingAlert {
             XCTAssertEqual(app.alerts.count, 0, "No permission or provider prompt appeared.")
         }
-        XCTAssertFalse(app.descendants(matching: .any)["signal.confirm"].exists, "No later chapter is reached.")
+        XCTAssertFalse(app.descendants(matching: .any)["signal.headline"].exists, "Signal opens only from Continue preview.")
     }
 
     // MARK: - Waiting and input

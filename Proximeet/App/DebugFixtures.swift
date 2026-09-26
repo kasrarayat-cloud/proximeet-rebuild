@@ -7,9 +7,13 @@ import ProximeetDomain
 ///     -ProximeetFixture welcome | birthday | birthday-adult | birthday-under18 | pass |
 ///                       guest-list | guest-list-filled | guest-list-card | guest-list-name-only |
 ///                       wristband | wristband-social | wristband-dating | wristband-business |
-///                       wristband-activity | band | band-selected | signal | signal-selected | ready
+///                       wristband-activity | signal | signal-selected | band | band-selected | ready
 ///     -ProximeetFixtureBand social | dating | business | activity
-///     -ProximeetFixtureSignal comeSayHi | chatFirst | withMyCrew | justLooking
+///     -ProximeetFixtureSignal chatFirst | okayToSayHello
+///
+/// `signal` and `signal-selected` open the approved Signal through the same gates as the real
+/// route; they need an explicit `-ProximeetFixtureBand` (and `signal-selected` an explicit
+/// `-ProximeetFixtureSignal`): no intent or approach is ever assumed.
 ///     -ProximeetReduceMotionPreview YES
 ///
 /// The last one is an app-level presentation override for captures; it does not change
@@ -21,6 +25,10 @@ enum DebugLaunch {
         else { return nil }
         let band = value(after: "-ProximeetFixtureBand", in: arguments).flatMap(BandIntent.init(rawValue:))
         let signal = value(after: "-ProximeetFixtureSignal", in: arguments).flatMap(ApproachSignal.init(rawValue:))
+        if stage == .signal || stage == .signalSelected {
+            guard let band, stage == .signal || signal != nil else { return nil }
+            return PreviewFixtures.session(at: stage, band: band, signal: signal ?? .chatFirst)
+        }
         return PreviewFixtures.session(at: stage, band: band ?? .social, signal: signal ?? .chatFirst)
     }
 
@@ -66,10 +74,13 @@ enum PreviewFixtures {
         case wristbandDating = "wristband-dating"
         case wristbandBusiness = "wristband-business"
         case wristbandActivity = "wristband-activity"
+        /// The approved Signal for the given intent, no approach, opened from its Wristband.
+        case signal
+        /// The approved Signal for the given intent with the given approach chosen.
+        case signalSelected = "signal-selected"
+        /// Legacy, unapproved later scenes, reached through the legacy route for their captures.
         case band
         case bandSelected = "band-selected"
-        case signal
-        case signalSelected = "signal-selected"
         case ready
     }
 
@@ -90,9 +101,10 @@ enum PreviewFixtures {
         signal: ApproachSignal = .chatFirst
     ) -> DemoSession {
         let session = DemoSession(flow: flow(at: stage, band: band, signal: signal))
-        // The Guest List below a Wristband fixture shows its card too, as on the real route.
+        // The Guest List below a Wristband or Signal fixture shows its card too, as on the real route.
         session.fixtureOpensGuestListCard = [.guestListCard, .guestListNameOnly, .wristband, .wristbandSocial,
-                                             .wristbandDating, .wristbandBusiness, .wristbandActivity].contains(stage)
+                                             .wristbandDating, .wristbandBusiness, .wristbandActivity,
+                                             .signal, .signalSelected].contains(stage)
         return session
     }
 
@@ -113,7 +125,8 @@ enum PreviewFixtures {
         case .birthday:
             return flow
         case .birthdayAdult, .birthdayUnder18, .pass, .guestList, .guestListFilled, .guestListCard, .guestListNameOnly,
-             .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity:
+             .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity,
+             .signal, .signalSelected:
             // The approved Figma example dates, entered and checked through the domain.
             let today = CivilDate(year: 2026, month: 9, day: 24) ?? CivilDate.day(of: reference, in: calendar.timeZone)
             flow.updateBirthday { entry in
@@ -137,7 +150,8 @@ enum PreviewFixtures {
                 flow.editIntroduction { $0 = exampleIntroduction }
             case .guestListNameOnly:
                 flow.editIntroduction { $0.name = exampleIntroduction.name }
-            case .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity:
+            case .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity,
+                 .signal, .signalSelected:
                 // Through the card's Continue preview, as a guest would reach it.
                 flow.editIntroduction { $0 = exampleIntroduction }
                 var card = GuestListDemo()
@@ -147,6 +161,14 @@ enum PreviewFixtures {
                                                     .wristbandBusiness: .business, .wristbandActivity: .activity]
                 if let intent = intents[stage] {
                     flow.chooseIntent(intent)
+                }
+                if stage == .signal || stage == .signalSelected {
+                    // Through the Wristband's Continue preview, with the given intent.
+                    flow.chooseIntent(band)
+                    flow.continueFromWristband()
+                    if stage == .signalSelected {
+                        flow.chooseApproach(signal)
+                    }
                 }
             default:
                 break
@@ -166,11 +188,7 @@ enum PreviewFixtures {
         if stage == .bandSelected { return flow }
 
         flow.confirmBand()
-        if stage == .signal { return flow }
-
         flow.selectSignal(signal)
-        if stage == .signalSelected { return flow }
-
         flow.confirmSignal()
         return flow
     }

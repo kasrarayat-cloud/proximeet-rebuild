@@ -93,12 +93,37 @@ final class DemoSession {
         flow.chooseIntent(intent)
     }
 
-    /// Whether Continue preview may show the end-of-preview message.
-    var canContinueWristband: Bool { flow.continueWristbandPreview() }
+    /// Whether Continue preview is available: only with an intent chosen.
+    var canContinueWristband: Bool { flow.canContinueFromWristband }
+
+    /// Continue preview on the Wristband: opens the approved Signal carrying the chosen intent.
+    func continueFromWristband() {
+        flow.continueFromWristband()
+    }
 
     /// Back on the Wristband: returns to the Guest List card, with the draft and intent kept.
     func leaveWristband() {
         flow.leaveWristband()
+    }
+
+    // MARK: - Approved Signal
+
+    /// The single current approach, or none. Memory only; separate from the intent.
+    var approach: ApproachSignal? { flow.draft.signal }
+
+    /// Chooses the approach; choosing the current one again does nothing. Returns whether it
+    /// changed, so the screen animates only a real change.
+    @discardableResult
+    func chooseApproach(_ approach: ApproachSignal) -> Bool {
+        flow.chooseApproach(approach)
+    }
+
+    /// Whether Continue preview may show the end-of-preview message.
+    var canContinueSignal: Bool { flow.continueSignalPreview() }
+
+    /// Back on Signal: returns to the Wristband, with the intent and the approach kept.
+    func leaveSignal() {
+        flow.leaveSignal()
     }
 
     #if DEBUG
@@ -122,14 +147,6 @@ final class DemoSession {
 
     func confirmBand() {
         flow.confirmBand()
-    }
-
-    func selectSignal(_ signal: ApproachSignal) {
-        flow.selectSignal(signal)
-    }
-
-    func confirmSignal() {
-        flow.confirmSignal()
     }
 
     func returnTo(_ scene: DemoScene) {

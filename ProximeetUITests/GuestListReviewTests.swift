@@ -355,8 +355,10 @@ final class GuestListReviewTests: XCTestCase {
         capture("guest-list-keyboard-dismissed", app)
     }
 
-    /// Starts from the DEBUG fixture `guest-list-filled`. With the keyboard open, the floating Done
-    /// and the editor's Back are separate targets. On build 6ab75905 (iPhone 17 Pro Max) Done lay
+    /// Direct launch: starts from the DEBUG fixture `guest-list-filled`, so the Pass below is a new
+    /// screen at its intro (not the real route's complete Pass; see
+    /// `testKeyboardBackOnTheRealRouteReturnsToTheCompletePass`). With the keyboard open, the
+    /// floating Done and the editor's Back are separate targets. On build 6ab75905 (iPhone 17 Pro Max) Done lay
     /// at y 569–605 over the bottom-right corner of Back's 376 × 44 target (545–589). Here, for
     /// each field: Done's frame meets neither action, both actions keep their size above the
     /// keyboard, and Done closes the keyboard and stays on the editor with the draft. Then, with
@@ -379,7 +381,7 @@ final class GuestListReviewTests: XCTestCase {
             attachNote("Keyboard open (\(field.identifier), \(width) pt wide): Done \(NSCoder.string(for: doneFrame)); "
                 + "Back \(NSCoder.string(for: back)); Preview my card \(NSCoder.string(for: primary)); "
                 + "keyboard \(NSCoder.string(for: keyboard)); field \(NSCoder.string(for: field.frame)).")
-            capture("guest-list-keyboard-done-back-\(field.identifier == "guestList.name" ? "name" : "opener")-\(width)pt", app)
+            capture("guest-list-keyboard-done-back-\(field.identifier == "guestList.name" ? "name" : "opener")-\(width)pt-direct-launch", app)
             XCTAssertFalse(doneFrame.intersects(back), "Done does not overlap Back's target.")
             XCTAssertFalse(doneFrame.intersects(primary), "Done does not overlap Preview my card.")
             XCTAssertGreaterThanOrEqual(back.height, 44)
@@ -411,7 +413,43 @@ final class GuestListReviewTests: XCTestCase {
         waitForAbsence(guest.headline)
         XCTAssertFalse(guest.headline.exists, "The editor has closed.")
         hold(0.6)
-        capture("guest-list-keyboard-back-corner-\(width)pt", app)
+        // A direct launch: the Pass below the fixture is a new screen at its intro.
+        capture("guest-list-keyboard-back-corner-\(width)pt-direct-launch", app)
+    }
+
+    /// Full journey: Welcome → Birthday → Pass (completed) → Guest List. With the keyboard open in
+    /// the editor, a tap 3 pt inside the bottom-right corner of Back's target returns to the actual
+    /// Pass, still complete (not its intro); the typed draft is kept for re-entry.
+    func testKeyboardBackOnTheRealRouteReturnsToTheCompletePass() throws {
+        let app = launchWelcome()
+        let pass = openCompletedPass(app)
+        pass.primary.tap()
+        let guest = GuestListElements(app: app)
+        waitForHeadline(guest, "A little about you.")
+        guest.name.tap()
+        XCTAssertTrue(waitForKeyboard(app))
+        guest.name.typeText("Alex")
+        guest.name.typeText("\n")
+        XCTAssertTrue(waitForFocus(guest.opener))
+        guest.opener.typeText("Up for coffee.")
+        hold(0.8)
+        let back = guest.secondary.frame
+        let done = keyboardDoneButton(app)
+        let corner = CGPoint(x: back.maxX - 3, y: back.maxY - 3)
+        attachNote("Full journey, keyboard open: Back \(NSCoder.string(for: back)); tap \(String(format: "{%.2f, %.2f}", corner.x, corner.y)); "
+            + "Done \(NSCoder.string(for: done.exists ? done.frame : .null)).")
+        XCTAssertFalse(done.exists && done.frame.intersects(back), "Done does not overlap Back's target.")
+        capture("guest-list-keyboard-open-full-journey", app)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: corner.x, dy: corner.y)).tap()
+        waitForPass(pass, "Demo complete.")
+        XCTAssertEqual(pass.primary.label, "Continue preview", "Back returns to the actual, complete Pass, not its intro.")
+        XCTAssertFalse(guest.headline.exists, "The editor has closed.")
+        hold(0.8)
+        capture("guest-list-keyboard-back-corner-full-journey", app)
+        pass.primary.tap()
+        waitForHeadline(guest, "A little about you.")
+        XCTAssertEqual(fieldText(guest.name, placeholder: "What should we call you?"), "Alex", "The draft is kept.")
+        XCTAssertEqual(fieldText(guest.opener, placeholder: "A good hello starts with…"), "Up for coffee.")
     }
 
     /// Starts from the DEBUG fixture `guest-list`. A hardware keyboard: Tab moves from the name to
@@ -740,7 +778,7 @@ final class GuestListReviewTests: XCTestCase {
         XCTAssertEqual(app.descendants(matching: .any).matching(predicate).count, 0, "No verified, visible, present or member wording.")
         XCTAssertEqual(app.alerts.count, 0, "No permission or provider prompt appeared.")
         XCTAssertFalse(app.descendants(matching: .any)["wristband.headline"].exists, "No Wristband over the Guest List.")
-        XCTAssertFalse(app.descendants(matching: .any)["signal.confirm"].exists, "No later chapter is reached.")
+        XCTAssertFalse(app.descendants(matching: .any)["signal.headline"].exists, "No later chapter is reached.")
     }
 
     /// The focused field, both actions and Back are visible and hittable with the keyboard open.
