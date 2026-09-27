@@ -57,9 +57,10 @@ Mac, and until that build reports, each is PENDING.
      real View place tap). PENDING.
 2. **View place is a real button.** The ticket's name, kind, intents and schedule read on their
    own. View place is a labelled button ("View place") that tests tap directly. The card still
-   opens the detail when tapped. Before, the whole ticket was one accessibility element. Its hint
-   keeps the approved wording, "Opens this fictional venue's details." Checked by C2, C3, C13 and
-   C14. PENDING.
+   opens the detail when tapped. Before, the whole ticket was one accessibility element. The label
+   and the tap are checked by C2, C3, C13 and C14. PENDING. Its hint keeps the approved wording,
+   "Opens this fictional venue's details." The hint is not machine-checked, since XCUITest cannot
+   read it; it is left to the VoiceOver review (§7).
 3. **Back navigation.**
    - What was wrong. Places shows browsing, a detail and the explanation inside one navigation
      destination, so the expansion can play. That left the navigation stack's back gestures free
@@ -110,8 +111,11 @@ Mac, and until that build reports, each is PENDING.
 - The guardrail audit again flagged the earlier doctrine's brand-string, "PROTOTYPE" banner and
   `app.projecthalo.lab` rules. They do not match this rebuild, and this correction does not change
   them. TASK_01 sets the provisional `com.proximeet.demo` and says not to inherit
-  `app.projecthalo.lab`; every approved chapter shows the DEMO badge (see the Places chapter
-  report, §7). The report page's title no longer carries the product name.
+  `app.projecthalo.lab`. Every approved chapter from the Pass on shows a DEMO badge. Welcome and
+  Birthday show none; Welcome's route reads "Continue the demo (no account)". The Places chapter
+  report's §7 says every chapter shows the badge, which is wrong in the same way. That report is
+  left unchanged here, and this line corrects it. The report page's title no longer carries the
+  product name.
 - No permission, scanner, verification, presence, visibility or Room was added. The snapshot,
   eligibility (only Social or Business at Common Ground), missing-choice and age-gate protections
   are unchanged.
