@@ -26,11 +26,12 @@ correction: 8 of 13 required executions passed (`places-correction-01.md` §6). 
   adds a debug-only diagnosis switch (§3);
 - records the lead's ruling on the DEMO badge and the obsolete banner (§4), and why no browser
   preview was opened (§5);
-- plans four sequential builds on one frozen commit (§6); after build 1 changed the product, three
-  remain on a new frozen commit: the correction gate again, one merged sweep, the regressions.
+- planned four sequential builds on one frozen commit (§6). Build 1 changed the product, so the
+  plan was revised after build 1 and again after build 2 (§6, "After build 2"); builds 3 and 4 ran
+  `e0d2b2e3`.
 
 Linux cannot compile the SwiftUI app, so no check on the VPS shows the app working. The Linux checks
-of the frozen commit are recorded in §7 when it exists.
+of `e0d2b2e3` are recorded at the end of §7.
 
 ## 1. Baseline and provenance
 
@@ -197,15 +198,16 @@ All four scrolling failures used the same helper, `scrollIntoView`
   - C stalling on the detail with and without it points to the app.
 
   It cannot by itself tell the scroll indicator from the repeat-tap guard, since both need a quick
-  second touch. PENDING. If its run does not fit before the deadline it is listed as not run, and
-  nothing required depends on it.
+  second touch. Which of the two it is remains not established, and no remaining build runs the
+  probe. What build 1's C17 measured is in §7; C16 did not fit before that build's deadline and was
+  listed as not run. Nothing required depended on either.
 
 ## 3. The corrections in this recovery
 
 Each item is the intended behaviour and the rows that check it. Builds 1 and 2's results are in §7:
-build 1 ran 907d7401, before item 5, and build 2 ran 808950f. Nothing after `808950f` has run on a
-Mac. Files in this section are cited by
-symbol: several changed while this report was written.
+build 1 ran 907d7401, before item 5, and build 2 ran 808950f. Builds 3 and 4 ran `e0d2b2e3`, whose
+product and test files are identical to `808950f`. Files in this section are cited by symbol:
+several changed while this report was written.
 
 1. **One shared, one-stage Places Back (product).**
    - `DemoFlow.placesBack(from:)` (domain, `@discardableResult`, mutating) goes back one stage from
@@ -252,8 +254,8 @@ symbol: several changed while this report was written.
      returns `Bool`, so no call site changed.
    - Checked by: C1, C2, C12 and C13 (build 1), and every Places review row that scrolls, among them
      P3 and P11 (the sweep). On Linux it can only be type-checked against a shim of the XCUITest types
-     (§7), so the real `XCUIElement.snapshot()` and `XCUIElementSnapshot` signatures are unconfirmed
-     until the Mac compiles them.
+     (§7); the Mac compiled it against the real `XCUIElement.snapshot()` and `XCUIElementSnapshot` in
+     builds 1–4.
 3. **A documented 1e-6 epsilon for the 44-pt target checks (tests).** A 44-pt control may measure
    44 − 1e-6 or more; a real shortfall is far larger than any floating-point error. It replaces
    `ae908de`'s `44 − 0.001` and the exact comparison it left in `PlacesCorrectionTests`. Checked by
@@ -267,7 +269,8 @@ symbol: several changed while this report was written.
    asserts the switch's effect. The default behaviour, without it, is what C10 and C11 check.
 5. **Back to places aligns browsing again once the detail has gone (app, after build 1).** Added
    after build 1's C12 (§7). It was observed on the 390-pt iPhone 17e in build 2: C12 passed and was
-   photographed. It is not yet observed on the 440-pt iPhone 17 Pro Max (C1, build 3).
+   photographed. It was observed on the 440-pt iPhone 17 Pro Max in build 3: C1 passed, and
+   `correction-entry-back-to-now-440pt-largest-fixture` shows View place clear of the bar.
    - The scroll that `revealStart` issues when the stage changes still runs, so the dissolve shows
      roughly the right place.
    - When the dissolve completes (or at once after a swipe's instant change), a `@State` token asks
@@ -332,8 +335,8 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
   app into it, which is permanent ("Once an application has been transferred to a team, it cannot
   be transferred back to the personal account or to other teams"). The assignment forbids both.
 - Also, Quick Launch is offered next to a `.app` artifact of a successful build. Before this
-  recovery no build published one; recovery build 1 (6ab8adb4) published `Proximeet.app` (§7), but
-  it failed its verdict, and the account has no App Preview anyway.
+  recovery no build published one. Recovery builds 1–4 each published `Proximeet.app` (§7); build 3
+  is the only one whose own verdict passed, and the account has no App Preview anyway.
 
 **Appetize.**
 - It needs the founder's own sign-in or an Appetize API token. There is no token on the VPS. The
@@ -341,7 +344,17 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
   only by that repository's own workflow runs.
 - The agent could not operate a browser session and did not test one.
 
-**The upload-ready artifact.**
+**The upload-ready artifact, after build 3.** The file to upload is now build 3's simulator app,
+`Proximeet-Debug-iphonesimulator-e0d2b2e3a76b.zip` (24,741,540 bytes, SHA-256
+`977e58af6b524858153582c83cc0496f212bf8ab0bfbb8abc12223ead7543df7`, matching the `.sha256` beside
+its copy in `Places-Gate-Review.zip`'s `app/` folder). Its app bundle is byte-identical to build 2's, built at `808950f`. Off the repository it
+is copied, under the same hash, to
+`/home/proximeet/proximeet-preview/Proximeet-Prototype-verified-candidate-product-808950f-build-6ab8efca.zip`,
+with `README-PREVIEW.md` beside it. The steps below apply unchanged with that file; its status is
+"Places correction verified; full regression sweep incomplete" (§7). The table below records the
+earlier, superseded candidate.
+
+**The earlier upload-ready artifact (superseded).**
 
 | | |
 | --- | --- |
@@ -358,8 +371,10 @@ test fixtures.
 2. Before uploading, go to Organization → Session Defaults → Permissions (Legacy). Set **run** to
    authenticated, and the same for debugLog, networkProxy and networkIntercept, so the new build is
    never runnable by anyone who has its link.
-3. Upload the inner file, `Proximeet-Debug-iphonesimulator-358f59f1204c.zip`, not the review zip,
-   with the note "Prototype — Places verification pending". It creates a new app,
+3. Upload the simulator zip itself, not a review zip: now build 3's (above), with the note
+   "Places correction verified; full regression sweep incomplete". (Before build 3 this step named
+   `Proximeet-Debug-iphonesimulator-358f59f1204c.zip`, with the note "Prototype — Places
+   verification pending".) It creates a new app,
    `com.proximeet.demo`. Do not update the earlier preview's entry. If the plan refuses a second
    app, stop and decide.
 4. Open the build → Settings → App Permissions and confirm **run = authenticated**.
@@ -371,7 +386,7 @@ test fixtures.
    agent's account, never in git or chat. Whether a token-started session may run a build set to
    authenticated is inferred, not documented, and sessions use your metered minutes.
 
-**Parity gaps.**
+**Parity gaps.** They apply equally to build 3's app, whose tests also ran on iOS 26.5 simulators.
 - Build 6ab88011's tests ran on iOS 26.5 simulators. Appetize's device list (fetched 2026-09-27)
   offers the iPhone 17 Pro Max on iOS 26.0 only, its highest version, so a preview is not the tested
   runtime. That the app installs there is inferred from its iOS 17.0 minimum.
@@ -385,13 +400,13 @@ then `sweep_places`, `sweep_signal` and `regressions`. Build 1 ran the correctio
 product defect (§7), and the fix changes product code. Nothing measured at `907d7401` can count
 toward the final verdict, so the plan was revised.
 
-**Now: three builds, one at a time, on one new frozen commit.** That commit holds the product fix,
+**As planned after build 1: three builds, one at a time, on one new frozen commit.** That commit holds the product fix,
 this recovery's tests, manifest, harness and workflow. Each build is pinned by
 `PLACES_EXPECTED_COMMIT`, and the source gate rejects anything else.
 
 | | |
 | --- | --- |
-| Frozen commit | PENDING (the commit that adds this section) |
+| Frozen commit | `808950f` (build 2). Builds 3 and 4 ran `e0d2b2e3`, whose product and test files are identical ("After build 2", below) |
 | Workflow | `proximeet-places-review-35`: 35 minutes, `PLACES_UI_DEADLINE_SECONDS=1740` (the harness accepts 600–1740). It was 1680 for build 1. It was raised because build 1 measured the main device's first test 666 s after the harness's gate. The worst-case end is 2032 s of the 2100 |
 | Machine | Mac mini M2 (`mac_mini_m2`), Xcode 26.6, unsigned simulator; retries off |
 | Order | A build starts only after the previous one's verdict and evidence have been read |
@@ -429,9 +444,8 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
 
 **After build 2: the last two builds.** Build 2's iPhone 17 Pro Max ran nothing, so 79 of the
 120 minutes and two of the four builds remain. The correction gate's nine 17 Pro Max rows and the
-49 earlier rows cannot all fit in two builds. Both builds run on one commit (the one that adds this
-section, or a later harness- and document-only one), whose product and test files are identical to
-`808950f`; only the harness and documents differ. So
+49 earlier rows cannot all fit in two builds. Both builds run on one commit (they ran `e0d2b2e3`),
+whose product and test files are identical to `808950f`; only the harness and documents differ. So
 build 2's passed rows count toward the same verdicts.
 
 | Build | Scope | iPhone 17 Pro Max ("main") | Other device |
@@ -523,15 +537,18 @@ C10–C15 come from build 2 (the iPhone 17e) and C1–C9 from build 3 (the iPhon
 heads were checked: `git diff` of the product and test paths against `808950f` printed nothing.
 
 **Build 4** (10:56:00–11:27:15 UTC).
-- **Device B (the Pro Max clone): all 16 rows passed**, at their earlier pace. M4–M13 (the Pass and
-  the Wristband), B1 (the Guest List paste test), B10–B13 (Welcome) and B15 (hardware Tab).
+- **Device B (the Pro Max clone): all 16 rows passed.** M4–M13 (the Pass and the Wristband), B1 (the
+  Guest List paste test), B10–B13 (Welcome) and B15 (hardware Tab). In total they took 628 s, against
+  686 s for the same 16 tests in build 6ab81e22. Three were more than 20 % slower: M13 (56.8 → 77.3
+  s), B10 (14.5 → 21.5 s) and B13 (10.4 → 19.2 s).
 - **The iPhone 17 Pro Max ran about three times slower than in earlier builds.** P2 took 101.1 s
   (35.5 s in build 6ab8639c), P4 115.2 s (34.7 s) and P5 36.2 s (11.7 s). The cause is not
   established; the two Pro Max simulators ran heavy tests side by side on the three-CPU host.
   - **Passed:** P2, P4, P5, M1 (118.7 s) and M3 (83.4 s).
   - **P3 was interrupted.** XCTest stopped it at its five-minute execution allowance ("exceeded
     execution time allowance of 5 minutes"). Its scroll helper had finished every call it began, 40
-    drags with no stall and no failure, at 4–11 s a drag against about 2.5 s in build 3.
+    drags with no stall and no failure, at 4.2–11.3 s a drag against about 2 s (1.9–2.2 s) in
+    build 3.
   - **P6 was interrupted** by its run's 1020-s bound.
   - **M2 was interrupted** by its run's bound (376 s, cut short by the deadline).
   - **Not started:** P1, S9, S10, S12 and S13; their run ended at its bound first.
@@ -545,9 +562,8 @@ heads were checked: `git diff` of the product and test paths against `808950f` p
 **Final reconciliation** (real builds 2, 3 and 4, from this repository; all three heads
 product-equivalent to `808950f` by git):
 - `TARGETED CORRECTION: PASS (C1-C15: 15 of 15 passed at product-equivalent commits; none failed)`
-- `FULL REGRESSION: FAIL (40 of 56 earlier required executions covered; failed: places:P3,
-  places:P6, regressions:M2; uncovered: places:P1, signal:S9, S10, S12, S13, regressions:B2-B9)`.
-  The three listed as failed were interrupted by time, not by a failed assertion.
+- `FULL REGRESSION: FAIL (40 of 56 earlier required executions covered; failed: places:P3, places:P6, regressions:M2; uncovered: places:P1 (not covered), signal:S9 (not covered), signal:S10 (not covered), signal:S12 (not covered), signal:S13 (not covered), regressions:B2 (pending, not scheduled), regressions:B3 (pending, not scheduled), regressions:B4 (pending, not scheduled), regressions:B5 (pending, not scheduled), regressions:B6 (pending, not scheduled), regressions:B7 (pending, not scheduled), regressions:B8 (pending, not scheduled), regressions:B9 (pending, not scheduled))`
+- The three listed as failed were interrupted by time, not by a failed assertion.
 
 **Covered at the frozen product (40 of 56):**
 - places: P2, P4, P5, P7 (C9), P8 (C15), P9–P13;
@@ -559,7 +575,7 @@ product-equivalent to `808950f` by git):
   rounded, of the 120 authorised minutes.
 - At the published $0.095 a minute:
   - $9.24–9.50 if every minute is billed;
-  - $6.57–8.07 if the account's last free minutes (28.1 exact / 15 rounded before build 1) applied.
+  - $6.57–8.08 if the account's last free minutes (28.1 exact / 15 rounded before build 1) applied.
 - The account's invoice is not readable through the API. No browser preview minutes were used.
 
 **Build 1** (05:46:37–06:11:04 UTC, Mac mini M2, Xcode 26.6, iOS 26.5). The app and the new escape
@@ -587,8 +603,8 @@ routing compiled; the domain tests passed on the Mac; the preview copy of the ap
 
     The landing depends on the detail's scroll range, not on a fixed shortfall.
   - **Correction, after build 1** (§3, item 5): browsing is aligned again once the dissolve has
-    finished. It was observed passing on the 390-pt iPhone 17e in build 2. It is not yet observed on
-    the 440-pt iPhone 17 Pro Max (C1, build 3).
+    finished. It was observed passing on the 390-pt iPhone 17e in build 2, and on the 440-pt iPhone
+    17 Pro Max in build 3 (C1; `correction-entry-back-to-now-440pt-largest-fixture`).
   - **Rerun.** It changes product code, so the whole correction gate reruns on the new commit.
 - **The scroll diagnosis is settled by evidence.** The new helper made 138 traced drags (59 on the
   iPhone 17 Pro Max, 79 on the iPhone 17e) and none stalled: each moved the page its finger travel
@@ -618,15 +634,22 @@ routing compiled; the domain tests passed on the Mac; the preview copy of the ap
   `Proximeet.app.zip` and the `proximeet-rebuild_1_artifacts.zip` bundle have no published hash.
   The review page's 155 links, to 148 distinct files, all resolve.
 
-Linux checks of the frozen commit, each PENDING: the domain suite (`swift test`), the project
-validator, the source-gate manifests (`scripts/places_source_manifests.py --check`), and the UI
-tests type-checked against an XCUITest shim. None of them shows the app working.
+**Linux checks of `e0d2b2e3`**, run on the VPS in a detached checkout of that commit, after the
+builds:
+- the domain suite (`swift test`, Swift 6.3.3): "Executed 186 tests, with 0 failures";
+- the project validator (`scripts/validate_project.py`): "13 checks, 0 failed";
+- the source-gate manifests (`scripts/places_source_manifests.py --check`): "up to date: approved
+  105, review 196";
+- `PlacesCorrectionTests.swift` and `PlacesReviewTests.swift`, type-checked against an XCUITest shim
+  (`swiftc -typecheck -strict-concurrency=complete`): exit 0, no errors, no warnings.
+
+None of them shows the app working. The app and its UI tests were compiled on the Mac in builds 2–4.
 
 ## 8. Not verified by automation
 
 - The 16 earlier executions not verified at the frozen product: P1, P3, P6, S9, S10, S12, S13, M2 (run
-  out of time or interrupted in build 4) and B2–B9 (the Guest List, not scheduled). One more build of
-  those rows would close the full regression sweep; it needs a new authorisation.
+  out of time or interrupted in build 4) and B2–B9 (the Guest List, not scheduled). At least one more
+  build of those rows is needed to close the full regression sweep; it needs a new authorisation.
 - VoiceOver, hands-on, including the new escape action from each stage: browsing → Signal; a detail
   → its category; the explanation → Common Ground's detail → browsing → Signal; the same with Reduce
   Motion on. XCUITest cannot perform the escape and VoiceOver does not run in the Simulator.
