@@ -3,15 +3,16 @@
 Date: 2026-09-27. Not production-ready.
 
 **Status: recovery build 1 (`6ab8adb429a3df446d9749a3`, on `907d7401`) passed 14 of its 15 required
-correction rows; C12 found a real (small) product defect, fixed after it (§7). The later builds are
-PENDING.**
+correction rows; C12 found a small product defect, corrected after it but not yet observed on a Mac
+(§7). The later builds are PENDING.**
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
 correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
 - diagnoses that build's five failures and one interruption from its logs, keeping what is proven
   apart from what is a hypothesis (§2);
-- makes one product change, a shared one-stage Places Back that now also answers VoiceOver's escape,
-  replaces the UI tests' scroll helper with one that checks its own progress, and adds a debug-only
-  diagnosis switch (§3);
+- makes two product changes: a shared one-stage Places Back that now also answers VoiceOver's
+  escape, and (after build 1's C12) a Back to places that aligns browsing again once the detail has
+  gone; it also replaces the UI tests' scroll helper with one that checks its own progress, and
+  adds a debug-only diagnosis switch (§3);
 - records the lead's ruling on the DEMO badge and the obsolete banner (§4), and why no browser
   preview was opened (§5);
 - plans four sequential builds on one frozen commit (§6); after build 1 changed the product, three
@@ -190,8 +191,9 @@ All four scrolling failures used the same helper, `scrollIntoView`
 
 ## 3. The corrections in this recovery
 
-Each item is the intended behaviour and the rows that check it. No result exists yet. Files in
-this section are cited by symbol: several changed while this report was written.
+Each item is the intended behaviour and the rows that check it. Build 1's results (on 907d7401,
+before item 5) are in §7; nothing after it has run on a Mac yet. Files in this section are cited by
+symbol: several changed while this report was written.
 
 1. **One shared, one-stage Places Back (product).**
    - `DemoFlow.placesBack(from:)` (domain, `@discardableResult`, mutating) goes back one stage from
@@ -237,7 +239,7 @@ this section are cited by symbol: several changed while this report was written.
    - What it reports: the `PLACES_SCROLL` trace and the PRODUCT or HARNESS verdict (§2). It still
      returns `Bool`, so no call site changed.
    - Checked by: C1, C2, C12 and C13 (build 1), and every Places review row that scrolls, among them
-     P3 and P11 (build 2). On Linux it can only be type-checked against a shim of the XCUITest types
+     P3 and P11 (the sweep). On Linux it can only be type-checked against a shim of the XCUITest types
      (§7), so the real `XCUIElement.snapshot()` and `XCUIElementSnapshot` signatures are unconfirmed
      until the Mac compiles them.
 3. **A documented 1e-6 epsilon for the 44-pt target checks (tests).** A 44-pt control may measure
@@ -248,9 +250,22 @@ this section are cited by symbol: several changed while this report was written.
    YES` in a DEBUG build's launch arguments, `PlacesEdgeBack` leaves iOS 26's
    `interactiveContentPopGestureRecognizer` enabled on a detail and the explanation instead of
    holding it off. Without the switch nothing changes, and a Release build never reads it (`#if
-   DEBUG`). Only the probe's last detail pattern uses it (C16, C17, diagnostic), and the probe records
-   rather than judges, so nothing asserts the switch's effect. The default behaviour, without it, is
-   what C10 and C11 check.
+   DEBUG`). Only the probe's last detail pattern used it (build 6ab8adb4's C17; C16 was left unrun
+   and no scope runs the probe any more), and the probe records rather than judges, so nothing
+   asserts the switch's effect. The default behaviour, without it, is what C10 and C11 check.
+5. **Back to places aligns browsing again once the detail has gone (app, after build 1).** Added
+   after build 1's C12 (§7); intended behaviour, not yet observed on a Mac.
+   - The scroll that `revealStart` issues when the stage changes still runs, so the dissolve shows
+     roughly the right place.
+   - When the dissolve completes (or at once after a swipe's instant change), a `@State` token asks
+     the `ScrollViewReader` to align the ticket's end with the bottom of the visible page again,
+     now against browsing's own content and action bar. It is animated over 0.2 s, and instant
+     under Reduce Motion or VoiceOver. It does nothing if another stage is showing by then.
+   - `PlacesScrollTarget.ticketEnd` is now the 25-pt gap between the ticket and its line: a
+     `Color.clear` of that height replaces the line's `.padding(.top, 25)`. The layout is intended
+     to be identical, so an aligned ticket stops 25 pt above the bar.
+   - No timer is used; the Places source guard forbids them. The completion of the existing
+     animation drives it.
 
 Nothing else in the product changed: no copy, layout, motion, artwork, catalog, eligibility,
 permission, location or camera behaviour.
@@ -303,8 +318,9 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
 - Enabling it would need a paid team ("Teams is a paid feature on Codemagic") and a transfer of the
   app into it, which is permanent ("Once an application has been transferred to a team, it cannot
   be transferred back to the personal account or to other teams"). The assignment forbids both.
-- Also, Quick Launch is offered next to a `.app` artifact of a successful build. None of the eight
-  builds whose artifact lists were saved published one, and build 6ab88011 failed.
+- Also, Quick Launch is offered next to a `.app` artifact of a successful build. Before this
+  recovery no build published one; recovery build 1 (6ab8adb4) published `Proximeet.app` (§7), but
+  it failed its verdict, and the account has no App Preview anyway.
 
 **Appetize.**
 - It needs the founder's own sign-in or an Appetize API token. There is no token on the VPS. The
@@ -363,14 +379,14 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
 | | |
 | --- | --- |
 | Frozen commit | PENDING (the commit that adds this section) |
-| Workflow | `proximeet-places-review-35`: 35 minutes, `PLACES_UI_DEADLINE_SECONDS=1740` (the harness accepts 600–1740). It was 1680 for build 1. It was raised because build 1 measured the main device's first test about 600 s after the harness start. The worst-case end is 2032 s of the 2100 |
+| Workflow | `proximeet-places-review-35`: 35 minutes, `PLACES_UI_DEADLINE_SECONDS=1740` (the harness accepts 600–1740). It was 1680 for build 1. It was raised because build 1 measured the main device's first test 666 s after the harness's gate. The worst-case end is 2032 s of the 2100 |
 | Machine | Mac mini M2 (`mac_mini_m2`), Xcode 26.6, unsigned simulator; retries off |
 | Order | A build starts only after the previous one has passed and its verdict has been read |
 
 | Build | Scope | iPhone 17 Pro Max ("main") | Other device |
 | --- | --- | --- | --- |
 | 2 | `correction` (C16/C17 probes removed) | `correction_first` [C3] 600 → `correction_main` [C1, C2] 700 → `correction_signal` [C4, C5, C9, C6, C7, C8] 600 | iPhone 17e: `journey` [C10, recorded] 420 → `correction_small` [C12, C13, C14, C15] 780 → `correction_small_b` [C11] 240 |
-| 3 | `sweep` | `journey` [P1, recorded, full holds] 720 → `places_main` [P2–P6] 600 → `signal_main` [S3, S4, S5, S6, S8, S9, S10, S12, S13] 900 | iPhone 17e: `places_small` [P9–P13] 900 → `signal_small` [S15, S16] 420 |
+| 3 | `sweep` | `places_main` [P1 (short holds, not recorded), P2–P6] 900 → `signal_main` [S3, S4, S5, S6, S8, S9, S10, S12, S13] 900 | iPhone 17e: `places_small` [P9–P13] 900 → `signal_small` [S15, S16] 420 |
 | 4 | `regressions`, rows unchanged | `main_early` [M1, M2] 780 → `main_rest` [M3–M13] 1000 | device B (a Pro Max clone): `paste_b` [B1] 480 → `regressions_b` [B2–B13] 1000 → `paste_repeat_b` [B14, repeat, time-gated] 300 → `hardware_keys_b` [B15] 240 |
 
 - **Coverage.** 64 required executions across the three builds (15 + 22 + 27), plus the optional B14.
@@ -381,12 +397,20 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
     `scripts/places_recovery_reconcile.py <three build folders>` passes only when every required row
     passed on its device, on one commit.
 - **Predicted, from measured timings.**
-  - **Build 2:** like build 1, about 25 minutes. Build 1's main lane ended 341 s before its
-    1680-s deadline.
-  - **Build 3:** build 6ab8639c's main lane reached its recorded P1 at harness-start + 590 s, and
-    runs were about 70–80 s apart. That puts the sweep's main lane at about harness-start + 1540 s,
-    about 200 s before the new deadline. The margin is thin.
-  - **Build 4:** at about harness-start + 1500–1550 s on each lane, a margin of about 190–240 s.
+  - **Build 2:** like build 1, about 25 minutes. Build 1's main lane's last test ended 341 s before
+    its 1680-s deadline.
+  - **Build 3, the thin one.** A review of the measured timelines put the main lane, with P1 as a
+    recorded journey, at only 65–140 s before the deadline, and gave it a 5–15% chance of
+    overrunning.
+    - Its inputs: first tests at 590–666 s after the gate; P2–P6 at about 265 s with the new helper;
+      the journey's own close and gap of about 81 s; result-bundle closes of about 25 s.
+    - So P1 runs in `places_main` with short holds and is not recorded. Its assertions and device
+      are the same.
+    - That saves the journey run's own start and close. The expected margin is then about 150–195 s.
+    - This is the one run-type difference the reconciliation accepts, and it is stated there.
+    - The recovery's walkthrough video is the correction's C10. The full real route is still
+      executed, unrecorded, by P1 and by C8.
+  - **Build 4:** at about gate + 1500–1550 s on each lane, a margin of about 190–240 s.
     B14 will probably be left unrun for time, which is allowed.
   - **Minutes:** about 25 + 30 + 28 on top of build 1's 25, so about 108 of the 120.
 
@@ -396,8 +420,8 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
 | --- | --- |
 | Rate | Mac mini M2, pay as you go: $0.095 a minute, published at codemagic.io/pricing, read 2026-09-27 |
 | Caps | 120 build minutes and USD 15 for this assignment |
-| Free minutes | 15 rounded (28.1 exact) were left before build 1; after it the account shows 510 rounded / 496.3 exact of 500. Codemagic resets a personal account's 500 free minutes on the 1st of each month (docs.codemagic.io/billing/pricing, read 2026-09-27), so none come back before 2026-10-01 |
-| Cost estimate | each further build is fully billable: about $2.40–3.30 per build. At most $11.40 if all 120 minutes were billed |
+| Free minutes | 15 rounded (28.1 exact) were left before build 1. Used after build 1: 510 rounded / 496.3 exact of 500 (−10 rounded / 3.7 exact left), summed from the account's build list, not a figure the account displays. Codemagic resets a personal account's 500 free minutes on the 1st of each month (docs.codemagic.io/billing/pricing, read 2026-09-27), so none come back before 2026-10-01 |
+| Cost estimate | Further builds are fully billable if Codemagic rounds each build up to the whole minute. If it bills exact minutes, the first 3.7 minutes of build 2 are free (about $0.35 less). Either way about $2.40–3.30 per build, and at most $11.40 if all 120 minutes were billed |
 | Guard | A build starts only while its 35-minute limit fits under what is left of the 120 |
 
 Codemagic's pages do not say how minutes are rounded; the rounded figures here round each build up
@@ -423,17 +447,29 @@ routing compiled; the domain tests passed on the Mac; the preview copy of the ap
   gestures and controls with the `places.screen` containment check, the largest-text and
   default-text footers, the Back routes).
 - **C12 failed** (smaller iPhone, largest text): after Back to places from Common Ground's detail,
-  View place's bottom was at 738.3 pt and the action bar's top at 734.7 pt: 3.7 pt of the button sat
-  under the bar. That is a product defect in this correction's "Back to places shows the ticket's
-  end": the page stopped about 18 pt below the zero-height ticket-end marker's alignment (C13's
-  Back to Upcoming on the same phone stopped above it and passed). **Fix, after build 1:** the marker
-  is now the existing 25-pt gap between the ticket and its line (layout unchanged), so the page stops
-  with View place at least that far clear of the bar. It changes product code, so the whole
-  correction gate reruns (build 2).
+  View place's bottom was at 738.3 pt and the action bar's top at 734.7 pt: 3.7 pt of the button
+  sat under the bar. It is a product defect in this correction's "Back to places shows the ticket's
+  end".
+  - **The mechanism, reconstructed from this build's frames (not logged directly).** The scroll
+    issued while the stage changes (during the 240-ms dissolve) stopped at the outgoing detail's
+    largest scroll offset. Its own target, the ticket's end aligned against the detail's taller
+    action bar, lay beyond that. Browsing's alignment point, the ticket's end at browsing's own bar,
+    is a different offset:
+    - On the 390-pt iPhone it stopped at about 1293, short of browsing's alignment (about 1311), so
+      View place sat under the bar.
+    - On the 440-pt iPhone it stopped at about 1106, about 52 pt beyond browsing's alignment, so the
+      ticket ended well above the bar and C1 passed.
+
+    The landing depends on the detail's scroll range, not on a fixed shortfall.
+  - **Correction, after build 1** (§3, item 5; not yet observed): browsing is aligned again once the
+    dissolve has finished.
+  - **Rerun.** It changes product code, so the whole correction gate reruns on the new commit.
 - **The scroll diagnosis is settled by evidence.** The new helper made 138 traced drags (59 on the
   iPhone 17 Pro Max, 79 on the iPhone 17e) and none stalled: each moved the page its finger travel
-  less 9.6–10.4 pt, including the largest-text detail and explanation pages that C1 and C12 could not
-  scroll in build 6ab88011. 54 of them started on the browse ticket's paper (the helper's fallback
+  less 9.6–10.4 pt. That includes the largest-text pages where build 6ab88011's scrolls failed:
+  browsing on the 390-pt iPhone 17e, where C12 stopped at `PlacesCorrectionTests.swift:210`, and
+  Common Ground's detail on the 440-pt phone, where C1 stopped at `:219`. It also includes the
+  explanation page, which neither test reached in that build. 54 of them started on the browse ticket's paper (the helper's fallback
   when no other clear point exists) and none opened anything. The optional probe (C17, smaller iPhone, largest text) measured, five drags each:
 
   | Pattern | Browsing (Now) | Common Ground's detail |
@@ -448,11 +484,13 @@ routing compiled; the domain tests passed on the Mac; the preview copy of the ap
   detail does not affect scrolling. Why a quick second drag at the edge reverses (the scroll
   indicator is the likeliest) is not established. The main-device probe (C16) was left unrun for
   time, as a diagnostic may be.
-- Durations: C1 97.3 s, C2 64.1 s, C3 33.7 s, C12 112.9 s (to its failure), C13 75.7 s; the UI step
-  took 18.0 minutes; the main device's first run reached its first test about 5 minutes after the
-  UI step began, as in build 6ab88011.
-- Downloads: every artifact matched its published size and SHA-256; the review page's 149 links all
-  resolve.
+- Durations: C1 97.3 s, C2 64.1 s, C3 33.7 s, C12 112.9 s (to its failure), C13 75.7 s. The UI step
+  took 18.0 minutes. The main device's first test began 666 s after the harness's gate: about
+  6 minutes (361 s) after the UI step began, against 373 s in build 6ab88011.
+- Downloads: all six artifacts matched their published sizes. The four with a published `.sha256`
+  also matched it: the review, screens and walkthrough packages and the Debug simulator zip.
+  `Proximeet.app.zip` and the `proximeet-rebuild_1_artifacts.zip` bundle have no published hash.
+  The review page's 155 links, to 148 distinct files, all resolve.
 
 Linux checks of the frozen commit, each PENDING: the domain suite (`swift test`), the project
 validator, the source-gate manifests (`scripts/places_source_manifests.py --check`), and the UI

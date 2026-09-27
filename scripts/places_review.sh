@@ -21,11 +21,11 @@
 #                tests whose endpoint changed, the seven screens on main (C9 = P7) and Back routes on
 #                the smaller iPhone (C15 = P8), and a short recording of the corrected scrolling and
 #                back swipes. 15 rows, all required (the scroll diagnostic's rows C16 and C17 were
-#                removed after build 6ab8adb4 collected their evidence)
+#                removed after build 6ab8adb4, which ran C17; C16 was left unrun for time)
 #   sweep        the recovery's sweep: the places scope's rows except P7 and P8 and the signal
 #                scope's rows except S1, S2, S7, S11 and S14 (the correction runs those), under their
-#                own row IDs. On main: the recorded full journey (P1) first, then the Birthday gate on
-#                the way back, the largest text, rapid taps and interruptions, the Reduce Motion
+#                own row IDs. On main: the real journey (P1, short holds, not recorded), the Birthday
+#                gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion
 #                preview and relaunch (P2-P6), then S3-S6, S8-S10, S12 and S13; on the smaller iPhone:
 #                the band change, all twelve intent-venue combinations, the largest text, missing
 #                choices and the seven screens (P9-P13), then S15 and S16. 22 rows, all required
@@ -61,10 +61,10 @@
 #                 cloned from it before either boots, or a smaller iPhone) behind the compilation
 #   ui-review     compile the UI test harness; give the other device its own copy of the build
 #                 products; run the scope's main and other-device runs in parallel (device B is
-#                 deleted after the run). The places and sweep scopes record their full journey
-#                 first on main; only places gets a compact video, made in the background once the
-#                 recording ends, and sweep delivers its recording unedited; the correction
-#                 records its walkthrough first on the smaller iPhone, delivered unedited.
+#                 deleted after the run). The places scope records its full journey first on main
+#                 and gets a compact video, made in the background once the recording ends; the
+#                 correction records its walkthrough first on the smaller iPhone, delivered
+#                 unedited; the sweep records nothing (its P1 runs with short holds).
 #                 Every xcodebuild
 #                 is bounded by time and interrupted (SIGINT) at its bound so it can close its result
 #                 bundle before it is killed (the UI deadline is 1380 s after the checkpoint, or the
@@ -75,14 +75,14 @@
 #                 source commit, the app zip's name and SHA-256, and a line saying the Places
 #                 verification is pending). Never fails the build; a problem is a note. Run after
 #                 'codemagic_verify.sh package' and before ui-review
-#   compact-video half-size re-encode of the recording, trimmed to the app (places only; sweep and
-#                 the correction deliver their recordings unedited)
+#   compact-video half-size re-encode of the recording, trimmed to the app (places only; the
+#                 correction delivers its recording unedited; the sweep records nothing)
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  scripts/places_review_package.py: <title>.zip, <prefix>-Screens.zip,
 #                 <prefix>-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
 #                 <prefix>-walkthrough-original.zip, with the title Places-Review (prefix Places) for
-#                 places; Places-Sweep-Review.zip, Places-Sweep-Screens.zip and
-#                 Places-Sweep-walkthrough-original.zip for sweep (no compact: delivered unedited);
+#                 places; Places-Sweep-Review.zip and Places-Sweep-Screens.zip for sweep (it records
+#                 nothing);
 #                 Places-Correction-Review.zip with its Screens and walkthrough zips (correction);
 #                 Places-Signal-Review.zip or Places-Regressions-Review.zip otherwise; each with an
 #                 offline index.html and its SHA-256
@@ -129,7 +129,7 @@ UI_DEADLINE_SECONDS=1380
 # 1740, digits only. The workflow proximeet-places-review-short, 24 minutes, sets 1110 (at the worst
 # 72 + 1110 + 75 + 100 + about 40 = 1397 s); proximeet-places-review-35, 35 minutes, sets 1740 (at
 # the worst 72 + 1740 + 75 + 100 + about 45 = 2032 s, inside its 2100 s; raised from 1680 after build
-# 6ab8adb4 measured the main device's first test about 600 s after the gate). A value above 1380
+# 6ab8adb4 measured the main device's first test 666 s after the gate). A value above 1380
 # belongs only to the 35-minute workflow. The source gate rejects any value outside 600 to 1740.
 case "${PLACES_UI_DEADLINE_SECONDS:-}" in
     ''|*[!0-9]*|0*) ;;
@@ -398,9 +398,9 @@ scope_uses() {
 }
 
 # Whether the scope's recording gets a compact re-encode on the Mac: only the original places
-# scope. The correction and sweep deliver their recordings unedited (a re-encode would compete with
-# two simulators for three CPUs); any viewing trim is made elsewhere and labelled as such. The other
-# scopes record nothing.
+# scope. The correction delivers its recording unedited (a re-encode would compete with two
+# simulators for three CPUs); any viewing trim is made elsewhere and labelled as such. The sweep and
+# the other scopes record nothing.
 compacts_recording() {
     case "$SCOPE" in
         places) return 0 ;;
@@ -827,11 +827,11 @@ lane_run() {
 }
 
 # journey_run <udid> <derived data> <bundle> <natural seconds>: the scope's recorded run "journey"
-# (places and sweep: the full journey; correction: its walkthrough). The recorder is confirmed
-# active before the test starts, and the app is closed first. It keeps its full holds and is never
-# retried (a retry would not be the recorded run). For places (only) the compact video is made in
-# the background from the journey's own start marker; sweep and the correction deliver their
-# recordings unedited.
+# (places: the full journey; correction: its walkthrough; the sweep has none). The recorder is
+# confirmed active before the test starts, and the app is closed first. It keeps its full holds and
+# is never retried (a retry would not be the recorded run). For places (only) the compact video is
+# made in the background from the journey's own start marker; the correction delivers its
+# recording unedited.
 journey_run() {
     local udid="$1" derived="$2" bundle="$3" seconds="$4" movie="$OUT/places-walkthrough-original.mp4"
     local waited=0 status=0 recording_started mark attempt=1
@@ -1039,7 +1039,7 @@ stage_ui_review() {
         summary_line "places-parallel" "$second $second_udid runs its $SCOPE runs beside the selected simulator's"
     fi
 
-    # 4. The selected simulator's runs (places and sweep: the recorded journey first).
+    # 4. The selected simulator's runs (places: the recorded journey first).
     run_lane main "$SIM_UDID" "$DERIVED_DATA"
 
     # 5. Without its device, device B's runs happen here, after the selected simulator's; the smaller
@@ -1160,7 +1160,7 @@ stage_preview_app() {
 stage_compact_video() {
     local movie="$OUT/places-walkthrough-original.mp4" compact="$OUT/places-walkthrough-compact.mp4"
     local start=0 end="" took marker ready started pid waited=0 status=1 cap
-    if [ "$SCOPE" = "correction" ] || [ "$SCOPE" = "sweep" ]; then
+    if [ "$SCOPE" = "correction" ]; then
         note "Scope $SCOPE: its recording is delivered unedited; no re-encode is made on the Mac."
         printf 'result=NOT APPLICABLE (scope %s delivers its recording unedited)\n' "$SCOPE" > "$OUT/compact-video.txt"
         return 0
@@ -1301,7 +1301,8 @@ covered = {
                   "interaction tests whose endpoint changed (S1, S2, S7, S11, S14), the seven screens on main (P7) and "
                   "Back routes on the smaller iPhone (P8), and the recorded correction walkthrough",
     "sweep": "the 22 required sweep executions of docs/verification/places-review-manifest.tsv, under the places and "
-             "signal scopes' row IDs: P1-P6 and P9-P13 (P7 and P8 run in the correction scope): the recorded journey, the "
+             "signal scopes' row IDs: P1-P6 and P9-P13 (P7 and P8 run in the correction scope): the real journey (short "
+             "holds, not recorded), the "
              "Birthday gate on the way back, the largest text on two widths, rapid taps and interruptions, the Reduce "
              "Motion preview flag, relaunch, the band change, all twelve intent-venue combinations, missing choices and "
              "the guarded explanation, the seven screens on the smaller iPhone; and S3-S6, S8-S10, S12, S13, S15 and S16 "
@@ -1323,7 +1324,7 @@ required = {
     "UI tests executed and passed (%s; no retries; none skipped, interrupted or missing; every run exited 0)" % covered:
         tests.get("result") == "PASS" and tests.get("scope") == scope,
 }
-if scope in ("places", "sweep", "correction"):
+if scope in ("places", "correction"):
     required["journey recording confirmed and saved"] = last.get("places-recording", "").startswith("confirmed") \
         and os.path.isfile(movie) and os.path.getsize(movie) > 0
 lines = [
@@ -1359,7 +1360,7 @@ if os.path.isfile(path):
     lines += ["    " + line.strip() for line in open(path)
               if re.match(r"^\w+Tests\.test\w+\[", line) or line.startswith("xcodebuild_exit")]
 lines += ["", "Supplementary (reported, not required):"]
-if scope in ("places", "sweep", "correction"):
+if scope in ("places", "correction"):
     lines += ["  compact walkthrough video: " + compact.get("result", "NOT RUN")]
 lines += [
     "  unsigned simulator app zip (simulator only; not installable on a device): " + status("package"),

@@ -34,7 +34,7 @@ parallel. Every test with 440-point pixel anchors runs on main, or on device B, 
 | `signal` | Signal's journey (unrecorded), twelve states, first choices, rapid changes and the endpoint. Then build 6ab7e942's device-B tests (the same model): the age-gate journey, relaunch, the Reduce Motion preview, largest text, missing intent, the two `BandSignalInteractionTests` and both Guest List keyboard tests | The smaller iPhone: the keyboard Done/Back check and Signal's largest text | 16 (14 unique) |
 | `regressions` | The Wristband (7), Pass (4) and Birthday (2) tests, the two walkthroughs first | Device B (a clone of main): the Guest List's paste test, its on-screen-keyboard tests with the names test, Welcome (all 4), a time-gated repeat of the paste test, and last its hardware Tab test | 27 required (+1 optional repeat) |
 | `correction` | See §0a | The smaller iPhone; see §0a | 15 required |
-| `sweep` | The recorded journey (P1, alone, full holds); then P2–P6: the Birthday gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion preview and relaunch; then S3–S6, S8–S10, S12 and S13: both Guest List keyboard tests, the age-gate journey, twelve states, first choices, largest text, missing intent, the Reduce Motion preview and relaunch | The smaller iPhone: P9–P13, the band change, all twelve intent-venue combinations, the largest text, missing choices and the guarded explanation, and the seven screens; then S15 and S16, the keyboard Done/Back check and Signal's largest text | 22 required |
+| `sweep` | P1, the real journey (short holds, not recorded), then P2–P6: the Birthday gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion preview and relaunch; then S3–S6, S8–S10, S12 and S13: both Guest List keyboard tests, the age-gate journey, twelve states, first choices, largest text, missing intent, the Reduce Motion preview and relaunch | The smaller iPhone: P9–P13, the band change, all twelve intent-venue combinations, the largest text, missing choices and the guarded explanation, and the seven screens; then S15 and S16, the keyboard Done/Back check and Signal's largest text | 22 required |
 
 **Devices and time (after build `6ab84ede`).**
 - Measurements from builds `6ab84ede` and `6ab85be6` set the device plan:
@@ -44,7 +44,7 @@ parallel. Every test with 440-point pixel anchors runs on main, or on device B, 
 - So both devices boot during the compilation and neither is ever restarted. For regressions, device B is cloned from main before either boots.
 - The UI deadline is 1380 s after the gate. The run input `PLACES_UI_DEADLINE_SECONDS` (600 to 1740) changes it; the source gate rejects any other value. A value above 1380 belongs only to the 35-minute workflow.
 - `proximeet-places-review-short` runs the same steps with a 24-minute limit. Its own `PLACES_UI_DEADLINE_SECONDS` is 1110 (at the worst 72 + 1110 + 75 + 100 + about 40 = 1397 s). It is for a final build that must fit what is left of the chapter's 90 free minutes.
-- `proximeet-places-review-35` runs the same steps with a 35-minute limit and one more (the preview copy, §2). Its own `PLACES_UI_DEADLINE_SECONDS` is 1740 (at the worst 72 + 1740 + 75 + 100 + about 45 = 2032 s of its 2100), raised from 1680 after build `6ab8adb4` measured the main device's first test about 600 s after the gate.
+- `proximeet-places-review-35` runs the same steps with a 35-minute limit and one more (the preview copy, §2). Its own `PLACES_UI_DEADLINE_SECONDS` is 1740 (at the worst 72 + 1740 + 75 + 100 + about 45 = 2032 s of its 2100), raised from 1680 after build `6ab8adb4` measured the main device's first test 666 s after the gate.
 - The regressions repeat (B14) starts only while 420 s are left before the deadline (300 s until the recovery). At 300 s it was a coin flip that left the required hardware-key run (B15) about 110–125 s for a run measured at 103 s.
 
 `signal` and `regressions` preserve the earlier coverage: 41 unique test methods in 43 required
@@ -77,7 +77,8 @@ The final report lists every build, scope, commit and duration.
 recovery's correction gate, the first of the three builds in §0b.
 
 The first correction build (Codemagic `6ab8adb4`, on `907d7401`) passed 14 of its 15 required
-rows. C12 failed on a product issue, fixed in `Proximeet/Scenes/PlacesView.swift`. So the
+rows. C12 failed on a product issue; a correction is in `Proximeet/Scenes/PlacesView.swift`, not yet
+observed on a Mac. So the
 correction runs again on the new frozen commit, with the same required rows, runs, bounds and
 order. Build `6ab8adb4` counts toward nothing in the recovery.
 
@@ -95,9 +96,9 @@ The runs, in order on each device (the device's runs are serial; the two devices
 - **Earlier rows it executes.** C9 is P7 and C15 is P8; C4, C5, C6, C7 and C8 are S1, S2, S7, S11
   and S14. Each is the same test method on the same device class in the same kind of run (short
   holds), at the same commit as the other two builds.
-- **The diagnostic is removed.** C16 and C17 (`probe_main` and `probe_small`, both running
-  `PlacesCorrectionTests.testScrollDiagnosticProbe`, kind `diagnostic`) ran in build `6ab8adb4`,
-  which collected their evidence. They are no longer manifest rows, so no scope runs the probe. The
+- **The diagnostic is removed.** Of C16 and C17 (`probe_main` and `probe_small`, both running
+  `PlacesCorrectionTests.testScrollDiagnosticProbe`, kind `diagnostic`), build `6ab8adb4` ran C17
+  (smaller iPhone); C16 was left unrun for time. They are no longer manifest rows, so no scope runs the probe. The
   test method stays in the test file, and the harness still handles kind `diagnostic` (reported,
   never part of a verdict) should one return.
 - **Footer checks.** They use frames and pixels:
@@ -145,22 +146,26 @@ three builds started by hand, one after another, each only if the one before pas
 
   | Device | Run (bound) | Rows |
   | --- | --- | --- |
-  | Main (iPhone 17 Pro Max) | `journey` (720 s) | P1, `PlacesReviewTests.testWalkthroughRealJourney`, recorded, alone, full holds |
-  | | `places_main` (600 s) | P2–P6 |
+  | Main (iPhone 17 Pro Max) | `places_main` (900 s) | P1 (`PlacesReviewTests.testWalkthroughRealJourney`, short holds, not recorded), P2–P6 |
   | | `signal_main` (900 s) | S3, S4, S5, S6, S8, S9, S10, S12, S13 |
   | Smaller iPhone | `places_small` (900 s) | P9–P13 |
   | | `signal_small` (420 s) | S15, S16 |
 
-  Each row keeps its earlier row ID, test method and device class, and every run but `journey`
-  uses short holds. The measured durations (builds `6ab85be6`, `6ab8639c` and `6ab7e942`) were
+  Each row keeps its earlier row ID, test method and device class. Every run uses short holds and
+  nothing is recorded: P1 was the places scope's recorded full-hold journey, and here it runs in
+  `places_main` instead. Its assertions are the same; only its holds (at most 0.6 s each) and the
+  recording differ, and the one run fewer saves the journey's own start and close on the main
+  device, whose lane was projected, from build 6ab8adb4's measured start times, to have too little
+  margin before the deadline otherwise. The reconcile script
+  accepts exactly this one difference in run type. The recovery's walkthrough video is C10's. The measured durations (builds `6ab85be6`, `6ab8639c` and `6ab7e942`) were
   188–213 s for a passing P1, 233–240 s for P2–P6 together and about 375 s for the nine S rows on
-  main, and about 511 s for P9–P13 and 82 s for S15 and S16 on the smaller iPhone. The recording is
-  delivered unedited, like the correction's; no compact re-encode is made on the Mac.
+  main, and about 511 s for P9–P13 and 82 s for S15 and S16 on the smaller iPhone.
 - **Workflow.** `proximeet-places-review-35`, each build with the same `PLACES_EXPECTED_COMMIT` and
   its own `PLACES_REVIEW_SCOPE`. Retries stay off.
 - **The identity rule.** An execution counts as an earlier one only when it is the same test
   method, on the same device class, in the same run type (a recorded `journey` run keeps full
-  holds; every other run uses short holds), at the same commit as the other two builds. The
+  holds; every other run uses short holds), at the same commit as the other two builds. The one
+  stated exception is the sweep's P1 (short holds, not recorded; see the sweep's runs above). The
   places and signal rows of the manifest stay as the record; the sweep keeps their row IDs, so the
   builds reconcile by row ID and device.
 - **The coverage file.** `docs/verification/places-recovery-coverage.tsv` lists all 65 executions
@@ -255,7 +260,7 @@ checkout is exactly the reviewed revision:
    The UI deadline is 1380 s after the gate, or the run input.
 9. `places_review.sh compact-video`: a half-size re-encode of the journey, trimmed to the app by
    the test's own start marker and duration (places only). The original is kept. The correction's
-   and the sweep's recordings are delivered unedited; the other scopes record nothing.
+   recording is delivered unedited; the sweep and the other scopes record nothing.
 10. `verdict`, `package-review` and `enforce`: the build fails unless the automated verdict is
     PASS.
 
@@ -267,7 +272,7 @@ checkout is exactly the reviewed revision:
 | `Places-Screens.zip` | places | Every screen. Each file name says `XCTest-journey` (the real route) or `XCTest-FIXTURE-direct-launch`. |
 | `Places-walkthrough-compact.zip` / `.mp4` | places | The journey, re-encoded at half size and trimmed to the app. If the re-encode failed, the file is labelled a fallback copy. |
 | `Places-walkthrough-original.zip` | places | The unedited simulator recording. |
-| `Places-Sweep-Review.zip`, `Places-Sweep-Screens.zip`, `Places-Sweep-walkthrough-original.zip` | sweep | As for places, with the S rows' captures beside the Places ones (`Signal-rows-*` in the Screens zip) and every P and S execution listed by row, device, outcome and the earlier row it counts as. The recording is delivered unedited: no compact re-encode is made on the Mac. P7's 440-pt screens and P8's Back-route captures are made by the correction build (C9, C15) and are named as such, not as missing. |
+| `Places-Sweep-Review.zip`, `Places-Sweep-Screens.zip` | sweep | As for places, with the S rows' captures (chosen by the test that attached them) beside the Places ones (`Signal-rows-*` in the Screens zip) and every P and S execution listed by row, device, outcome and the earlier row it counts as. It records nothing. P7's 440-pt screens and P8's Back-route captures are made by the correction build (C9, C15) and are named as such, not as missing. |
 | `Places-Signal-Review.zip`, `Places-Regressions-Review.zip` | signal, regressions | That scope's captures, results, logs and verdict. |
 | `Places-Correction-Review.zip`, `Places-Correction-Screens.zip`, `Places-Correction-walkthrough.zip` | correction | See §0a. |
 | `app/Proximeet-Debug-iphonesimulator-<sha>.zip` | every scope | The unsigned simulator app. It cannot be installed on an iPhone. |

@@ -78,6 +78,12 @@ def run_type(run):
     return "recorded journey, full holds" if run == "journey" else "short holds"
 
 
+# The one covering row whose run type differs from the earlier row it covers, on purpose: the sweep runs
+# P1 (the real journey) with short holds and no recording, to keep the main device's lane inside its
+# deadline. Its assertions are the same; only the holds (at most 0.6 s each) and the recording differ.
+RUN_TYPE_DEVIATIONS = {("sweep", "P1", "places:P1")}
+
+
 def load_build(path):
     """The build's result files, by base name: {name: text}. Prefers the shallowest match; source.txt
     only from a metadata folder."""
@@ -196,7 +202,9 @@ def main(argv):
                     key + (target,)))
                 continue
             for label, mine, theirs in (("test", entry["test"], earlier["test"]), ("device", entry["device"], earlier["device"]),
-                                        ("run type", run_type(entry["run"]), run_type(earlier["run"])),
+                                        ("run type", run_type(entry["run"]),
+                                         run_type(earlier["run"]) if (entry["scope"], entry["order"], target)
+                                         not in RUN_TYPE_DEVIATIONS else run_type(entry["run"])),
                                         ("kind", entry["kind"], earlier["kind"])):
                 if mine != theirs:
                     problems.append("coverage row %s %s covers %s, but its %s is %r, not %r: not the same check" % (

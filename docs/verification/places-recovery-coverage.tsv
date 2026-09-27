@@ -11,7 +11,7 @@
 #   device   main = the selected iPhone 17 Pro Max; small = the smaller iPhone; b = device B, a clone of main.
 #   kind     as in the manifest: required, or repeat (B14, optional). Only required rows count as coverage.
 #            The scroll probe's diagnostic rows C16 and C17 were removed from the manifest after build
-#            6ab8adb4 collected their evidence.
+#            6ab8adb4, which ran C17 (C16 was left unrun for time).
 #   covers   the earlier execution it counts as, <scope>:<row> of the places, signal or regressions scope,
 #            or "-" for a check that has no earlier row (the correction's own tests).
 # The identity rule: an execution counts as an earlier one only when it is the same test method, on the
@@ -37,7 +37,7 @@ C13	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtLarge
 C14	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
 C15	2	correction	small	correction_small	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required	places:P8
 C11	2	correction	small	correction_small_b	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required	-
-P1	3	sweep	main	journey	PlacesReviewTests/testWalkthroughRealJourney	required	places:P1
+P1	3	sweep	main	places_main	PlacesReviewTests/testWalkthroughRealJourney	required	places:P1
 P2	3	sweep	main	places_main	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required	places:P2
 P3	3	sweep	main	places_main	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P3
 P4	3	sweep	main	places_main	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required	places:P4

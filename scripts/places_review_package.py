@@ -10,8 +10,8 @@ verdict and the recorded deviations), Places-Screens.zip (every screen, each fil
 is a real journey or a direct-launch fixture), Places-walkthrough-compact.zip (and the loose .mp4 when
 re-encoded) and Places-walkthrough-original.zip. The sweep scope (the places scope's P rows and the
 signal scope's S rows that the correction does not run) makes the same under the prefix Places-Sweep
-(Places-Sweep-Review.zip, Places-Sweep-Screens.zip, Places-Sweep-walkthrough-original.zip; no compact:
-its recording is delivered unedited), naming the captures of P7 and P8 as the correction build's, with
+(Places-Sweep-Review.zip, Places-Sweep-Screens.zip; no recording: its P1 runs with short holds), naming
+the captures of P7 and P8 as the correction build's, with
 its S rows' captures beside the Places ones and every P and S execution listed by row, device and
 outcome. The signal and regressions scopes make Places-Signal-Review.zip or
 Places-Regressions-Review.zip. The correction scope makes Places-Correction-Review.zip (before and
@@ -187,11 +187,12 @@ def main(argv):
                 required=places or scope == "correction")
     deliveries = {key: add("approved/%s-delivery.png" % key, os.path.join(ref, "%s-delivery.png" % key), required=places)
                   for key, _, _ in VENUES}
-    # Only the original places scope re-encodes its recording on the Mac; sweep delivers it unedited.
+    # Only the original places scope re-encodes its recording on the Mac; the sweep records nothing.
     compact = add("captures/places-walkthrough-compact.mp4", os.path.join(out, "places-walkthrough-compact.mp4"),
                   required=scope == "places")
+    # The sweep records nothing: its P1 runs with short holds (docs/verification/places-review-manifest.tsv).
     original = add("captures/places-walkthrough-original.mp4", os.path.join(out, "places-walkthrough-original.mp4"),
-                   required=places or scope == "correction")
+                   required=scope in ("places", "correction"))
     for key in sorted(os.listdir(out)) if os.path.isdir(out) else []:
         if key.endswith(("-summary.json", "-tests.json", ".sha256")) or key in (
                 "verdict.txt", "ui-review-tests.txt", "ui-review-counts.txt", "runs.txt", "destination.txt",
@@ -213,7 +214,7 @@ def main(argv):
 
     # Every screenshot and note from every run. Retries are off, so a name appears once per test;
     # a name attached twice keeps its latest image.
-    shots, stamps, notes, used = {}, {}, [], set()
+    shots, stamps, notes, used, shot_tests = {}, {}, [], set(), {}
     folders = sorted(n for n in os.listdir(out) if n.startswith("attachments-")) if os.path.isdir(out) else []
     for folder in folders:
         directory = os.path.join(out, folder)
@@ -239,6 +240,7 @@ def main(argv):
             if extension in (".png", ".jpg", ".jpeg"):
                 if base not in shots or stamp >= stamps[base]:
                     shots[base], stamps[base] = name, stamp
+                    shot_tests[base] = test
             elif extension == ".txt":
                 notes.append("%s (%s): %s" % (test.split("/")[-1].replace("()", ""), folder.replace("attachments-", ""),
                                               read(source).strip()))
@@ -352,11 +354,18 @@ def main(argv):
     else:
         compact_cell = ('<p class="note">Compact walkthrough: %s. No re-encode is made on the Mac for this scope; the '
                         'recording beside this note is the unedited original.</p>' % html.escape(compact_note))
+    if sweep:
+        walkthrough = ("Walkthrough: not recorded in this build",
+                       '<p class="note">No walkthrough is recorded in the sweep: its P1 (the real journey) runs with '
+                       'short holds in places_main, unrecorded. The recovery\'s walkthrough is the correction build\'s '
+                       'C10, in Places-Correction-walkthrough.zip.</p>')
+    else:
+        walkthrough = ("Walkthrough: the real journey from Welcome, through Birthday, the Pass, the Guest List, the "
+                       "Wristband and Signal, into Places",
+                       row(compact_cell, video(original, "Original simulator recording, unedited")))
     if places:
         sections = [
-            ("Walkthrough: the real journey from Welcome, through Birthday, the Pass, the Guest List, the Wristband "
-             "and Signal, into Places",
-             row(compact_cell, video(original, "Original simulator recording, unedited"))),
+            walkthrough,
             ("The approved design (Social) beside the real journey",
              row(shot("places-journey-now-social", "This run (XCTest, real route): Now"),
                  shot("places-journey-detail-common-ground-social", "This run: Common Ground's detail"),
@@ -400,7 +409,13 @@ def main(argv):
         sections = [("Every capture of this build", row(*[img(v, k) for k, v in sorted(shots.items())]))]
     # The sweep's S rows (Signal and Guest List tests) attach captures of their own names; every one is
     # shown, as the signal scope's package showed them.
-    signal_shots = sorted((k, v) for k, v in shots.items() if not k.startswith("places-")) if sweep else []
+    def s_row(key):
+        # By the test that attached it; a capture whose test is unknown counts only if it is neither a
+        # Places capture nor a scroll helper's failure screen (which belongs to the P row that failed).
+        test = shot_tests.get(key, "?")
+        return test.startswith(("SignalReviewTests", "GuestListReviewTests")) or (
+            test == "?" and not key.startswith(("places-", "scroll-")))
+    signal_shots = sorted((k, v) for k, v in shots.items() if s_row(k)) if sweep else []
     if sweep:
         sections.append(("The S rows of this build (S3-S6, S8-S10, S12 and S13 on main; S15 and S16 on the smaller "
                          "iPhone): every capture they attached",
@@ -800,8 +815,8 @@ recovery build (correction gate), the first of three on one frozen commit (corre
 as C15 and S1, S2, S7, S11, S14 as C4-C8, listed below by test and device; the other earlier executions are due in the sweep and
 regressions builds, and scripts/places_recovery_reconcile.py passes only when all three builds passed every required row on one
 commit. The first correction build, 6ab8adb4 on <code>%s</code>, passed 14 of its 15 required rows (C12 failed); it counts toward
-nothing here, and the product files changed since its commit are listed below. The scroll diagnostic (C16, C17) ran in that build
-and is no longer in the manifest. The correction's captures come from direct launches (FIXTURE) through the same
+nothing here, and the product files changed since its commit are listed below. Of the scroll diagnostic, only C17 (smaller
+iPhone) ran in that build; C16 (iPhone 17 Pro Max) was left unrun for time. Neither is in the manifest any more. The correction's captures come from direct launches (FIXTURE) through the same
 gates. Captures named signal-journey-*
 come from Signal's real-route test, <code>SignalReviewTests.testWalkthroughRealJourney</code> (onboarding → Signal → Places,
 on the iPhone 17 Pro Max, unrecorded). BEFORE images are 1× copies of build 6ab8639c's captures (before/provenance.json names

@@ -40,6 +40,11 @@ struct PlacesView: View {
     @State private var backDrag: CGFloat = 0
     /// A completed swipe is finishing its movement; further swipes are ignored until it has.
     @State private var backCompleting = false
+    /// Bumped when Back to places from a detail completes its dissolve (or, after a swipe, right
+    /// after its instant change), so browsing is aligned again against its own content and action
+    /// bar. Build 6ab8adb4's frames, as reconstructed, put the scroll issued during the stage change
+    /// within the outgoing detail's scroll range.
+    @State private var revealTicketEnd = 0
 
     var body: some View {
         if let intent = session.intent, session.approach != nil {
@@ -110,6 +115,9 @@ struct PlacesView: View {
                 }
                 .onChange(of: session.flow.currentScene) { previous, scene in
                     revealStart(from: previous, to: scene, with: reader)
+                }
+                .onChange(of: revealTicketEnd) { _, _ in
+                    revealTicketEndAgain(with: reader)
                 }
             }
             // A back swipe in progress moves the whole screen with the finger; the ground stays.
@@ -288,10 +296,22 @@ struct PlacesView: View {
                 dissolveToken += 1
                 backDrag = 0
             }
+            if moved && stage == .detail {
+                revealTicketEnd += 1
+            }
         } else {
-            dissolve {
+            // The dissolve (as `dissolve(_:)`), and once it has finished, Back to places from a
+            // detail aligns browsing again (`revealTicketEndAgain`). A repeated request that no
+            // longer moves anything re-aligns the same ticket, which is harmless.
+            withAnimation(dissolveAnimation) {
                 moved = session.placesBack(from: stage.scene)
-                return moved
+                if moved {
+                    dissolveToken += 1
+                }
+            } completion: {
+                if stage == .detail {
+                    revealTicketEnd += 1
+                }
             }
         }
         return moved
@@ -306,6 +326,19 @@ struct PlacesView: View {
     }
 
     // MARK: - Where a stage starts
+
+    /// Back to places, once browsing has replaced the detail: the ticket's end (the 25-pt gap below
+    /// the ticket) is aligned with the bottom of the visible page again, now against browsing's own
+    /// content and action bar. The scroll `revealStart` issues while the stage changes stopped, as
+    /// reconstructed from build 6ab8adb4's frames, within the outgoing detail's scroll range (about
+    /// 1293 on the 390-pt iPhone, where browsing's alignment was about 1311, leaving View place
+    /// 3.7 pt under the bar). Nothing happens if another stage is showing by then.
+    private func revealTicketEndAgain(with reader: ScrollViewProxy) {
+        guard session.flow.currentScene == .places else { return }
+        withAnimation(adaptive.reduceMotion || adaptive.voiceOverRunning ? nil : .easeOut(duration: 0.2)) {
+            reader.scrollTo(PlacesScrollTarget.ticketEnd, anchor: .bottom)
+        }
+    }
 
     /// A new detail or explanation starts at its beginning (the header, then the venue or the
     /// headline), never at the offset browsing was scrolled to: moving with the expansion, at once
@@ -381,10 +414,8 @@ struct PlacesView: View {
 private enum PlacesScrollTarget: Hashable {
     /// The header: a stage's beginning.
     case top
-    /// The end of the browse ticket, where View place is, and the 25-pt gap below it. (A zero-height
-    /// marker at the ticket's edge left View place up to 3.7 pt under the action bar at the largest
-    /// text on the 390-pt iPhone in build 6ab8adb4: the page stopped about 18 pt lower than the
-    /// marker's alignment while the stage and its bar changed.)
+    /// The end of the browse ticket, where View place is, and the 25-pt gap below it, so the ticket
+    /// stops that far above the action bar once it is aligned (`revealTicketEndAgain`).
     case ticketEnd
 }
 
@@ -440,8 +471,7 @@ private struct PlacesTicketStage: View {
             .padding(.top, stage == .browse ? 10 : 38)
             if stage == .browse {
                 // The 25-pt gap between the ticket and its line: the target Back to places aligns
-                // with the bottom of the visible page, so the ticket's end, and View place above it,
-                // stop at least this far clear of the action bar.
+                // with the bottom of the visible page (`PlacesScrollTarget.ticketEnd`).
                 Color.clear
                     .frame(height: 25)
                     .id(PlacesScrollTarget.ticketEnd)

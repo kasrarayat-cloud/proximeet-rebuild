@@ -225,8 +225,8 @@ def main(argv):
                                               "the same tests ran again" % (r["run"], r["bundle"], r["exit"])
                                               for r in infra) if infra else "none"),
         "flag_markers_in_log=" + " ".join(sorted(markers)),
-        "walkthrough_started_epoch=%s" % (walk_start or ("unknown" if any(r["run"] == "journey" for r in rows)
-                                                         else "not recorded in this scope")),
+        "walkthrough_started_epoch=%s" % ((walk_start or "unknown") if any(r["run"] == "journey" for r in rows)
+                                          else "not recorded in this scope"),
         "devices=main %s; device B %s; smaller %s" % (main_udid, b_udid.upper() if b_used else "not used",
                                                      small_udid.upper() or "not used"),
     ]

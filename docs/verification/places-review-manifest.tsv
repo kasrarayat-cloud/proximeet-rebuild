@@ -22,15 +22,19 @@
 #            then the five Signal and interaction tests whose endpoint changed, with C9, in XCTest's
 #            class order. On the smaller iPhone: the recorded correction walkthrough C10 (full holds),
 #            then C12-C15, then C11 alone. 15 rows, all required. The scroll diagnostic's rows C16 and
-#            C17 (kind diagnostic, runs probe_main and probe_small) are removed: build 6ab8adb4 collected
-#            their evidence, and PlacesCorrectionTests/testScrollDiagnosticProbe stays in the test file,
-#            run by no scope.
+#            C17 (kind diagnostic, runs probe_main and probe_small) are removed: in build 6ab8adb4 C17
+#            (smaller iPhone) ran and C16 (main) was left unrun for time; the test method
+#            PlacesCorrectionTests/testScrollDiagnosticProbe stays in the test file, run by no scope.
 #            sweep = the recovery's sweep, one build for what sweep_places and sweep_signal (both
-#            removed) split between two: on main, the recorded journey P1 first and alone (run journey,
-#            full holds), then P2-P6 (places_main), then S3-S6, S8-S10, S12 and S13 (signal_main); on the
-#            smaller iPhone P9-P13 (places_small), then S15 and S16 (signal_small). 22 rows, all required.
-#            It keeps the places and signal row IDs and test methods, so the builds reconcile by row ID
-#            and device. Its recording is delivered unedited, like the correction's.
+#            removed) split between two: on main, P1-P6 (places_main), then S3-S6, S8-S10, S12 and S13
+#            (signal_main); on the smaller iPhone P9-P13 (places_small), then S15 and S16 (signal_small).
+#            22 rows, all required. It keeps the places and signal row IDs and test methods, so the builds
+#            reconcile by row ID and device. It records nothing: P1 (the real journey) runs with short
+#            holds in places_main instead of a recorded journey run with full holds. Its assertions are
+#            the same; only its holds (at most 0.6 s each) and the recording differ. That saves the
+#            journey run's own start and close on the main device, whose lane was projected, from
+#            build 6ab8adb4's measured start times, to have too little margin before the deadline
+#            otherwise. The recovery's walkthrough video is the correction's C10.
 #            P7 = C9, P8 = C15, S1 = C4, S2 = C5, S7 = C6, S11 = C7 and S14 = C8: those earlier
 #            executions are executed by the correction scope, on the same device, at the same commit,
 #            by the same method in the same kind of run (short holds). docs/verification/
@@ -42,8 +46,8 @@
 #            with 440-point pixel anchors runs on main (or b, the same model). The signal scope's
 #            former device-B tests run on main, which is the same model and runtime.
 #   run      one bounded xcodebuild test-without-building; within a run XCTest orders the tests by
-#            class, then by name. A run named "journey" is recorded and alone, with full holds (places
-#            and sweep: the full journey; correction: C10); every other run uses short holds.
+#            class, then by name. A run named "journey" is recorded and alone, with full holds (places:
+#            the full journey; correction: C10; the sweep has none); every other run uses short holds.
 #   seconds  the run's natural time bound; the build's deadline can shorten it.
 #   kind     required = must execute once and pass; repeat = a planned second execution of a
 #            required test from a fresh app and test runner, run only if the time budget allows both
@@ -126,12 +130,12 @@ correction	C13	small	correction_small	CorrectionSmall	780	PlacesCorrectionTests/
 correction	C14	small	correction_small	CorrectionSmall	780	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
 correction	C15	small	correction_small	CorrectionSmall	780	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required
 correction	C11	small	correction_small_b	CorrectionSmallB	240	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required
-sweep	P1	main	journey	SweepJourney	720	PlacesReviewTests/testWalkthroughRealJourney	required
-sweep	P2	main	places_main	SweepPlacesMain	600	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
-sweep	P3	main	places_main	SweepPlacesMain	600	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
-sweep	P4	main	places_main	SweepPlacesMain	600	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
-sweep	P5	main	places_main	SweepPlacesMain	600	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required
-sweep	P6	main	places_main	SweepPlacesMain	600	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required
+sweep	P1	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testWalkthroughRealJourney	required
+sweep	P2	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+sweep	P3	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+sweep	P4	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+sweep	P5	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required
+sweep	P6	main	places_main	SweepPlacesMain	900	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required
 sweep	S3	main	signal_main	SweepSignalMain	900	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	required
 sweep	S4	main	signal_main	SweepSignalMain	900	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required
 sweep	S5	main	signal_main	SweepSignalMain	900	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	required
