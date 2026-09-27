@@ -673,7 +673,7 @@ workflows:
       - name: XCTest review for the run's scope, by the manifest (correction, sweep_places, sweep_signal or regressions; places; signal), no retries
         script: bash scripts/places_review.sh ui-review
         ignore_failure: true
-      - name: Compact walkthrough video (half size, trimmed to the app; original kept; places and sweep_places)
+      - name: Compact walkthrough video (half size, trimmed to the app; original kept; places scope only - correction and sweep_places deliver theirs unedited)
         script: bash scripts/places_review.sh compact-video
         ignore_failure: true
       - name: Verdict - automated results apart from outstanding manual review

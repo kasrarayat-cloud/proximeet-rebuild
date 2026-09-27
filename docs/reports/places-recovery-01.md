@@ -55,8 +55,12 @@ All four scrolling failures used the same helper, `scrollIntoView`
   test runner printed "Running tests..." at 02:42:33.8 (`:378`), about five minutes after the run
   began.
 - C1 started at 02:43:10.08 (`:386`), C2 at 02:45:59.78 (`:1122`) and C3 at 02:47:16.06 (`:1673`).
-  The bound stopped the run 6.46 s into C3's launch (`:1682-1683`), before any assertion, and the
-  run exited 142 (`:2222`).
+  The bound stopped the run about 10–14 s after C3 started, before any assertion: the run's 600-s
+  bound fell between 02:47:26 and 02:47:30 (its `bounded_test` started after the 02:37:26
+  places-parallel line in summary.txt and no later than the result bundle's 02:37:30.1 start). C3's
+  launch was still waiting for the app to idle (that step began at t = 6.46 s, `:1682`); the stop is
+  `:1683`, and the run exited 142 (`:2222`). This agrees with `places-correction-01.md`'s "11 s after
+  it started".
 - C1 and C2 together took 246 s. The analysis of their step timestamps puts about 150 s of that in
   the two loops that stalled.
 - The same test on the smaller phone (C14) passed in 27.2 s.
@@ -78,7 +82,8 @@ All four scrolling failures used the same helper, `scrollIntoView`
 - Classification: the test's exact comparison, not a product defect. A product change (the scroll on
   Back) exposed it.
 - The same hazard was left at `ae908de` in `PlacesCorrectionTests.swift:490`
-  (`XCTAssertGreaterThanOrEqual(button.height, 44, …)`); `ae908de` changed only the review tests.
+  (`XCTAssertGreaterThanOrEqual(button.height, 44, …)`); `ae908de` applied its 44 − 0.001 tolerance
+  only in `PlacesReviewTests.swift`.
 
 **C2 (main, largest text): the harness. The mechanism is unproven.**
 - Decisive: C2 scrolled the same page (Now, 440 pt, largest text), on the same device, with the same
@@ -372,7 +377,8 @@ governs.
   coverage is dropped. `docs/verification/places-recovery-coverage.tsv` lists every execution of
   the four builds and the earlier row each counts as, and `scripts/places_recovery_reconcile.py`
   joins the four builds' results by it.
-- **Predicted minutes, rounded** (from the step timings of builds 6ab84ede to 6ab88011; the
+- **Predicted minutes, rounded** (from the step and test timings of builds 6ab7e942 to 6ab88011:
+  build 3's tests from 6ab7e942's signal run, build 4 scaled from 6ab81e22's 1427-s run; the
   durations of C1, C2, C12 and C13 are estimates, since no passing run of them exists): build 1
   about 25 (worst 30), build 2 about 21 (26), build 3 about 18 (22), build 4 about 27 (28). In all
   about 91, worst 106. Build 1's estimate was made for a slightly different order of its main runs.
@@ -383,7 +389,7 @@ governs.
 | --- | --- |
 | Rate | Mac mini M2, pay as you go: $0.095 a minute, published at codemagic.io/pricing, read 2026-09-27 |
 | Caps | 120 build minutes and USD 15 for the four builds |
-| Free minutes | 15 rounded (28.1 exact) of the account's 500 were left before this assignment (`places-correction-01.md` §6, read from the account's build list). The reset date is unknown |
+| Free minutes | 15 rounded (28.1 exact) of the account's 500 were left before this assignment (`places-correction-01.md` §6, read from the account's build list). Codemagic resets a personal account's 500 free minutes on the 1st of each month (docs.codemagic.io/billing/pricing, read 2026-09-27; no time zone given), so none come back before 2026-10-01 |
 | Cost, if every minute past the free 15 is billed | about $7.22 for the central 91 (76 billed), about $8.65 for the worst 106 (91 billed) |
 | Cost at the cap | $11.40 for 120 minutes, even if no free minute applied. USD 15 buys about 158 minutes, so the 120-minute cap binds first |
 | Guard | Four 35-minute limits total 140 minutes, more than the cap. A build therefore starts only while at least 35 minutes remain under it |

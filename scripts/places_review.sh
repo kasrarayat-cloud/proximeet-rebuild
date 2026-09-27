@@ -61,9 +61,10 @@
 #   ui-review     compile the UI test harness; give the other device its own copy of the build
 #                 products; run the scope's main and other-device runs in parallel (device B is
 #                 deleted after the run). The places and sweep_places scopes record their full
-#                 journey first on main, and the compact video is made in the background once the
-#                 recording ends; the correction records its walkthrough first on the smaller iPhone,
-#                 delivered unedited. Every xcodebuild
+#                 journey first on main; only places gets a compact video, made in the background
+#                 once the recording ends, and sweep_places delivers its recording unedited; the
+#                 correction records its walkthrough first on the smaller iPhone, delivered unedited.
+#                 Every xcodebuild
 #                 is bounded by time and interrupted (SIGINT) at its bound so it can close its result
 #                 bundle before it is killed (the UI deadline is 1380 s after the checkpoint, or the
 #                 run input). Every execution is judged against the manifest by
@@ -73,8 +74,8 @@
 #                 source commit, the app zip's name and SHA-256, and a line saying the Places
 #                 verification is pending). Never fails the build; a problem is a note. Run after
 #                 'codemagic_verify.sh package' and before ui-review
-#   compact-video half-size re-encode of the recording, trimmed to the app (places and sweep_places;
-#                 the correction delivers its recording unedited)
+#   compact-video half-size re-encode of the recording, trimmed to the app (places only; sweep_places
+#                 and the correction deliver their recordings unedited)
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  scripts/places_review_package.py: <title>.zip, <prefix>-Screens.zip,
 #                 <prefix>-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
@@ -825,8 +826,9 @@ lane_run() {
 # journey_run <udid> <derived data> <bundle> <natural seconds>: the scope's recorded run "journey"
 # (places and sweep_places: the full journey; correction: its walkthrough). The recorder is confirmed
 # active before the test starts, and the app is closed first. It keeps its full holds and is never
-# retried (a retry would not be the recorded run). For places and sweep_places the compact video is
-# made in the background from the journey's own start marker.
+# retried (a retry would not be the recorded run). For places (only) the compact video is made in
+# the background from the journey's own start marker; sweep_places and the correction deliver their
+# recordings unedited.
 journey_run() {
     local udid="$1" derived="$2" bundle="$3" seconds="$4" movie="$OUT/places-walkthrough-original.mp4"
     local waited=0 status=0 recording_started mark attempt=1

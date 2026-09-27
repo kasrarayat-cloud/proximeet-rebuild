@@ -725,10 +725,12 @@ final class PlacesCorrectionTests: XCTestCase {
     /// in the page's column on nothing that is a control (`scrollTouchPoint`), never nearer than
     /// 44 pt to either screen edge: the leading edge is Places' back swipe, the trailing edge the
     /// scroll indicator (build 6ab88011's largest-text scrolls stalled with drags 16 pt from it; the
-    /// cause is unverified). A drag never travels further than would carry the element's top past the
-    /// far side of the range, so it cannot overshoot; it aims 16 pt inside the near side (the middle
-    /// of a narrower range), adds what the last drag lost before the scroll view took it, and is at
-    /// least 20 pt where the range allows, well past what a tap allows for.
+    /// cause is unverified). The page is never expected to move further than would carry the
+    /// element's top past the far side of the range: the finger travels at most that plus what the
+    /// last drag lost before the scroll view took it. A drag that loses less than the last one can
+    /// overshoot a narrow range; the next drag corrects it from the other side. Each drag aims 16 pt
+    /// inside the near side (the middle of a narrower range) and is at least 20 pt where the range
+    /// allows, well past what a tap allows for.
     ///
     /// After every drag the frames are read again once the target has settled (`snapshot()`: one
     /// round trip for the whole screen). The page must move the right way by a quarter of the drag
@@ -786,14 +788,20 @@ final class PlacesCorrectionTests: XCTestCase {
             let distance = low ? frame.minY - (lowestTop - inset) : (highestTop + inset) - frame.minY
             // The most the page may move before the element's top passes the far side of the range.
             let farthest = low ? frame.minY - highestTop - 1 : lowestTop - frame.minY - 1
-            var travel = min(longest, distance + loss, farthest, room)
+            // The page lags the finger by what the last drag lost, so the finger may travel that much
+            // past `farthest`; the page itself still stops short of the far side. (Build 6ab8639c's
+            // P11 on the 390-pt phone: a window of about 7 pt, and drags losing 7 to 9.5 pt.)
+            let reach = farthest + loss
+            var travel = min(longest, distance + loss, reach, room)
             if stalls > 0 {
-                // After a drag that did not move the page, a longer one (still within `farthest`), so
-                // the next verdict does not rest on a drag the scroll view could have absorbed.
-                travel = max(travel, min(confirming, farthest, room))
+                // After a drag that did not move the page: long enough to clear any loss this helper
+                // allows (24, the cap on `loss`), so the next verdict does not rest on a drag the
+                // scroll view could have absorbed; an overshoot is corrected by the next drag, from
+                // the other side.
+                travel = max(travel, min(confirming, farthest + 24, room))
             }
             if travel < shortest {
-                travel = min(shortest, farthest, room)
+                travel = min(shortest, reach, room)
             }
             guard travel >= 2 else {
                 return scrollFailed(.harness("no room for a drag: band \(Self.pt(bandTop))–\(Self.pt(bandBottom)), the far "

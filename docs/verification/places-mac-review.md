@@ -225,8 +225,8 @@ checkout is exactly the reviewed revision:
 
    The UI deadline is 1380 s after the gate, or the run input.
 9. `places_review.sh compact-video`: a half-size re-encode of the journey, trimmed to the app by
-   the test's own start marker and duration (places and sweep_places). The original is kept. The
-   correction's recording is delivered unedited; the other scopes record nothing.
+   the test's own start marker and duration (places only). The original is kept. The correction's
+   and sweep_places' recordings are delivered unedited; the other scopes record nothing.
 10. `verdict`, `package-review` and `enforce`: the build fails unless the automated verdict is
     PASS.
 
