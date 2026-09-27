@@ -4,16 +4,27 @@
 # its 24-minute twin proximeet-places-review-short and its 35-minute twin proximeet-places-review-35
 # (codemagic.yaml). See docs/verification/places-mac-review.md.
 #
-#   PLACES_REVIEW_SCOPE=correction|sweep|regressions|places|signal \
+#   PLACES_REVIEW_SCOPE=gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
 #       bash scripts/places_review.sh <stage>
 #
 # Scopes (the run input PLACES_REVIEW_SCOPE; each runs as its own build, and every result says which
 # build and which commit supplied it). What each scope runs, on which device, in which order and
 # within which bound comes from docs/verification/places-review-manifest.tsv. After the Places
-# correction the review is three builds on one frozen commit, in this order: correction, sweep,
-# regressions; scripts/places_recovery_reconcile.py joins their results by
-# docs/verification/places-recovery-coverage.tsv. (The first correction build, 6ab8adb4, ran on an
-# earlier commit and counts toward none of it.)
+# correction the recovery is three builds: build 2 (correction, Codemagic 6ab8c585 on 808950f: C10-C15
+# passed on the smaller iPhone; on the iPhone 17 Pro Max the test runner failed to initialize for UI
+# testing before any test started), then gate_finish (build 3) and sweep_finish (build 4), on a commit
+# whose product and test files equal 808950f's. scripts/places_recovery_reconcile.py reconciles them
+# row by row by docs/verification/places-recovery-coverage.tsv. (The first correction build, 6ab8adb4,
+# ran on 907d7401 and counts toward none of it.)
+#   gate_finish  recovery build 3: C1-C9 on the iPhone 17 Pro Max, the correction rows that build 2's
+#                main device never started (the correction scope's runs, bounds and order), then the
+#                optional extras S3, S4, S5, S6 and S8 on main and P9-P13, S15 and S16 on the smaller
+#                iPhone, each started only when its bound plus 60 s is left. 9 required rows and 12
+#                extras; nothing recorded
+#   sweep_finish recovery build 4: on the iPhone 17 Pro Max P1-P6 (P1 short holds, not recorded), S9,
+#                S10, S12, S13, then M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and, last,
+#                B15 (hardware keys). 29 required rows; nothing recorded. B2-B9 and the optional B14
+#                run in no recovery build (pending)
 #   correction   the recovery's correction gate, the targeted Places correction (after build
 #                6ab8639c, reworked after 6ab88011): the adaptive ticket footer on both widths at the
 #                default and the largest text, one-stage back gestures and controls (with a cancelled
@@ -22,16 +33,17 @@
 #                the smaller iPhone (C15 = P8), and a short recording of the corrected scrolling and
 #                back swipes. 15 rows, all required (the scroll diagnostic's rows C16 and C17 were
 #                removed after build 6ab8adb4, which ran C17; C16 was left unrun for time)
-#   sweep        the recovery's sweep: the places scope's rows except P7 and P8 and the signal
+#   sweep        the sweep planned before build 2 (now replaced by gate_finish and sweep_finish):
+#                the places scope's rows except P7 and P8 and the signal
 #                scope's rows except S1, S2, S7, S11 and S14 (the correction runs those), under their
 #                own row IDs. On main: the real journey (P1, short holds, not recorded), the Birthday
 #                gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion
 #                preview and relaunch (P2-P6), then S3-S6, S8-S10, S12 and S13; on the smaller iPhone:
 #                the band change, all twelve intent-venue combinations, the largest text, missing
 #                choices and the seven screens (P9-P13), then S15 and S16. 22 rows, all required
-#   regressions  the recovery's last build, the 27 required executions of the Signal regression
-#                correction (build 6ab81e22): the Wristband, the Guest List, the Pass, Birthday and
-#                Welcome, with its time-gated repeat of the paste test
+#   regressions  the 27 required executions of the Signal regression correction (build 6ab81e22),
+#                planned as the recovery's last build before build 2: the Wristband, the Guest List,
+#                the Pass, Birthday and Welcome, with its time-gated repeat of the paste test
 #   places       the full Places review, as first run (build 6ab8639c): the recorded full journey
 #                from Welcome through Signal into Places, the seven screens (on the iPhone 17 Pro Max
 #                and the smaller iPhone), all twelve intent-venue combinations, Back routes with the
@@ -41,7 +53,9 @@
 #   signal       the 16 Signal executions of build 6ab7e942, with Continue preview now opening
 #                Places (the intentional endpoint change)
 # Automatic retries are off in every scope: a test that fails, even once, is a failure; a skipped,
-# interrupted or missing required execution is a failure.
+# interrupted or missing required execution is a failure. A run that started no test because its
+# simulator was not found, or because its test runner failed to initialize for UI testing, is run
+# once more after the device is ready (an infrastructure rerun, listed as such; not a test retry).
 #
 # Stages:
 #   checkpoint    source gate. The approved assets (Welcome poses, Manrope fonts and licence, the
@@ -64,7 +78,8 @@
 #                 deleted after the run). The places scope records its full journey first on main
 #                 and gets a compact video, made in the background once the recording ends; the
 #                 correction records its walkthrough first on the smaller iPhone, delivered
-#                 unedited; the sweep records nothing (its P1 runs with short holds).
+#                 unedited; the sweep, gate_finish and sweep_finish record nothing (their P1, where
+#                 they run it, uses short holds).
 #                 Every xcodebuild
 #                 is bounded by time and interrupted (SIGINT) at its bound so it can close its result
 #                 bundle before it is killed (the UI deadline is 1380 s after the checkpoint, or the
@@ -76,13 +91,15 @@
 #                 verification is pending). Never fails the build; a problem is a note. Run after
 #                 'codemagic_verify.sh package' and before ui-review
 #   compact-video half-size re-encode of the recording, trimmed to the app (places only; the
-#                 correction delivers its recording unedited; the sweep records nothing)
+#                 correction delivers its recording unedited; the sweep, gate_finish and
+#                 sweep_finish record nothing: NOT APPLICABLE)
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  scripts/places_review_package.py: <title>.zip, <prefix>-Screens.zip,
 #                 <prefix>-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
 #                 <prefix>-walkthrough-original.zip, with the title Places-Review (prefix Places) for
 #                 places; Places-Sweep-Review.zip and Places-Sweep-Screens.zip for sweep (it records
-#                 nothing);
+#                 nothing); Places-Gate-Review.zip and Places-Gate-Screens.zip for gate_finish;
+#                 Places-Finish-Review.zip and Places-Finish-Screens.zip for sweep_finish;
 #                 Places-Correction-Review.zip with its Screens and walkthrough zips (correction);
 #                 Places-Signal-Review.zip or Places-Regressions-Review.zip otherwise; each with an
 #                 offline index.html and its SHA-256
@@ -150,6 +167,12 @@ RESULTS_SECONDS=20
 # the repeat started with 297-312 s left was a coin flip that left the required hardware-key run
 # about 110-125 s for a run measured at 103 s; 420 s keeps a full worst case of both plus 150 s.
 REPEAT_GATE_SECONDS=420
+# After a run whose test runner failed to initialize for UI testing (build 6ab8c585: the iPhone 17 Pro
+# Max's three runs, 39-106 s after its boot status reported Finished, all before any test started;
+# the smaller iPhone's first runner, at 07:35:27, worked), the device's boot status is awaited and
+# then this many seconds more before the one infrastructure rerun. The cause is not established; the
+# settle and rerun rest on one build and are untested on a Mac.
+RUNNER_SETTLE_SECONDS=60
 TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360"
 TEST_BOUND="bounded_test"
 SETTLE_SECONDS=3
@@ -166,7 +189,7 @@ STAGE="${1:-}"
 case "$STAGE" in
     checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce) ;;
     *)
-        echo "usage: PLACES_REVIEW_SCOPE=correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
+        echo "usage: PLACES_REVIEW_SCOPE=gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -391,6 +414,17 @@ manifest_kinds() {
         "$RUN_MANIFEST"
 }
 
+# run_gate <run> <natural seconds>: the time that must be left before an optional run starts (or is
+# started again after an infrastructure failure); 0 for a run with required rows. A run made only of
+# planned repeats needs REPEAT_GATE_SECONDS; one made only of extras (or diagnostics) its bound plus 60 s.
+run_gate() {
+    case "$(manifest_kinds "$1")" in
+        "repeat ") echo "$REPEAT_GATE_SECONDS" ;;
+        "extra "|"diagnostic ") echo $(($2 + 60)) ;;
+        *) echo 0 ;;
+    esac
+}
+
 # Whether the scope has rows for <device>.
 scope_uses() {
     awk -F '\t' -v scope="$SCOPE" -v device="$1" '!/^#/ && $1 == scope && $3 == device { found = 1 } END { exit found ? 0 : 1 }' \
@@ -399,8 +433,8 @@ scope_uses() {
 
 # Whether the scope's recording gets a compact re-encode on the Mac: only the original places
 # scope. The correction delivers its recording unedited (a re-encode would compete with two
-# simulators for three CPUs); any viewing trim is made elsewhere and labelled as such. The sweep and
-# the other scopes record nothing.
+# simulators for three CPUs); any viewing trim is made elsewhere and labelled as such. The sweep,
+# gate_finish, sweep_finish and the other scopes record nothing.
 compacts_recording() {
     case "$SCOPE" in
         places) return 0 ;;
@@ -804,11 +838,40 @@ reboot_destination() {
     run bounded "$(budget 180)" xcrun simctl bootstatus "$1" -b || true
 }
 
+# runner_not_ready <log line mark>: the test runner failed to initialize for UI testing and no test
+# started in that attempt (build 6ab8c585: "The test runner failed to initialize for UI testing.
+# (Underlying Error: Failed call to AXDisableAccessibilityOnTermination: kAXErrorCannotComplete)",
+# exit 65, on every run of the iPhone 17 Pro Max). Neither a test failure nor a retry, since no test
+# ran: the device's boot is awaited, then RUNNER_SETTLE_SECONDS, and the same tests run once more. Both
+# runs are listed, the first as "infra"; the second attempt's exit is the run's exit. awk reads the log
+# itself: a pipe into grep -q could end the reader early, which pipefail would report as no match.
+runner_not_ready() {
+    awk -v from="$(($1 + 1))" -v q="'" '
+        NR >= from && tolower($0) ~ /failed to initialize for ui testing/ { failed = 1 }
+        NR >= from && $0 ~ ("Test [Cc]ase " q ".*" q " started") { started = 1 }
+        END { exit (failed && !started) ? 0 : 1 }' "$LOG"
+}
+
+# wait_for_runner <udid> <exit>: before the one infrastructure rerun after runner_not_ready.
+wait_for_runner() {
+    local pause
+    note "The test runner failed to initialize for UI testing on $1 (xcodebuild exit $2; no test started). Not a test failure and not a retry: waiting for the device's boot status, then ${RUNNER_SETTLE_SECONDS} s, then running the same tests once more."
+    run bounded "$(budget 180)" xcrun simctl bootstatus "$1" -b || true
+    pause="$(budget "$RUNNER_SETTLE_SECONDS")"
+    if [ "$pause" -gt 0 ]; then
+        note "Waiting ${pause} s before the second attempt ($(remaining)s left)."
+        sleep "$pause"
+    fi
+}
+
 # lane_run <name> <udid> <derived data> <bundle> <natural seconds> <-only-testing...>: one bounded run,
 # its exit recorded in $OUT/runs.txt as "<name> <bundle> <exit> no" (no retry), its attachments
-# exported.
+# exported. A first attempt that started no test because the simulator was not found (exit 70) or the
+# test runner failed to initialize is listed as "<name>_destination_unavailable" or
+# "<name>_runner_not_ready" (kind infra) and run once more, never twice; an optional run is started
+# again only while its gate still holds, and is otherwise listed as not run for time.
 lane_run() {
-    local name="$1" udid="$2" derived="$3" bundle="$4" seconds="$5" status=0 mark
+    local name="$1" udid="$2" derived="$3" bundle="$4" seconds="$5" status=0 mark gate left
     shift 5
     rm -rf "${OUT:?}/${bundle:?}.xcresult"
     mark="$(wc -l < "$LOG" | tr -d ' ')"
@@ -816,6 +879,19 @@ lane_run() {
     if [ "$status" -eq 70 ] && destination_lost "$mark"; then
         printf '%s %s %s %s\n' "${name}_destination_unavailable" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
         reboot_destination "$udid"
+        rm -rf "${OUT:?}/${bundle:?}.xcresult"
+        status=0
+        xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
+    elif [ "$status" -ne 0 ] && runner_not_ready "$mark"; then
+        printf '%s %s %s %s\n' "${name}_runner_not_ready" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
+        wait_for_runner "$udid" "$status"
+        gate="$(run_gate "$name" "$seconds")"
+        left="$(remaining)"
+        if [ "$gate" -gt 0 ] && [ "$left" -lt "$gate" ]; then
+            note "The optional run $name is not started again: ${left}s left, under ${gate}s."
+            printf '%s %s %s %s\n' "$name" "$bundle" none time >> "$OUT/runs.txt"
+            return 0
+        fi
         rm -rf "${OUT:?}/${bundle:?}.xcresult"
         status=0
         xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
@@ -829,7 +905,9 @@ lane_run() {
 # journey_run <udid> <derived data> <bundle> <natural seconds>: the scope's recorded run "journey"
 # (places: the full journey; correction: its walkthrough; the sweep has none). The recorder is
 # confirmed active before the test starts, and the app is closed first. It keeps its full holds and
-# is never retried (a retry would not be the recorded run). For places (only) the compact video is
+# is never retried (a retry would not be the recorded run); only a first attempt that started no test
+# (simulator not found, or the test runner failed to initialize) is recorded again, once, as an
+# infrastructure rerun. For places (only) the compact video is
 # made in the background from the journey's own start marker; the correction delivers its
 # recording unedited.
 journey_run() {
@@ -872,6 +950,11 @@ journey_run() {
             reboot_destination "$udid"
             attempt=2
             continue
+        elif [ "$status" -ne 0 ] && [ "$attempt" -eq 1 ] && runner_not_ready "$mark"; then
+            printf 'journey_runner_not_ready %s %s infra\n' "$bundle" "$status" >> "$OUT/runs.txt"
+            wait_for_runner "$udid" "$status"
+            attempt=2
+            continue
         fi
         break
     done
@@ -894,7 +977,8 @@ journey_run() {
 }
 
 # run_lane <device> <udid> <derived data>: the scope's runs for that device, in manifest order. A
-# run made only of planned repeats starts only while REPEAT_GATE_SECONDS are left.
+# run made only of planned repeats starts only while REPEAT_GATE_SECONDS are left; one made only of
+# extras (or diagnostics) only while its bound plus 60 s is left (run_gate).
 run_lane() {
     local device="$1" udid="$2" derived="$3" name bundle seconds left gate
     for name in $(manifest_runs "$device"); do
@@ -904,11 +988,7 @@ run_lane() {
             journey_run "$udid" "$derived" "$bundle" "$seconds"
             continue
         fi
-        gate=0
-        case "$(manifest_kinds "$name")" in
-            "repeat ") gate="$REPEAT_GATE_SECONDS" ;;
-            "extra "|"diagnostic ") gate=$((seconds + 60)) ;;
-        esac
+        gate="$(run_gate "$name" "$seconds")"
         if [ "$gate" -gt 0 ]; then
             left="$(remaining)"
             if [ "$left" -lt "$gate" ]; then
@@ -1307,11 +1387,24 @@ covered = {
              "Motion preview flag, relaunch, the band change, all twelve intent-venue combinations, missing choices and "
              "the guarded explanation, the seven screens on the smaller iPhone; and S3-S6, S8-S10, S12, S13, S15 and S16 "
              "(S1, S2, S7, S11 and S14 run in the correction scope)",
+    "gate_finish": "the 9 required gate_finish executions of docs/verification/places-review-manifest.tsv, C1-C9 on the "
+                   "iPhone 17 Pro Max (the footers at the default and the largest text, where a detail and the "
+                   "explanation start, the five Signal and interaction tests whose endpoint changed, the seven screens), "
+                   "and its 12 extras, each started only when its bound plus 60 s was left and, if it ran, required to "
+                   "pass: S3-S6 and S8 on main, P9-P13, S15 and S16 on the smaller iPhone (C10-C15 passed in recovery "
+                   "build 2 and are not rerun)",
+    "sweep_finish": "the 29 required sweep_finish executions of docs/verification/places-review-manifest.tsv: on the "
+                    "iPhone 17 Pro Max P1-P6 (P1, the real journey, with short holds, not recorded), S9, S10, S12, S13 "
+                    "and M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and B15 (B2-B9 and the optional B14 run in "
+                    "no recovery build)",
 }.get(scope, "unknown scope %r" % scope)
-# The three builds of the recovery after the Places correction, in order, on one frozen commit, and
-# how a verdict names each (the first correction build, 6ab8adb4, ran on an earlier commit, so the
-# verdict names a role, not a number).
-recovery = {"correction": "correction gate", "sweep": "sweep", "regressions": "regressions"}
+# The recovery after the Places correction, and how a verdict names each of its builds. Build 1 (the
+# first correction build, 6ab8adb4 on 907d7401) counts toward none of it; build 2 (6ab8c585, scope
+# correction, on 808950f) passed C10-C15 on the smaller iPhone, and on the main device the test runner
+# failed to initialize on all three runs, so no test ran there;
+# gate_finish and sweep_finish are builds 3 and 4.
+recovery = {"correction": "correction gate, build 2", "gate_finish": "gate finish, build 3",
+            "sweep_finish": "sweep finish, build 4"}
 required = {
     "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
         source.get("result") == "MATCH",
@@ -1354,7 +1447,8 @@ lines += ["    XCTest detail: %s unique test cases, %s executions (passed %s, fa
           "    retries: " + tests.get("retries", "?") + "; tests executed more than once in one run: " + tests.get("retried", "?"),
           "    optional runs (repeats and extras: not unique tests, not retries; if they run they must pass): "
           + tests.get("repeats", "?"),
-          "    infrastructure reruns (simulator not found, no test ran): " + tests.get("infrastructure_reruns", "?")]
+          "    infrastructure reruns (a first attempt that started no test, run once more; not retries): "
+          + tests.get("infrastructure_reruns", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
     lines += ["    " + line.strip() for line in open(path)
@@ -1379,13 +1473,15 @@ lines += [
 ok = all(required.values())
 if scope in recovery:
     role = "recovery build (%s)" % recovery[scope]
-    lines += ["", "This is the %s of the recovery after the Places correction: three builds (correction, sweep," % role,
-              "regressions), each a build of its own on the same frozen commit. The correction executes P7 as C9, P8 as C15",
-              "and S1, S2, S7, S11, S14 as C4, C5, C6, C7, C8 (the same method on the same device class in the same short-hold",
-              "run); the sweep and regressions execute the other 49 of the 56 earlier required executions. A PASS here covers",
-              "this build only: scripts/places_recovery_reconcile.py passes only when all three builds passed every required",
-              "row on one git_head (docs/verification/places-recovery-coverage.tsv)."]
-    verdict = ("PASS (scope %s, %s; the three-build reconciliation is separate; manual review still outstanding)"
+    lines += ["", "This is the %s of the recovery after the Places correction. Build 2 (Codemagic 6ab8c585, scope" % role,
+              "correction, on 808950f) passed C10-C15 on the smaller iPhone; on the iPhone 17 Pro Max its test runner failed to",
+              "initialize for UI testing before any test started. Build 3 (gate_finish) runs C1-C9 and extras, build 4",
+              "(sweep_finish) the other scheduled rows; B2-B9 and the optional B14 run in no recovery build (pending). A PASS",
+              "here covers this build only: scripts/places_recovery_reconcile.py reconciles row by row, counting a passed",
+              "execution of the same test on the same device class at a commit whose product and test files equal 808950f's",
+              "(docs/verification/places-recovery-coverage.tsv), and gives the targeted correction and the full regression",
+              "separate verdicts."]
+    verdict = ("PASS (scope %s, %s; the row-level reconciliation is separate; manual review still outstanding)"
                % (scope, role)) if ok else "FAIL (scope %s, %s)" % (scope, role)
 else:
     verdict = "PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope
@@ -1410,6 +1506,8 @@ stage_package_review() {
         regressions) title="Places-Regressions-Review" ;;
         correction) title="Places-Correction-Review" ;;
         sweep) title="Places-Sweep-Review" ;;
+        gate_finish) title="Places-Gate-Review" ;;
+        sweep_finish) title="Places-Finish-Review" ;;
         *)
             summary_line "places-package" "NOT MADE: unknown scope '$SCOPE' (no archive carries another scope's name)"
             return "$status"

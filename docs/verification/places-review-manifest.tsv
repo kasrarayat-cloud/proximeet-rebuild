@@ -8,13 +8,18 @@
 #            27 required executions of docs/verification/signal-regressions-recovery-manifest.tsv
 #            (build 6ab81e22), unchanged, with its time-gated repeat. Together: 41 unique test methods and
 #            43 required executions carried over, and 11 unique Places methods in 13 executions.
-#            After the Places correction these 56 required executions run again in three builds on one
-#            frozen commit, in this order: correction, sweep, regressions (its rows unchanged); in
-#            docs/verification/places-recovery-coverage.tsv they are recovery builds 2, 3 and 4. Build 1,
-#            the first correction build (Codemagic 6ab8adb4, on 907d7401), passed 14 of its 15 required
-#            rows; C12 failed on a product issue, so the product change and the correction run again on
-#            the new commit, and nothing of build 1 counts toward the recovery. The places and signal
-#            rows stay as the record of what was reviewed and can still be run as scopes of their own.
+#            After the Places correction these 56 required executions run again. Build 1, the first
+#            correction build (Codemagic 6ab8adb4, on 907d7401), passed 14 of its 15 required rows; C12
+#            failed on a product issue, so the product change and the correction ran again on 808950f,
+#            and nothing of build 1 counts toward the recovery. Recovery build 2 (Codemagic
+#            6ab8c585873de42fcd4f1a8a, scope correction, on 808950f) passed C10-C15 on the smaller
+#            iPhone; on the iPhone 17 Pro Max every run exited 65 before any test started (the test
+#            runner failed to initialize for UI testing). Two builds were left, so the recovery ends
+#            with gate_finish (build 3) and sweep_finish (build 4), below, on one commit whose product
+#            and test files equal 808950f's; docs/verification/places-recovery-coverage.tsv names the
+#            build, scope and run expected to execute every row, and scripts/places_recovery_reconcile.py
+#            reconciles row by row. The places, signal, correction, sweep and regressions rows stay as
+#            they were: the record of what was reviewed, and scopes that can still be run on their own.
 #            correction = the recovery's correction gate, the targeted Places correction after build
 #            6ab8639c (the adaptive footer, one-stage back gestures, where a stage starts), reworked after
 #            build 6ab88011. On main: C3, the case that build left interrupted, first and alone, in a run
@@ -37,23 +42,43 @@
 #            otherwise. The recovery's walkthrough video is the correction's C10.
 #            P7 = C9, P8 = C15, S1 = C4, S2 = C5, S7 = C6, S11 = C7 and S14 = C8: those earlier
 #            executions are executed by the correction scope, on the same device, at the same commit,
-#            by the same method in the same kind of run (short holds). docs/verification/
-#            places-recovery-coverage.tsv lists every execution of the three builds and the earlier row
-#            each covers; scripts/places_recovery_reconcile.py joins the three builds' results by it.
+#            by the same method in the same kind of run (short holds). The sweep and the regressions
+#            scope were planned as recovery builds 3 and 4; after build 2 they are replaced by
+#            gate_finish and sweep_finish.
+#            gate_finish = recovery build 3, the correction gate finished. On main: C3 (correction_first),
+#            then C1 and C2 (correction_main), then C4, C5, C9, C6, C7 and C8 (correction_signal): the
+#            nine correction rows that build 2's main device never started, with the correction scope's
+#            row IDs, tests, runs and bounds (9 rows, required); then S3, S4, S5, S6 and S8 (signal_main_a,
+#            kind extra). On the smaller iPhone: P9-P13 (places_small), then S15 and S16 (signal_small),
+#            both kind extra. C10-C15 passed in build 2 and are not rerun. It records nothing.
+#            sweep_finish = recovery build 4. On main: P1-P6, S9, S10, S12 and S13 (places_signal_main;
+#            P1, the real journey, with short holds and unrecorded, as in the sweep), then M1-M3
+#            (birthday_wristband_main). On device B, the clone of main: M4-M13 (pass_wristband_b; the
+#            regressions scope ran them on main, the same model and runtime), B1 (paste_b), B10-B13
+#            (welcome_b), then B15 (hardware_keys_b), last on its device because it sends hardware key
+#            events. 29 rows, all required. It records nothing.
+#            Not run in any recovery build: B2-B9 (the Guest List's regressions_b tests) and the
+#            optional repeat B14; the reconcile script lists them as pending. Every new row keeps the
+#            row ID and the test method of the earlier row it runs again.
 #   device   main = the selected iPhone 17 Pro Max; b = device B, its clone (same model and runtime);
 #            small = a smaller installed iPhone. A scope uses main and one other device, and the two
-#            run in parallel: regressions uses main and b, every other scope main and small. Every test
-#            with 440-point pixel anchors runs on main (or b, the same model). The signal scope's
-#            former device-B tests run on main, which is the same model and runtime.
+#            run in parallel: regressions and sweep_finish use main and b, every other scope main and
+#            small. Every test with 440-point pixel anchors runs on main (or b, the same model). The
+#            signal scope's former device-B tests run on main, which is the same model and runtime.
 #   run      one bounded xcodebuild test-without-building; within a run XCTest orders the tests by
 #            class, then by name. A run named "journey" is recorded and alone, with full holds (places:
-#            the full journey; correction: C10; the sweep has none); every other run uses short holds.
+#            the full journey; correction: C10; the sweep, gate_finish and sweep_finish have none);
+#            every other run uses short holds. A run whose test runner fails to initialize for UI
+#            testing before any test starts (build 6ab8c585), or whose simulator is not found, is run
+#            once more after the device is ready; that is an infrastructure rerun, not a test retry.
 #   seconds  the run's natural time bound; the build's deadline can shorten it.
 #   kind     required = must execute once and pass; repeat = a planned second execution of a
 #            required test from a fresh app and test runner, run only if the time budget allows both
 #            it and the run after it; it is not a unique test and not a retry, and if it runs it must pass;
-#            extra = a run that starts only when its bound plus 60 s is left before the deadline; if it
-#            runs it must pass, and it is listed as not run otherwise; diagnostic = like extra in when it
+#            extra = a run that starts only when its bound plus 60 s is left before the deadline (its
+#            infrastructure rerun too); if it runs it must pass, and it is listed as not run (time
+#            budget) otherwise; a passed extra counts toward the row-level reconciliation like a
+#            required execution of the same test on the same device class; diagnostic = like extra in when it
 #            starts, but its outcome is reported and never counts toward a verdict (no row uses it since
 #            the scroll probe's rows C16 and C17 were removed).
 # Automatic retries are off in every scope. A failed, skipped, interrupted or missing required
@@ -152,3 +177,53 @@ sweep	P12	small	places_small	SweepPlacesSmall	900	PlacesReviewTests/testMissingC
 sweep	P13	small	places_small	SweepPlacesSmall	900	PlacesReviewTests/testSevenScreensOnThisPhone	required
 sweep	S15	small	signal_small	SweepSignalSmall	420	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required
 sweep	S16	small	signal_small	SweepSignalSmall	420	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+gate_finish	C3	main	correction_first	GateFirst	600	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+gate_finish	C1	main	correction_main	GateMain	700	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+gate_finish	C2	main	correction_main	GateMain	700	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+gate_finish	C4	main	correction_signal	GateSignal	600	BandSignalInteractionTests/testBandSignalInteraction	required
+gate_finish	C5	main	correction_signal	GateSignal	600	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+gate_finish	C9	main	correction_signal	GateSignal	600	PlacesReviewTests/testSevenScreensOnThisPhone	required
+gate_finish	C6	main	correction_signal	GateSignal	600	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+gate_finish	C7	main	correction_signal	GateSignal	600	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+gate_finish	C8	main	correction_signal	GateSignal	600	SignalReviewTests/testWalkthroughRealJourney	required
+gate_finish	S3	main	signal_main_a	GateSignalExtra	420	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	extra
+gate_finish	S4	main	signal_main_a	GateSignalExtra	420	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	extra
+gate_finish	S5	main	signal_main_a	GateSignalExtra	420	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	extra
+gate_finish	S6	main	signal_main_a	GateSignalExtra	420	SignalReviewTests/testAllTwelveStates	extra
+gate_finish	S8	main	signal_main_a	GateSignalExtra	420	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	extra
+gate_finish	P9	small	places_small	GatePlacesSmall	900	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	extra
+gate_finish	P10	small	places_small	GatePlacesSmall	900	PlacesReviewTests/testEveryIntentAtEveryVenue	extra
+gate_finish	P11	small	places_small	GatePlacesSmall	900	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	extra
+gate_finish	P12	small	places_small	GatePlacesSmall	900	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	extra
+gate_finish	P13	small	places_small	GatePlacesSmall	900	PlacesReviewTests/testSevenScreensOnThisPhone	extra
+gate_finish	S15	small	signal_small	GateSignalSmall	420	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	extra
+gate_finish	S16	small	signal_small	GateSignalSmall	420	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	extra
+sweep_finish	P1	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testWalkthroughRealJourney	required
+sweep_finish	P2	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+sweep_finish	P3	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+sweep_finish	P4	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+sweep_finish	P5	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required
+sweep_finish	P6	main	places_signal_main	FinishPlacesSignalMain	1020	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required
+sweep_finish	S9	main	places_signal_main	FinishPlacesSignalMain	1020	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+sweep_finish	S10	main	places_signal_main	FinishPlacesSignalMain	1020	SignalReviewTests/testMissingIntentKeepsSignalClosed	required
+sweep_finish	S12	main	places_signal_main	FinishPlacesSignalMain	1020	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required
+sweep_finish	S13	main	places_signal_main	FinishPlacesSignalMain	1020	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required
+sweep_finish	M1	main	birthday_wristband_main	FinishBirthdayWristbandMain	600	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	required
+sweep_finish	M2	main	birthday_wristband_main	FinishBirthdayWristbandMain	600	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required
+sweep_finish	M3	main	birthday_wristband_main	FinishBirthdayWristbandMain	600	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	required
+sweep_finish	M4	b	pass_wristband_b	FinishPassWristbandB	700	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	required
+sweep_finish	M5	b	pass_wristband_b	FinishPassWristbandB	700	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	required
+sweep_finish	M6	b	pass_wristband_b	FinishPassWristbandB	700	PassReviewTests/testReduceMotionPreviewKeepsThePassStationary	required
+sweep_finish	M7	b	pass_wristband_b	FinishPassWristbandB	700	PassReviewTests/testWalkthroughStartFinishEndpointLeaveReentryCancelBack	required
+sweep_finish	M8	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testEndpointDuplicateTapsAndBack	required
+sweep_finish	M9	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testEveryChangeBetweenIntentsKeepsEverythingInAgreement	required
+sweep_finish	M10	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+sweep_finish	M11	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testRapidChangesLeaveTheLastChoice	required
+sweep_finish	M12	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	required
+sweep_finish	M13	b	pass_wristband_b	FinishPassWristbandB	700	WristbandReviewTests/testRelaunchStartsUnselected	required
+sweep_finish	B1	b	paste_b	FinishPasteB	480	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	required
+sweep_finish	B10	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testDefaultGeometry	required
+sweep_finish	B11	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testHonestNotices	required
+sweep_finish	B12	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testLargestTextSize	required
+sweep_finish	B13	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testReduceMotionPreviewLaunch	required
+sweep_finish	B15	b	hardware_keys_b	FinishHardwareKeysB	240	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required

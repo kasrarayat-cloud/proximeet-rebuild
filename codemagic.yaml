@@ -436,7 +436,7 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (correction | sweep | regressions | places | signal; required)
+  # PLACES_REVIEW_SCOPE (gate_finish | sweep_finish | correction | sweep | regressions | places | signal; required)
   # picks the scope; each scope is its own build, and what it runs comes from
   # docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
@@ -507,6 +507,14 @@ workflows:
       - build/artifacts/Places-Sweep-Review.zip.sha256
       - build/artifacts/Places-Sweep-Screens.zip
       - build/artifacts/Places-Sweep-Screens.zip.sha256
+      - build/artifacts/Places-Gate-Review.zip
+      - build/artifacts/Places-Gate-Review.zip.sha256
+      - build/artifacts/Places-Gate-Screens.zip
+      - build/artifacts/Places-Gate-Screens.zip.sha256
+      - build/artifacts/Places-Finish-Review.zip
+      - build/artifacts/Places-Finish-Review.zip.sha256
+      - build/artifacts/Places-Finish-Screens.zip
+      - build/artifacts/Places-Finish-Screens.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
@@ -524,7 +532,7 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (correction | sweep | regressions | places | signal; required)
+  # PLACES_REVIEW_SCOPE (gate_finish | sweep_finish | correction | sweep | regressions | places | signal; required)
   # picks the scope; each scope is its own build, and what it runs comes from
   # docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
@@ -597,6 +605,14 @@ workflows:
       - build/artifacts/Places-Sweep-Review.zip.sha256
       - build/artifacts/Places-Sweep-Screens.zip
       - build/artifacts/Places-Sweep-Screens.zip.sha256
+      - build/artifacts/Places-Gate-Review.zip
+      - build/artifacts/Places-Gate-Review.zip.sha256
+      - build/artifacts/Places-Gate-Screens.zip
+      - build/artifacts/Places-Gate-Screens.zip.sha256
+      - build/artifacts/Places-Finish-Review.zip
+      - build/artifacts/Places-Finish-Review.zip.sha256
+      - build/artifacts/Places-Finish-Screens.zip
+      - build/artifacts/Places-Finish-Screens.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
@@ -607,9 +623,9 @@ workflows:
       - build/artifacts/places/*.tsv
       - build/artifacts/places/*.json
 
-  # The same Places review with a 35-minute limit, for the three-build recovery after the Places
-  # correction: correction (the correction gate), sweep, regressions, in that order, each started by
-  # hand with the same PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) and its own
+  # The same Places review with a 35-minute limit, for the recovery after the Places correction:
+  # build 2, correction (Codemagic 6ab8c585, on 808950f), then gate_finish (build 3) and sweep_finish
+  # (build 4), each started by hand with PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) and its own
   # PLACES_REVIEW_SCOPE (required; any manifest scope is accepted). It sets its own UI deadline,
   # PLACES_UI_DEADLINE_SECONDS=1740 (a plain, non-secret value; at the worst 72 + 1740 + 75 + 100 +
   # about 45 = 2032 s of its 2100; raised from 1680 after build 6ab8adb4). One step more than proximeet-places-review: straight after the app
@@ -617,7 +633,7 @@ workflows:
   # with build/preview/PREVIEW.txt (the source commit, the zip's SHA-256, and a line saying a runnable
   # app is not evidence that its checks passed); it never fails the build. Codemagic offers Quick
   # Launch for a .app artifact only to teams with App Preview; on other accounts the .app is a plain
-  # download. scripts/places_recovery_reconcile.py joins the three builds' results.
+  # download. scripts/places_recovery_reconcile.py reconciles the builds' results row by row.
   # Manual start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. No automatic test
   # retries. Compile-path steps stop the build on failure; evidence steps use ignore_failure so later
@@ -693,6 +709,14 @@ workflows:
       - build/artifacts/Places-Sweep-Review.zip.sha256
       - build/artifacts/Places-Sweep-Screens.zip
       - build/artifacts/Places-Sweep-Screens.zip.sha256
+      - build/artifacts/Places-Gate-Review.zip
+      - build/artifacts/Places-Gate-Review.zip.sha256
+      - build/artifacts/Places-Gate-Screens.zip
+      - build/artifacts/Places-Gate-Screens.zip.sha256
+      - build/artifacts/Places-Finish-Review.zip
+      - build/artifacts/Places-Finish-Review.zip.sha256
+      - build/artifacts/Places-Finish-Screens.zip
+      - build/artifacts/Places-Finish-Screens.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*

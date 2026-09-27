@@ -1,89 +1,102 @@
-# The recovery after the Places correction: every execution of its three builds, which all run one
-# frozen commit (build 2 correction, the correction gate; build 3 sweep; build 4 regressions), and the
-# earlier execution each one counts as. Build 1, the first correction build (Codemagic 6ab8adb4, on
-# 907d7401), passed 14 of its 15 required rows (C12 failed on a product issue); it ran an earlier
-# commit and an earlier manifest, so it counts toward nothing here. Its rows are the manifest's rows of
-# those scopes (docs/verification/places-review-manifest.tsv), by build and in manifest order within
-# each; scripts/places_recovery_reconcile.py checks this file against the manifest and joins the three
-# builds' results by it.
-# Columns (tab-separated): row, build, scope, device, run, test, kind, covers.
-#   row      the manifest row ID in the scope that executes it.
-#   device   main = the selected iPhone 17 Pro Max; small = the smaller iPhone; b = device B, a clone of main.
-#   kind     as in the manifest: required, or repeat (B14, optional). Only required rows count as coverage.
-#            The scroll probe's diagnostic rows C16 and C17 were removed from the manifest after build
-#            6ab8adb4, which ran C17 (C16 was left unrun for time).
-#   covers   the earlier execution it counts as, <scope>:<row> of the places, signal or regressions scope,
-#            or "-" for a check that has no earlier row (the correction's own tests).
-# The identity rule: an execution counts as an earlier one only when it is the same test method, on the
-# same device class, in the same run type (a recorded "journey" run keeps full holds; every other run
-# uses short holds), at the same frozen commit as the other two builds. By that rule P7 = C9, P8 = C15,
-# S1 = C4, S2 = C5, S7 = C6, S11 = C7 and S14 = C8; the other 49 of the 56 earlier required executions
-# (13 places, 16 signal, 27 regressions) keep their own IDs in the sweep (P1-P6, P9-P13 and S3-S6, S8-S10,
-# S12, S13, S15, S16) and in regressions, which is the regressions scope itself, unchanged. 64 required
-# executions in all: 15 + 22 + 27.
-row	build	scope	device	run	test	kind	covers
-C3	2	correction	main	correction_first	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
-C1	2	correction	main	correction_main	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
-C2	2	correction	main	correction_main	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
-C4	2	correction	main	correction_signal	BandSignalInteractionTests/testBandSignalInteraction	required	signal:S1
-C5	2	correction	main	correction_signal	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required	signal:S2
-C9	2	correction	main	correction_signal	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P7
-C6	2	correction	main	correction_signal	SignalReviewTests/testEndpointDuplicateTapsAndBack	required	signal:S7
-C7	2	correction	main	correction_signal	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required	signal:S11
-C8	2	correction	main	correction_signal	SignalReviewTests/testWalkthroughRealJourney	required	signal:S14
-C10	2	correction	small	journey	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required	-
-C12	2	correction	small	correction_small	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
-C13	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
-C14	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
-C15	2	correction	small	correction_small	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required	places:P8
-C11	2	correction	small	correction_small_b	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required	-
-P1	3	sweep	main	places_main	PlacesReviewTests/testWalkthroughRealJourney	required	places:P1
-P2	3	sweep	main	places_main	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required	places:P2
-P3	3	sweep	main	places_main	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P3
-P4	3	sweep	main	places_main	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required	places:P4
-P5	3	sweep	main	places_main	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required	places:P5
-P6	3	sweep	main	places_main	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required	places:P6
-S3	3	sweep	main	signal_main	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	required	signal:S3
-S4	3	sweep	main	signal_main	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S4
-S5	3	sweep	main	signal_main	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	required	signal:S5
-S6	3	sweep	main	signal_main	SignalReviewTests/testAllTwelveStates	required	signal:S6
-S8	3	sweep	main	signal_main	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	required	signal:S8
-S9	3	sweep	main	signal_main	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S9
-S10	3	sweep	main	signal_main	SignalReviewTests/testMissingIntentKeepsSignalClosed	required	signal:S10
-S12	3	sweep	main	signal_main	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required	signal:S12
-S13	3	sweep	main	signal_main	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required	signal:S13
-P9	3	sweep	small	places_small	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required	places:P9
-P10	3	sweep	small	places_small	PlacesReviewTests/testEveryIntentAtEveryVenue	required	places:P10
-P11	3	sweep	small	places_small	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P11
-P12	3	sweep	small	places_small	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required	places:P12
-P13	3	sweep	small	places_small	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P13
-S15	3	sweep	small	signal_small	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S15
-S16	3	sweep	small	signal_small	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S16
-M1	4	regressions	main	main_early	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	required	regressions:M1
-M2	4	regressions	main	main_early	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required	regressions:M2
-M3	4	regressions	main	main_rest	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	required	regressions:M3
-M4	4	regressions	main	main_rest	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	required	regressions:M4
-M5	4	regressions	main	main_rest	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	required	regressions:M5
-M6	4	regressions	main	main_rest	PassReviewTests/testReduceMotionPreviewKeepsThePassStationary	required	regressions:M6
-M7	4	regressions	main	main_rest	PassReviewTests/testWalkthroughStartFinishEndpointLeaveReentryCancelBack	required	regressions:M7
-M8	4	regressions	main	main_rest	WristbandReviewTests/testEndpointDuplicateTapsAndBack	required	regressions:M8
-M9	4	regressions	main	main_rest	WristbandReviewTests/testEveryChangeBetweenIntentsKeepsEverythingInAgreement	required	regressions:M9
-M10	4	regressions	main	main_rest	WristbandReviewTests/testLargestTextKeepsEveryChoiceReachable	required	regressions:M10
-M11	4	regressions	main	main_rest	WristbandReviewTests/testRapidChangesLeaveTheLastChoice	required	regressions:M11
-M12	4	regressions	main	main_rest	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	required	regressions:M12
-M13	4	regressions	main	main_rest	WristbandReviewTests/testRelaunchStartsUnselected	required	regressions:M13
-B1	4	regressions	b	paste_b	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	required	regressions:B1
-B2	4	regressions	b	regressions_b	GuestListReviewTests/testBlankInternationalAndLongNames	required	regressions:B2
-B3	4	regressions	b	regressions_b	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	required	regressions:B3
-B4	4	regressions	b	regressions_b	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	required	regressions:B4
-B5	4	regressions	b	regressions_b	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	required	regressions:B5
-B6	4	regressions	b	regressions_b	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	required	regressions:B6
-B7	4	regressions	b	regressions_b	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	required	regressions:B7
-B8	4	regressions	b	regressions_b	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required	regressions:B8
-B9	4	regressions	b	regressions_b	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required	regressions:B9
-B10	4	regressions	b	regressions_b	WelcomeReviewTests/testDefaultGeometry	required	regressions:B10
-B11	4	regressions	b	regressions_b	WelcomeReviewTests/testHonestNotices	required	regressions:B11
-B12	4	regressions	b	regressions_b	WelcomeReviewTests/testLargestTextSize	required	regressions:B12
-B13	4	regressions	b	regressions_b	WelcomeReviewTests/testReduceMotionPreviewLaunch	required	regressions:B13
-B14	4	regressions	b	paste_repeat_b	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	repeat	regressions:B14
-B15	4	regressions	b	hardware_keys_b	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required	regressions:B15
+# The recovery after the Places correction, row by row: every row it must reconcile, and the build,
+# scope and run expected to execute it. The targets are the correction scope's 15 required rows
+# (C1-C15) and the 56 earlier required executions (13 places, 16 signal, 27 regressions), plus the
+# regressions scope's optional repeat B14, 72 lines in all; docs/verification/places-review-manifest.tsv
+# defines every row named here.
+# Build 1 (Codemagic 6ab8adb4, on 907d7401) counts toward nothing. Build 2 (Codemagic
+# 6ab8c585873de42fcd4f1a8a, scope correction, on 808950f) passed C10-C15 on the smaller iPhone; on the
+# iPhone 17 Pro Max every run exited 65 before any test started (the test runner failed to initialize
+# for UI testing). Two builds were left: build 3 (gate_finish) runs C1-C9 and, as extras, S3-S6, S8,
+# P9-P13, S15 and S16; build 4 (sweep_finish) runs P1-P6, S9, S10, S12, S13, M1-M13, B1, B10-B13 and
+# B15. B2-B9 (the Guest List's regressions_b tests) and the optional B14 are pending: no recovery build
+# runs them.
+# scripts/places_recovery_reconcile.py checks this file against the manifest and reconciles row by row:
+# a target is covered by a PASSED execution (kind required or extra) of the same test on the same
+# device class, in the same run type, in any given build whose git_head is product-equivalent to
+# 808950f8102d1c0e0f6c3422fc0aed3a0df555fe (git diff --name-only <head> 808950f -- Proximeet
+# ProximeetDomain ProximeetUITests Proximeet.xcodeproj assets is empty). The build, scope and run here
+# say where that execution is expected; an execution elsewhere that meets the rule counts too.
+# Columns (tab-separated): target, requirement, test, class, build, scope, run, row, kind, note.
+#   target       <scope>:<row> of the correction, places, signal or regressions scope.
+#   requirement  required, or optional (repeat) for B14.
+#   class        main = the iPhone 17 Pro Max model and runtime (the selected simulator, or device B, its
+#                clone); small = the smaller iPhone (the iPhone 17e).
+#   build        2, 3 or 4; "-" when pending.
+#   scope, run, row, kind   the executing row in the manifest (its kind: required or extra), or "pending"
+#                and "-" when no recovery build runs it.
+#   note         the stated identity exceptions: P1 runs with short holds, unrecorded (the places scope's
+#                P1 was the recorded journey, full holds); M4-M13 run on device B instead of main (the
+#                same model and runtime). "-" when there is none.
+target	requirement	test	class	build	scope	run	row	kind	note
+correction:C3	required	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	main	3	gate_finish	correction_first	C3	required	-
+correction:C1	required	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	main	3	gate_finish	correction_main	C1	required	-
+correction:C2	required	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	main	3	gate_finish	correction_main	C2	required	-
+correction:C4	required	BandSignalInteractionTests/testBandSignalInteraction	main	3	gate_finish	correction_signal	C4	required	-
+correction:C5	required	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	main	3	gate_finish	correction_signal	C5	required	-
+correction:C9	required	PlacesReviewTests/testSevenScreensOnThisPhone	main	3	gate_finish	correction_signal	C9	required	-
+correction:C6	required	SignalReviewTests/testEndpointDuplicateTapsAndBack	main	3	gate_finish	correction_signal	C6	required	-
+correction:C7	required	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	main	3	gate_finish	correction_signal	C7	required	-
+correction:C8	required	SignalReviewTests/testWalkthroughRealJourney	main	3	gate_finish	correction_signal	C8	required	-
+correction:C10	required	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	small	2	correction	journey	C10	required	-
+correction:C12	required	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	small	2	correction	correction_small	C12	required	-
+correction:C13	required	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	small	2	correction	correction_small	C13	required	-
+correction:C14	required	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	small	2	correction	correction_small	C14	required	-
+correction:C15	required	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	small	2	correction	correction_small	C15	required	-
+correction:C11	required	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	small	2	correction	correction_small_b	C11	required	-
+places:P1	required	PlacesReviewTests/testWalkthroughRealJourney	main	4	sweep_finish	places_signal_main	P1	required	run type differs: P1 runs with short holds, unrecorded (the places scope's P1 was the recorded journey, full holds)
+places:P2	required	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	main	4	sweep_finish	places_signal_main	P2	required	-
+places:P3	required	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	main	4	sweep_finish	places_signal_main	P3	required	-
+places:P4	required	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	main	4	sweep_finish	places_signal_main	P4	required	-
+places:P5	required	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	main	4	sweep_finish	places_signal_main	P5	required	-
+places:P6	required	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	main	4	sweep_finish	places_signal_main	P6	required	-
+places:P7	required	PlacesReviewTests/testSevenScreensOnThisPhone	main	3	gate_finish	correction_signal	C9	required	-
+places:P8	required	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	small	2	correction	correction_small	C15	required	-
+places:P9	required	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	small	3	gate_finish	places_small	P9	extra	-
+places:P10	required	PlacesReviewTests/testEveryIntentAtEveryVenue	small	3	gate_finish	places_small	P10	extra	-
+places:P11	required	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	small	3	gate_finish	places_small	P11	extra	-
+places:P12	required	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	small	3	gate_finish	places_small	P12	extra	-
+places:P13	required	PlacesReviewTests/testSevenScreensOnThisPhone	small	3	gate_finish	places_small	P13	extra	-
+signal:S1	required	BandSignalInteractionTests/testBandSignalInteraction	main	3	gate_finish	correction_signal	C4	required	-
+signal:S2	required	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	main	3	gate_finish	correction_signal	C5	required	-
+signal:S3	required	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	main	3	gate_finish	signal_main_a	S3	extra	-
+signal:S4	required	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	main	3	gate_finish	signal_main_a	S4	extra	-
+signal:S5	required	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	main	3	gate_finish	signal_main_a	S5	extra	-
+signal:S6	required	SignalReviewTests/testAllTwelveStates	main	3	gate_finish	signal_main_a	S6	extra	-
+signal:S7	required	SignalReviewTests/testEndpointDuplicateTapsAndBack	main	3	gate_finish	correction_signal	C6	required	-
+signal:S8	required	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	main	3	gate_finish	signal_main_a	S8	extra	-
+signal:S9	required	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	main	4	sweep_finish	places_signal_main	S9	required	-
+signal:S10	required	SignalReviewTests/testMissingIntentKeepsSignalClosed	main	4	sweep_finish	places_signal_main	S10	required	-
+signal:S11	required	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	main	3	gate_finish	correction_signal	C7	required	-
+signal:S12	required	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	main	4	sweep_finish	places_signal_main	S12	required	-
+signal:S13	required	SignalReviewTests/testRelaunchStartsWithoutAnApproach	main	4	sweep_finish	places_signal_main	S13	required	-
+signal:S14	required	SignalReviewTests/testWalkthroughRealJourney	main	3	gate_finish	correction_signal	C8	required	-
+signal:S15	required	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	small	3	gate_finish	signal_small	S15	extra	-
+signal:S16	required	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	small	3	gate_finish	signal_small	S16	extra	-
+regressions:M1	required	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	main	4	sweep_finish	birthday_wristband_main	M1	required	-
+regressions:M2	required	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	main	4	sweep_finish	birthday_wristband_main	M2	required	-
+regressions:M3	required	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	main	4	sweep_finish	birthday_wristband_main	M3	required	-
+regressions:M4	required	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	main	4	sweep_finish	pass_wristband_b	M4	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M5	required	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	main	4	sweep_finish	pass_wristband_b	M5	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M6	required	PassReviewTests/testReduceMotionPreviewKeepsThePassStationary	main	4	sweep_finish	pass_wristband_b	M6	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M7	required	PassReviewTests/testWalkthroughStartFinishEndpointLeaveReentryCancelBack	main	4	sweep_finish	pass_wristband_b	M7	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M8	required	WristbandReviewTests/testEndpointDuplicateTapsAndBack	main	4	sweep_finish	pass_wristband_b	M8	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M9	required	WristbandReviewTests/testEveryChangeBetweenIntentsKeepsEverythingInAgreement	main	4	sweep_finish	pass_wristband_b	M9	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M10	required	WristbandReviewTests/testLargestTextKeepsEveryChoiceReachable	main	4	sweep_finish	pass_wristband_b	M10	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M11	required	WristbandReviewTests/testRapidChangesLeaveTheLastChoice	main	4	sweep_finish	pass_wristband_b	M11	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M12	required	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	main	4	sweep_finish	pass_wristband_b	M12	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:M13	required	WristbandReviewTests/testRelaunchStartsUnselected	main	4	sweep_finish	pass_wristband_b	M13	required	on device b instead of main (device B is the clone of main: same model and runtime)
+regressions:B1	required	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	main	4	sweep_finish	paste_b	B1	required	-
+regressions:B2	required	GuestListReviewTests/testBlankInternationalAndLongNames	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B3	required	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B4	required	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B5	required	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B6	required	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B7	required	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B8	required	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B9	required	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B10	required	WelcomeReviewTests/testDefaultGeometry	main	4	sweep_finish	welcome_b	B10	required	-
+regressions:B11	required	WelcomeReviewTests/testHonestNotices	main	4	sweep_finish	welcome_b	B11	required	-
+regressions:B12	required	WelcomeReviewTests/testLargestTextSize	main	4	sweep_finish	welcome_b	B12	required	-
+regressions:B13	required	WelcomeReviewTests/testReduceMotionPreviewLaunch	main	4	sweep_finish	welcome_b	B13	required	-
+regressions:B14	optional (repeat)	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	main	-	pending	-	-	-	the optional repeat of B1; not scheduled
+regressions:B15	required	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	main	4	sweep_finish	hardware_keys_b	B15	required	-

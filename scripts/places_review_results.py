@@ -3,9 +3,12 @@
 
     python3 scripts/places_review_results.py MANIFEST SCOPE RUNS OUT_TXT OUT_TSV MAIN_UDID B_UDID SMALL_UDID LOG [LOG ...]
 
-MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (correction, sweep,
-regressions, places or signal) are judged; a scope with no rows is a FAIL. RUNS is the stage's runs.txt
-("<run> <bundle> <exit> <kind>", kind no | infra | time | device). The LOGs are the lanes' xcodebuild
+MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (gate_finish,
+sweep_finish, correction, sweep, regressions, places or signal) are judged; a scope with no rows is a
+FAIL. RUNS is the stage's runs.txt ("<run> <bundle> <exit> <kind>", kind no | infra | time | device;
+an infra line names a first attempt that started no test, "<run>_destination_unavailable" when the
+simulator was not found or "<run>_runner_not_ready" when the test runner failed to initialize for UI
+testing, after which the same tests ran once more under <run>). The LOGs are the lanes' xcodebuild
 logs, in which every run starts with a "$ ..." line naming its destination and result bundle. B_UDID
 or SMALL_UDID may be "" when that device was not used (device B's rows then run on the selected
 simulator). Writes the key=value results that scripts/places_review.sh's verdict reads (OUT_TXT) and
@@ -18,7 +21,9 @@ may be left unrun for time (runs.txt says so), but if it runs it must pass; so m
 diagnostic row starts like an extra, but its outcome and its run's exit are only reported: they never
 count toward the verdict (no manifest row is a diagnostic since the correction's scroll probe rows,
 runs probe_*, were removed; the handling stays for any later one). A skipped test, an interrupted one
-(started, no outcome) and a run that did not exit 0 are failures. Standard library only; Python 3.8+.
+(started, no outcome) and a run that did not exit 0 are failures. A test that ran on another device
+than its row's has that in its outcome ("passed on <udid>, not on <udid> (wrong device)"), so
+executions.tsv never shows a plain "passed" for it. Standard library only; Python 3.8+.
 """
 import os
 import re
@@ -31,6 +36,17 @@ COMMAND = re.compile(r"^\$ .*-destination platform=iOS Simulator,id=([0-9A-Fa-f-
 BUNDLE = re.compile(r"-resultBundlePath \S*?(\w+)\.xcresult")
 FLAGS = ("PLACES", "SIGNAL", "WRISTBAND", "GUEST_LIST", "PASS", "BIRTHDAY", "WELCOME")
 LANE_LABEL = {"main": "main", "b": "deviceB", "small": "smaller"}
+# An infrastructure rerun's reason, by the suffix scripts/places_review.sh gives its first attempt.
+INFRA_REASONS = (("_destination_unavailable", "simulator not found, no test ran"),
+                 ("_runner_not_ready", "test runner failed to initialize, no test ran"))
+
+
+def infra_reason(run_name):
+    """(the run the rerun belongs to, why its first attempt did not count)."""
+    for suffix, reason in INFRA_REASONS:
+        if run_name.endswith(suffix):
+            return run_name[:-len(suffix)], reason
+    return run_name, "infrastructure, no test ran"
 
 
 def kind_label(row):
@@ -162,9 +178,11 @@ def main(argv):
             elif not expected_device:
                 problems.append("%s %s: ran, but no %s device was recorded" % (row["order"], row["test"],
                                                                           LANE_LABEL[row["device"]]))
+                outcome += " (no %s device recorded)" % LANE_LABEL[row["device"]]
             elif execution["device"] and execution["device"] != expected_device:
                 problems.append("%s %s: ran on %s, not on %s" % (row["order"], row["test"], execution["device"],
                                                                 expected_device))
+                outcome += " on %s, not on %s (wrong device)" % (execution["device"], expected_device)
             label = LANE_LABEL[row["device"]] + ((", " + kind_label(row)) if row["kind"] != "required" else "")
             result_lines.append("%s[%s]=%s%s" % (row["test"], label, outcome, (" (%s s)" % seconds) if seconds else ""))
         if row["kind"] != "required":
@@ -197,6 +215,18 @@ def main(argv):
             problems.append("run %s (bundle %s) exited %s" % (name, run["bundle"], run["exit"]))
     infra = [r for r in runs if r["kind"] == "infra"]
 
+    def infra_line(record):
+        base, reason = infra_reason(record["run"])
+        after = run_exit.get(base)
+        if after is None:
+            then = "no second attempt was recorded"
+        elif after["kind"] == "time":
+            then = "not started again (time budget: an optional run)"
+        else:
+            then = "the same tests ran once more (exit %s)" % after["exit"]
+        return "%s (bundle %s): xcodebuild exit %s, %s; %s" % (record["run"], record["bundle"], record["exit"], reason,
+                                                              then)
+
     # Every execution in this build's logs: the scope's rows and anything unexpected.
     all_exec = [e for found in by_bundle.values() for e in found]
     counts = {k: sum(1 for e in all_exec if e["outcome"] == k) for k in ("passed", "failed", "skipped", "interrupted")}
@@ -221,9 +251,7 @@ def main(argv):
         "retries=off (no -retry-tests-on-failure in any scope)",
         "retried=" + ("; ".join(p for p in problems if "retries are off" in p) or "none"),
         "repeats=" + ("; ".join(repeats) if repeats else "none planned"),
-        "infrastructure_reruns=" + ("; ".join("%s (bundle %s): xcodebuild exit %s, simulator not found, no test ran; "
-                                              "the same tests ran again" % (r["run"], r["bundle"], r["exit"])
-                                              for r in infra) if infra else "none"),
+        "infrastructure_reruns=" + ("; ".join(infra_line(r) for r in infra) if infra else "none"),
         "flag_markers_in_log=" + " ".join(sorted(markers)),
         "walkthrough_started_epoch=%s" % ((walk_start or "unknown") if any(r["run"] == "journey" for r in rows)
                                           else "not recorded in this scope"),
@@ -231,7 +259,7 @@ def main(argv):
                                                      small_udid.upper() or "not used"),
     ]
     lines += ["xcodebuild_exit_%s=%s (bundle %s, %s)" % (r["run"], r["exit"], r["bundle"],
-                                                        {"infra": "simulator not found, no test ran; rerun",
+                                                        {"infra": infra_reason(r["run"])[1] + "; rerun once",
                                                          "time": "not started: time budget",
                                                          "device": "not started: no device",
                                                          "no": "retries off"}.get(r["kind"], r["kind"]))

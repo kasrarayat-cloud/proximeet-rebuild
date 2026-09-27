@@ -2,9 +2,14 @@
 
 Date: 2026-09-27. Not production-ready.
 
-**Status: recovery build 1 (`6ab8adb429a3df446d9749a3`, on `907d7401`) passed 14 of its 15 required
-correction rows; C12 found a small product defect, corrected after it but not yet observed on a Mac
-(§7). The later builds are PENDING.**
+**Status:**
+- **Recovery build 1** (`6ab8adb429a3df446d9749a3`, on `907d7401`) passed 14 of its 15 required
+  correction rows. C12 found a small product defect.
+- **Recovery build 2** (`6ab8c585873de42fcd4f1a8a`, on `808950f8`, with the correction) passed C12
+  and the other five smaller-iPhone rows. On the iPhone 17 Pro Max its test runner failed to
+  initialize for UI testing, and no test ran there (§7).
+- **Builds 3 and 4** are PENDING. Nothing after `808950f` has run on a Mac. The infrastructure rerun
+  and the `gate_finish` and `sweep_finish` scopes are untested on a Mac; build 3 is their first run.
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
 correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
 - diagnoses that build's five failures and one interruption from its logs, keeping what is proven
@@ -191,8 +196,9 @@ All four scrolling failures used the same helper, `scrollIntoView`
 
 ## 3. The corrections in this recovery
 
-Each item is the intended behaviour and the rows that check it. Build 1's results (on 907d7401,
-before item 5) are in §7; nothing after it has run on a Mac yet. Files in this section are cited by
+Each item is the intended behaviour and the rows that check it. Builds 1 and 2's results are in §7:
+build 1 ran 907d7401, before item 5, and build 2 ran 808950f. Nothing after `808950f` has run on a
+Mac. Files in this section are cited by
 symbol: several changed while this report was written.
 
 1. **One shared, one-stage Places Back (product).**
@@ -254,7 +260,8 @@ symbol: several changed while this report was written.
    and no scope runs the probe any more), and the probe records rather than judges, so nothing
    asserts the switch's effect. The default behaviour, without it, is what C10 and C11 check.
 5. **Back to places aligns browsing again once the detail has gone (app, after build 1).** Added
-   after build 1's C12 (§7); intended behaviour, not yet observed on a Mac.
+   after build 1's C12 (§7). It was observed on the 390-pt iPhone 17e in build 2: C12 passed and was
+   photographed. It is not yet observed on the 440-pt iPhone 17 Pro Max (C1, build 3).
    - The scroll that `revealStart` issues when the stage changes still runs, so the dissolve shows
      roughly the right place.
    - When the dissolve completes (or at once after a swipe's instant change), a `@State` token asks
@@ -381,7 +388,7 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
 | Frozen commit | PENDING (the commit that adds this section) |
 | Workflow | `proximeet-places-review-35`: 35 minutes, `PLACES_UI_DEADLINE_SECONDS=1740` (the harness accepts 600–1740). It was 1680 for build 1. It was raised because build 1 measured the main device's first test 666 s after the harness's gate. The worst-case end is 2032 s of the 2100 |
 | Machine | Mac mini M2 (`mac_mini_m2`), Xcode 26.6, unsigned simulator; retries off |
-| Order | A build starts only after the previous one has passed and its verdict has been read |
+| Order | A build starts only after the previous one's verdict and evidence have been read |
 
 | Build | Scope | iPhone 17 Pro Max ("main") | Other device |
 | --- | --- | --- | --- |
@@ -414,6 +421,33 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
     B14 will probably be left unrun for time, which is allowed.
   - **Minutes:** about 25 + 30 + 28 on top of build 1's 25, so about 108 of the 120.
 
+**After build 2: the last two builds.** Build 2's iPhone 17 Pro Max ran nothing, so 79 of the
+120 minutes and two of the four builds remain. The correction gate's nine 17 Pro Max rows and the
+49 earlier rows cannot all fit in two builds. Both builds will run on one commit, not yet made,
+whose product and test files are identical to `808950f`; only the harness and documents differ. So
+build 2's passed rows count toward the same verdicts.
+
+| Build | Scope | iPhone 17 Pro Max ("main") | Other device |
+| --- | --- | --- | --- |
+| 3 | `gate_finish` | C3 → C1, C2 → C4, C5, C9, C6, C7, C8 (the gate's nine rows, required) → extra: S3, S4, S5, S6, S8 | iPhone 17e, extra: P9–P13 → S15, S16 |
+| 4 | `sweep_finish` | P1 (short holds, not recorded), P2–P6, S9, S10, S12, S13 → M1, M2, M3 (required) | device B (a Pro Max clone): M4–M13 → B1 → B10–B13 → B15 (required) |
+
+- **Order of priority.** The gate first. Then the Places and Signal rows, which sit nearest the
+  change. Then the Wristband, the Pass, Birthday and Welcome.
+- **Left pending, not scheduled:** the Guest List rows B2–B9 and the optional repeat B14. The Guest
+  List view and its tests are unchanged since `b06707ec`, where they last passed. The shared route
+  files (`DemoFlow`, `DemoSession`, `DemoScene`, `RootView`) have changed since then, so they are
+  not claimed at `808950f`.
+- **Extras.** Rows marked extra start only when their bound plus 60 s is left. If they run they must
+  pass; otherwise they are listed as not run.
+- **Reconciliation.** `scripts/places_recovery_reconcile.py` joins the builds row by row, at commits
+  whose product and test files are identical, and prints two verdicts:
+  - the targeted correction, C1–C15;
+  - the full regression, the 56 earlier executions. It reads INCOMPLETE while any row is
+    uncovered.
+- **Device classes.** The Pass and Wristband rows M4–M13 run on device B, the same model and runtime
+  as main, and that is stated as an identity exception. So is P1's short-hold run.
+
 **Budget.**
 
 | | |
@@ -433,9 +467,30 @@ readable through the API.
 | Build | Scope | Codemagic build | Commit | Minutes (exact / rounded) | Result |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `correction` | `6ab8adb429a3df446d9749a3` | `907d7401ec8b97a10138c2764094a9c564d0e4ce` | 24.45 / 25 | **FAIL**: 14 of 15 required passed; C12 failed (below) |
-| 2 | `correction` | PENDING | PENDING | PENDING | PENDING |
-| 3 | `sweep` | PENDING | PENDING | PENDING | PENDING |
-| 4 | `regressions` | PENDING | PENDING | PENDING | PENDING |
+| 2 | `correction` | `6ab8c585873de42fcd4f1a8a` | `808950f8102d1c0e0f6c3422fc0aed3a0df555fe` | 15.54 / 16 | **FAIL, infrastructure**: on the iPhone 17 Pro Max the test runner failed to initialize for all three runs (no test ran there); on the iPhone 17e all six rows passed (C10–C15, including C12) |
+| 3 | `gate_finish` | PENDING | PENDING | PENDING | PENDING |
+| 4 | `sweep_finish` | PENDING | PENDING | PENDING | PENDING |
+
+**Build 2** (07:28:13–07:43:45 UTC). The app, now with the re-alignment, compiled; the domain tests
+passed on the Mac.
+- **iPhone 17 Pro Max: no test ran.** Its three runners started at 07:33:01, 07:33:50 and 07:34:19.
+  Each failed to initialize within 4–15 s (07:33:16, 07:33:54, 07:34:23), 1.3–2.5 minutes after the
+  UI step began and 39–106 s after the device's boot status reported Finished (07:32:37). Each
+  exited 65 with "The test runner failed to
+  initialize for UI testing. (Underlying Error: Failed call to AXDisableAccessibilityOnTermination:
+  kAXErrorCannotComplete)". No test started, so none of C1–C9 has a result from this build.
+- **iPhone 17e: all six rows passed.** C10 (65.5 s, recorded), C11 (63.0 s), C12 (102.8 s), C13
+  (67.2 s), C14 (17.7 s) and C15 (39.7 s), all at `808950f`. Its first runner started at 07:35:27,
+  and C10 began at 07:35:34.
+- **C12 photographed passing.** After Back to Now and Back to Upcoming at the largest text, the
+  ticket's end now lands just above the Back area, with View place fully visible. The captures are
+  `correction-entry-back-to-now-390pt-largest-fixture` and
+  `correction-footer-back-to-upcoming-largest-390pt-fixture`. The re-alignment worked on this phone.
+- **Response.** The harness now treats "the test runner failed to initialize, no test ran" as an
+  infrastructure fault: it waits for the simulator (`bootstatus`, then 60 s) and runs the same
+  tests once more. This extends the existing rerun for "simulator not found". It is not a test
+  retry, because no test ran.
+- **Durations** (from `executions.tsv`): as above.
 
 **Build 1** (05:46:37–06:11:04 UTC, Mac mini M2, Xcode 26.6, iOS 26.5). The app and the new escape
 routing compiled; the domain tests passed on the Mac; the preview copy of the app was published as
@@ -461,8 +516,9 @@ routing compiled; the domain tests passed on the Mac; the preview copy of the ap
       ticket ended well above the bar and C1 passed.
 
     The landing depends on the detail's scroll range, not on a fixed shortfall.
-  - **Correction, after build 1** (§3, item 5; not yet observed): browsing is aligned again once the
-    dissolve has finished.
+  - **Correction, after build 1** (§3, item 5): browsing is aligned again once the dissolve has
+    finished. It was observed passing on the 390-pt iPhone 17e in build 2. It is not yet observed on
+    the 440-pt iPhone 17 Pro Max (C1, build 3).
   - **Rerun.** It changes product code, so the whole correction gate reruns on the new commit.
 - **The scroll diagnosis is settled by evidence.** The new helper made 138 traced drags (59 on the
   iPhone 17 Pro Max, 79 on the iPhone 17e) and none stalled: each moved the page its finger travel
