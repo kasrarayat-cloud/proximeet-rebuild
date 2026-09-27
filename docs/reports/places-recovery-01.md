@@ -8,8 +8,14 @@ Date: 2026-09-27. Not production-ready.
 - **Recovery build 2** (`6ab8c585873de42fcd4f1a8a`, on `808950f8`, with the correction) passed C12
   and the other five smaller-iPhone rows. On the iPhone 17 Pro Max its test runner failed to
   initialize for UI testing, and no test ran there (§7).
-- **Builds 3 and 4** are PENDING. Nothing after `808950f` has run on a Mac. The infrastructure rerun
-  and the `gate_finish` and `sweep_finish` scopes are untested on a Mac; build 3 is their first run.
+- **Recovery build 3** (`6ab8efca2cbed2e4829060fa`, on `e0d2b2e3`: product and test files identical to
+  `808950f`) passed all nine gate rows on the iPhone 17 Pro Max and all 12 extras.
+- **Recovery build 4** (`6ab8f638d1a64821265b5f4d`, same commit) ran out of time on the iPhone 17 Pro
+  Max: 21 passed, none failed, 3 interrupted, 5 not run.
+- **TARGETED CORRECTION: PASS**, 15 of 15.
+- **FULL REGRESSION: FAIL (incomplete).** 40 of 56 earlier executions passed. Three were interrupted
+  by time bounds without a failed assertion (P3, P6, M2). Thirteen never ran (P1, S9, S10, S12, S13,
+  and the Guest List's B2–B9). All four authorised builds are used (§7).
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
 correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
 - diagnoses that build's five failures and one interruption from its logs, keeping what is proven
@@ -469,8 +475,8 @@ readable through the API.
 | --- | --- | --- | --- | --- | --- |
 | 1 | `correction` | `6ab8adb429a3df446d9749a3` | `907d7401ec8b97a10138c2764094a9c564d0e4ce` | 24.45 / 25 | **FAIL**: 14 of 15 required passed; C12 failed (below) |
 | 2 | `correction` | `6ab8c585873de42fcd4f1a8a` | `808950f8102d1c0e0f6c3422fc0aed3a0df555fe` | 15.54 / 16 | **FAIL, infrastructure**: on the iPhone 17 Pro Max the test runner failed to initialize for all three runs (no test ran there); on the iPhone 17e all six rows passed (C10–C15, including C12) |
-| 3 | `gate_finish` | PENDING | PENDING | PENDING | PENDING |
-| 4 | `sweep_finish` | PENDING | PENDING | PENDING | PENDING |
+| 3 | `gate_finish` | `6ab8efca2cbed2e4829060fa` | `e0d2b2e3a76b2fc16f884a974c7ac3e4a57dec2a` (product and test files identical to `808950f`) | 26.03 / 27 | **PASS**: the gate's nine rows C1–C9 on the iPhone 17 Pro Max and all 12 extras, 21 of 21 on their first and only attempt; no infrastructure rerun was needed |
+| 4 | `sweep_finish` | `6ab8f638d1a64821265b5f4d` | `e0d2b2e3a76b2fc16f884a974c7ac3e4a57dec2a` | 31.26 / 32 | **FAIL, time**: 21 passed, 0 failed, 3 interrupted (P3, P6, M2), 5 not run (P1, S9, S10, S12, S13) |
 
 **Build 2** (07:28:13–07:43:45 UTC). The app, now with the re-alignment, compiled; the domain tests
 passed on the Mac.
@@ -492,6 +498,69 @@ passed on the Mac.
   tests once more. This extends the existing rerun for "simulator not found". It is not a test
   retry, because no test ran.
 - **Durations** (from `executions.tsv`): as above.
+
+**Build 3** (10:28:33–10:54:34 UTC).
+- **Required rows: C1–C9 passed.** C3 66.2 s, C1 142.5 s, C2 65.1 s, C4 39.8 s, C5 13.5 s, C9 107.2 s,
+  C6 27.4 s, C7 55.1 s and C8 124.5 s (C8 is the real onboarding route into Places).
+- **Extras, main: S3, S4, S5, S6 and S8 passed.** S3 47.9 s, S4 41.8 s, S5 95.7 s, S6 71.1 s and
+  S8 51.7 s.
+- **Extras, iPhone 17e: P9–P13, S15 and S16 passed.** P9 84.6 s, P10 196.1 s, P11 146.4 s, P12
+  53.2 s, P13 94.4 s, S15 62.0 s and S16 35.2 s.
+- **Captures:**
+  - The 440-pt default-text footers keep the approved side-by-side layout for all three venues.
+  - The 440-pt largest-text footer stacks, with the complete schedule.
+  - The detail's last line and the explanation's privacy and demo lines are reachable.
+  - Back to Now leaves View place clear of the bar.
+- **Same app as build 2.** The app bundle in this build's zip is byte-identical, file by file, to
+  build 2's (`808950f`); only the zip wrappers differ.
+- **Downloads.** Every artifact matched its published size. Every published `.sha256` matched, and
+  the review package verifies 219 of 219 of its own checksums.
+
+**Targeted correction verdict, from the real builds 2 and 3** (`scripts/places_recovery_reconcile.py`,
+run from this repository so its product-equivalence check used git):
+`TARGETED CORRECTION: PASS (C1-C15: 15 of 15 passed at product-equivalent commits; none failed)`.
+C10–C15 come from build 2 (the iPhone 17e) and C1–C9 from build 3 (the iPhone 17 Pro Max). Both
+heads were checked: `git diff` of the product and test paths against `808950f` printed nothing.
+
+**Build 4** (10:56:00–11:27:15 UTC).
+- **Device B (the Pro Max clone): all 16 rows passed**, at their earlier pace. M4–M13 (the Pass and
+  the Wristband), B1 (the Guest List paste test), B10–B13 (Welcome) and B15 (hardware Tab).
+- **The iPhone 17 Pro Max ran about three times slower than in earlier builds.** P2 took 101.1 s
+  (35.5 s in build 6ab8639c), P4 115.2 s (34.7 s) and P5 36.2 s (11.7 s). The cause is not
+  established; the two Pro Max simulators ran heavy tests side by side on the three-CPU host.
+  - **Passed:** P2, P4, P5, M1 (118.7 s) and M3 (83.4 s).
+  - **P3 was interrupted.** XCTest stopped it at its five-minute execution allowance ("exceeded
+    execution time allowance of 5 minutes"). Its scroll helper had finished every call it began, 40
+    drags with no stall and no failure, at 4–11 s a drag against about 2.5 s in build 3.
+  - **P6 was interrupted** by its run's 1020-s bound.
+  - **M2 was interrupted** by its run's bound (376 s, cut short by the deadline).
+  - **Not started:** P1, S9, S10, S12 and S13; their run ended at its bound first.
+- **None of these rows failed an assertion.** The rule counts an interrupted row as not passed, so
+  they stay unverified at the frozen product.
+- **App.** The app bundle is byte-identical to builds 2 and 3.
+- **Downloads.** Every published `.sha256` matched. The review page's 181 links resolve. The link
+  checker's one "broken" hit is a stack-trace line in a log excerpt. This package format carries no
+  inner checksum list.
+
+**Final reconciliation** (real builds 2, 3 and 4, from this repository; all three heads
+product-equivalent to `808950f` by git):
+- `TARGETED CORRECTION: PASS (C1-C15: 15 of 15 passed at product-equivalent commits; none failed)`
+- `FULL REGRESSION: FAIL (40 of 56 earlier required executions covered; failed: places:P3,
+  places:P6, regressions:M2; uncovered: places:P1, signal:S9, S10, S12, S13, regressions:B2-B9)`.
+  The three listed as failed were interrupted by time, not by a failed assertion.
+
+**Covered at the frozen product (40 of 56):**
+- places: P2, P4, P5, P7 (C9), P8 (C15), P9–P13;
+- signal: S1–S8 (S1, S2, S7 through C4–C6), S11 (C7), S14 (C8), S15, S16;
+- regressions: M1, M3–M13, B1, B10–B13, B15.
+
+**Minutes and money.**
+- The four builds took 24.45 + 15.54 + 26.03 + 31.26 = 97.28 exact, or 25 + 16 + 27 + 32 = 100
+  rounded, of the 120 authorised minutes.
+- At the published $0.095 a minute:
+  - $9.24–9.50 if every minute is billed;
+  - $6.57–8.07 if the account's last free minutes (28.1 exact / 15 rounded before build 1) applied.
+- The account's invoice is not readable through the API. No browser preview minutes were used.
 
 **Build 1** (05:46:37–06:11:04 UTC, Mac mini M2, Xcode 26.6, iOS 26.5). The app and the new escape
 routing compiled; the domain tests passed on the Mac; the preview copy of the app was published as
@@ -555,6 +624,9 @@ tests type-checked against an XCUITest shim. None of them shows the app working.
 
 ## 8. Not verified by automation
 
+- The 16 earlier executions not verified at the frozen product: P1, P3, P6, S9, S10, S12, S13, M2 (run
+  out of time or interrupted in build 4) and B2–B9 (the Guest List, not scheduled). One more build of
+  those rows would close the full regression sweep; it needs a new authorisation.
 - VoiceOver, hands-on, including the new escape action from each stage: browsing → Signal; a detail
   → its category; the explanation → Common Ground's detail → browsing → Signal; the same with Reduce
   Motion on. XCUITest cannot perform the escape and VoiceOver does not run in the Simulator.
