@@ -575,13 +575,18 @@ final class PlacesCorrectionTests: XCTestCase {
         return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 
-    /// Short, momentum-free drags in the right-hand page margin (clear of the leading edge, where
-    /// the back swipe starts) until `element` lies between the status bar and the top of the action
-    /// bar (`bar` is its top action, 13 pt below the bar's top), with `clearance` more below it. An
-    /// element taller than that space counts once its top is in view.
+    /// Short, momentum-free drags until `element` lies between the status bar and the top of the
+    /// action bar (`bar` is its top action, 13 pt below the bar's top), with `clearance` more below
+    /// it. An element taller than that space counts once its top is in view. When it gives up, the
+    /// last frames and the screen are attached.
+    /// The drags run down the middle of the page. The leading edge is where Places' back swipe
+    /// starts; the trailing edge is where the scroll indicator is, and on a page as long as the
+    /// largest text makes it, iOS lets a touch there grab the indicator and scrub the page back
+    /// (build 6ab88011's largest-text scrolls stalled with drags 16 pt from the edge; the indicator
+    /// is the suspected, unverified cause).
     private func scrollIntoView(_ element: XCUIElement, bar: XCUIElement, _ app: XCUIApplication,
                                 clearance: CGFloat = 0) -> Bool {
-        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0))
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
         for _ in 0..<40 {
             let frame = element.frame, top: CGFloat = 62, bottom = bar.frame.minY - 13 - clearance
             let slack = (bottom - top) - frame.height
@@ -600,6 +605,9 @@ final class PlacesCorrectionTests: XCTestCase {
                 upper.press(forDuration: 0.05, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.2)
             }
         }
+        attachNote("scrollIntoView gave up on \(element.identifier): element \(element.frame), bar \(bar.identifier) "
+                   + "\(bar.frame), clearance \(clearance).")
+        capture("scroll-gave-up-\(element.identifier)", app)
         return false
     }
 

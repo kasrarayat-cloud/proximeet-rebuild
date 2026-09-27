@@ -2,17 +2,19 @@
 
 Date: 2026-09-27. Not production-ready.
 
-**Status:** correction implemented; Linux checks passed; the Mac build and its captures are
-PENDING. Nothing here is shown fixed yet. The Linux checks:
+**Status: targeted correction FAIL; full regression sweep pending.** The one Mac build
+(`6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`) passed 8 of its 13
+required executions (§6). What passed, with captures, is the default-text footer on the 390-pt
+phone, the back gestures and controls, the recorded walkthrough, and the five Signal tests. The
+largest-text checks failed; they most likely failed because of where the test drags, but that is not
+verified. The Linux checks before the build:
 - the domain suite (174 tests, including the intent-venue matrix and the route guards) passed;
 - the UI tests were type-checked against an XCUITest shim;
 - the project validator passed;
 - the source gate matched;
 - a stubbed run of the harness under macOS's bash 3.2 completed.
 
-Linux cannot compile the SwiftUI app, so none of these checks shows the app working. The Mac
-verification is one targeted build. Its results are reported in the delivery message and in its own
-`verdict.txt`, since a commit cannot contain its own build's result.
+Linux cannot compile the SwiftUI app, so none of these checks shows the app working.
 
 ## 1. Baseline and provenance
 
@@ -26,7 +28,7 @@ verification is one targeted build. Its results are reported in the delivery mes
 ## 2. What was wrong, and the corrections
 
 Each correction below is the intended behaviour. The manifest rows named under it check it on the
-Mac, and until that build reports, each is PENDING.
+Mac. Their results from build `6ab88011` are in §6.
 
 1. **The browse footer at the largest text (confirmed defect).**
    - What was wrong. View place was drawn over the second line of Fieldwork's schedule:
@@ -54,11 +56,12 @@ Mac, and until that build reports, each is PENDING.
 
      At the largest text, every footer stacks.
    - Checked by C2, C3, C13 and C14 (both widths, all three venues, default and largest text, a
-     real View place tap). PENDING.
+     real View place tap). Only C14 (390 pt, default text) passed. C2 and C13 (largest text)
+     failed, and C3 (440 pt, default text) was cut off.
 2. **View place is a real button.** The ticket's name, kind, intents and schedule read on their
    own. View place is a labelled button ("View place") that tests tap directly. The card still
    opens the detail when tapped. Before, the whole ticket was one accessibility element. The label
-   and the tap are checked by C2, C3, C13 and C14. PENDING. Its hint keeps the approved wording,
+   passed in C10 and C14, and the tap in C10, C11 and C14. Its hint keeps the approved wording,
    "Opens this fictional venue's details." The hint is not machine-checked, since XCUITest cannot
    read it; it is left to the VoiceOver review (§7).
 3. **Back navigation.**
@@ -78,8 +81,8 @@ Mac, and until that build reports, each is PENDING.
      - Outside Places nothing changes.
    - Explore other places still returns to Now explicitly.
    - The edge pan is not disabled globally, and no screen-wide gesture replaces it.
-   - All of this is intended behaviour. It is checked by C10 and C11 (the recorded walkthrough and
-     the gesture test, on the smaller iPhone). PENDING.
+   - Checked by C10 and C11 (the recorded walkthrough and the gesture test, on the smaller
+     iPhone). Both passed.
 4. **Where a stage starts.**
    - What was wrong. Build 6ab8639c's largest-text "detail-top" captures showed Fieldwork's detail
      at its host and description. The test had scrolled browsing to the ticket before tapping, and
@@ -90,7 +93,10 @@ Mac, and until that build reports, each is PENDING.
        proven `ScrollViewReader` pattern. For the expansion, the scroll moves with it.
      - Back to places shows the originating ticket's end, where View place is.
      - Explore other places starts browsing at the top.
-   - Checked by C1 and C12 (both widths, largest text), and in the footer tests. PENDING.
+   - Checked by C1 and C12 (both widths, largest text), and in the footer tests. The 440-pt
+     detail opened at its beginning (C1's capture). C1 then failed reaching the detail's last line,
+     and C12 failed before it opened anything. At the default text on 390 pt, Fieldwork's detail
+     opened at its beginning (C10, C14), and Back to places showed View place (C10).
 
 ## 3. Decisions and deviations
 
@@ -164,10 +170,108 @@ the review package lists by test and device. The full regression sweep is pendin
 
 ## 6. Verification build
 
-**PENDING.** Reported in the delivery message and in the build's own `verdict.txt`.
+| | |
+| --- | --- |
+| Build | Codemagic `6ab8801175ac3236c0f1514f`, workflow `proximeet-places-review`, scope `correction`, Mac mini M2, unsigned simulator |
+| Source | `358f59f1204c02fa167d21ebd9e6226d8799ff02` on `places-correction/footer-navigation-20260927T012306Z` (pinned; the source gate matched) |
+| Time | 02:31:54 to 02:53:38 UTC: 21.74 minutes exact, 22 rounded, of the 30 authorised |
+| Account after it | 27 builds, 471.9 exact / 485 rounded of 500 free minutes; 28.1 exact / 15 rounded left (read from the account's build list after the build) |
+| Toolchain | Xcode 26.6 (17F113), iOS 26.5 simulators: iPhone 17 Pro Max ("main") and iPhone 17e ("smaller") |
+| Result | **AUTOMATED VERDICT: FAIL.** The app compiled, the domain tests passed on the Mac, and 8 of 13 required executions passed on their first and only attempt (retries off) |
+
+| Row | Device | Test | Result |
+| --- | --- | --- | --- |
+| C1 | main | `PlacesCorrectionTests.testDetailAndExplanationStartAtTheirBeginning` | failed, 169.7 s: "The detail's last line is reachable." It first passed: browsing scrolled to View place, and the detail at its beginning |
+| C2 | main | `PlacesCorrectionTests.testFootersAtLargestTextStackAndStayReadable` | failed, 76.3 s: "Common Ground: View place reachable." |
+| C3 | main | `PlacesCorrectionTests.testFootersAtNormalTextFitOrStack` | interrupted: its run's 600-s bound, 11 s after it started |
+| C4 | main | `BandSignalInteractionTests.testBandSignalInteraction` | passed, 35.8 s |
+| C5 | main | `BandSignalInteractionTests.testReducedMotionStillUpdatesImmediately` | passed, 20.5 s |
+| C6 | main | `SignalReviewTests.testEndpointDuplicateTapsAndBack` | passed, 28.7 s |
+| C7 | main | `SignalReviewTests.testRapidChangesAndInterruptionsStayConsistent` | passed, 53.6 s |
+| C8 | main | `SignalReviewTests.testWalkthroughRealJourney` (onboarding → Signal → Places) | passed, 111.5 s |
+| C9 | main | `PlacesReviewTests.testSevenScreensOnThisPhone` (extra) | not run: time |
+| C10 | smaller | `PlacesCorrectionTests.testCorrectionWalkthroughScrollingAndBackGestures` (recorded) | passed, 57.5 s |
+| C11 | smaller | `PlacesCorrectionTests.testBackGesturesMatchTheBackControls` | passed, 66.2 s |
+| C12 | smaller | `PlacesCorrectionTests.testDetailAndExplanationStartAtTheirBeginning` | failed, 64.2 s: its first scroll to View place gave up |
+| C13 | smaller | `PlacesCorrectionTests.testFootersAtLargestTextStackAndStayReadable` | failed, 84.2 s: "Common Ground: View place reachable." |
+| C14 | smaller | `PlacesCorrectionTests.testFootersAtNormalTextFitOrStack` | passed, 27.2 s |
+| C15 | smaller | `PlacesReviewTests.testBackRoutesKeepTheCategoryAndTheDraft` (extra) | failed, 20.2 s: a tab's height, 43.99999999999997, is not ≥ 44 |
+
+**What the captures show.**
+- **The 390-pt footer at the default text.** Common Ground and Afterglow sit side by side.
+  Fieldwork's whole schedule sits above View place, with the paper and the perforation intact.
+  Upcoming starts with View place below the fold; one scroll brings the whole button above the
+  Back area, and a real tap on it opens Fieldwork at its beginning.
+- **The 440-pt largest text (Now).** Browsing scrolled down shows the whole schedule above View
+  place, with the paper below it. The detail it opens starts at its beginning, not at browsing's
+  offset.
+- **Gestures (390 pt).**
+  - A cancelled swipe leaves Afterglow's detail as it was.
+  - Completed swipes go back one stage each: detail → Later, explanation → Common Ground, browsing
+    → Signal, with Social · Chat first kept.
+  - After the band change, Common Ground reads "Not available for Dating".
+  - Under the Reduce Motion preview, a swipe goes detail → Later.
+
+**Not shown by this build:**
+- the 440-pt default-text footers, including the approved layout (C3 was cut off);
+- every largest-text footer on 390 pt, and on 440 pt apart from Now;
+- where the detail and the explanation start at the largest text on 390 pt;
+- the detail's last line and the explanation's privacy and demo lines at the largest text (both
+  widths);
+- the seven screens (C9).
+
+**Why the largest-text checks failed: a hypothesis, not verified.** No frames were logged inside
+the scroll loops and no largest-text run was recorded, so where each loop stopped scrolling is
+unknown.
+- **Established.** The scroll helper drags at 96 % of the width: 16–18 pt from the trailing edge,
+  where the scroll indicator is (the recording shows it at x 384–387 on the 390-pt phone). I moved
+  the drags there in this correction, from the leading margin, to keep them clear of the new back
+  swipe. Build 6ab8639c's largest-text test scrolled with leading-margin drags: 44 and 80 drags,
+  and the test passed.
+- **The hypothesis.** On a page as long as the largest text makes it, iOS lets a touch on the
+  indicator grab it and scrub the page, so a drag that lands on it moves the page back up.
+  Scrolling would then work until the indicator reaches the drags' starting height, and then
+  stall.
+- **What fits it.**
+  - C1's browse scroll reached View place after 14 drags, but the detail's last line never came
+    into view in 40 more.
+  - C13 reached its tab in 2 drags, then 40 more did not reach View place.
+  - The press-to-press intervals in the loops of C2, C12 and C13 alternate between about 1.1 and
+    1.6 s. C1's detail loop does not.
+- **What it does not explain.** C2 gave up after 40 drags on the same 440-pt Now page that C1's
+  first loop scrolled through in 14. The only difference is that C2 tapped the Now tab first. There
+  is no evidence that any of C2's or C12's drags moved the page at all.
+- **Against a layout fault.** The layout has no fixed heights that could clip the scrollable
+  content. Where C1's browse scroll stopped, View place appears to clear the Back area by more than
+  C2's 12 pt, with more content below it. That is estimated from the capture's pixels; the top of
+  the Back button's frame cannot be seen.
+- **Why C3 ran out of time.** The main device's first test started about 343 s into its 600-s
+  run. C1 and C2 then took 246 s, about 160 s of it in the two stalled loops, which left C3 11 s.
+
+**After the build (test-only, not verified on a Mac):**
+- the scroll drags move to the middle of the page, clear of both edges;
+- a scroll that gives up attaches the frames and the screen;
+- the 44-pt target checks allow floating-point error (`44 − 0.001`).
+
+No product file changed after `358f59f1`. There is no second correction build; one needs a new
+authorisation.
+
+**Reconciliation.**
+- Of the 56 required earlier executions (13 places, 16 signal, 27 regressions), this build ran 6:
+  C4–C8 and C15, by test and device. C15 failed. The other 50 are listed in the review package's
+  index.
+- The earlier results stand at their own commits:
+  - places: 13 of 13 at `ea14c001` (build 6ab8639c);
+  - signal: `1085af3d`;
+  - regressions: `b06707ec` (build 6ab81e22).
+- The full regression sweep is pending.
 
 ## 7. Not verified by automation
 
+- The largest-text footers, the stage starts at the largest text on 390 pt, and the detail's and
+  the explanation's last lines at the largest text (§6: failed or not produced).
+- The 440-pt default-text footers, including the approved layout (§6: C3 was cut off).
+- The test repairs made after the build (§6).
 - VoiceOver, including the escape gesture (most likely one stage too far from a detail or the
   explanation).
 - The system Reduce Motion setting.

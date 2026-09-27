@@ -74,6 +74,9 @@ final class PlacesReviewTests: XCTestCase {
                 "Sample session · not a reservation")
     }
 
+    /// 44 pt, less floating-point error: build 6ab88011 measured a 44-pt tab as 43.99999999999997.
+    private static let minimumTarget: CGFloat = 44 - 0.001
+
     private static func intentsLine(_ venue: VenueFacts) -> String {
         venue.permitted.map { titles[$0] ?? $0 }.joined(separator: " and ")
     }
@@ -781,7 +784,7 @@ final class PlacesReviewTests: XCTestCase {
         let tabs = Self.categories.map { places.tab($0) }
         for tab in tabs {
             XCTAssertTrue(scrollIntoView(tab, bar: places.secondary, app), "\(tab.identifier) is reachable.")
-            XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(tab.frame.height, Self.minimumTarget)
         }
         XCTAssertGreaterThan(Set(tabs.map { Int($0.frame.minY.rounded()) }).count, 1, "The tabs stack at this size.")
         for element in [places.viewPlace, places.browseLine] {
@@ -894,20 +897,20 @@ final class PlacesReviewTests: XCTestCase {
             let tab = places.tab(other)
             XCTAssertEqual(tab.label, Self.categoryTitles[other] ?? other)
             XCTAssertEqual(tab.isSelected, other == category, "\(other) selected: \(tab.isSelected)")
-            XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(tab.frame.height, Self.minimumTarget)
         }
         XCTAssertEqual(places.ticketName.label, venue.name)
         XCTAssertEqual(places.ticketKind.label, venue.kind)
         XCTAssertEqual(places.ticketIntents.label, "For \(Self.intentsLine(venue)) bands")
         XCTAssertEqual(places.ticketSchedule.label, venue.schedule, "The whole schedule.")
         XCTAssertEqual(places.viewPlace.label, "View place", "View place is the ticket's action.")
-        XCTAssertGreaterThanOrEqual(places.viewPlace.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(places.viewPlace.frame.height, Self.minimumTarget)
         XCTAssertEqual(places.browseLine.label, Self.expected(category, intent).browse)
         XCTAssertFalse(places.detailTicket.exists, "Browsing shows no detail.")
         XCTAssertFalse(places.explanationHeadline.exists)
         XCTAssertEqual(places.secondary.label, "Back")
-        XCTAssertGreaterThanOrEqual(places.secondary.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(places.back.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(places.secondary.frame.height, Self.minimumTarget)
+        XCTAssertGreaterThanOrEqual(places.back.frame.height, Self.minimumTarget)
         XCTAssertGreaterThanOrEqual(places.back.frame.width, 44)
     }
 
@@ -929,7 +932,7 @@ final class PlacesReviewTests: XCTestCase {
         XCTAssertEqual(places.primary.isEnabled, expected.enabled, "\(intent) at \(venue.name): enabled \(places.primary.isEnabled).")
         XCTAssertGreaterThanOrEqual(places.primary.frame.height, 60)
         XCTAssertEqual(places.detailSecondary.label, "Back to places")
-        XCTAssertGreaterThanOrEqual(places.detailSecondary.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(places.detailSecondary.frame.height, Self.minimumTarget)
         XCTAssertEqual(places.demoBadge.label, "Demo")
         XCTAssertFalse(places.headline.exists, "The detail replaces browsing.")
         XCTAssertFalse(places.explanationHeadline.exists)
@@ -952,7 +955,7 @@ final class PlacesReviewTests: XCTestCase {
         XCTAssertTrue(places.explore.isEnabled)
         XCTAssertGreaterThanOrEqual(places.explore.frame.height, 60)
         XCTAssertEqual(places.backToPlace.label, "Back to place")
-        XCTAssertGreaterThanOrEqual(places.backToPlace.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(places.backToPlace.frame.height, Self.minimumTarget)
         XCTAssertEqual(places.demoBadge.label, "Demo")
         XCTAssertFalse(places.detailTicket.exists)
         XCTAssertFalse(places.headline.exists)
@@ -1001,7 +1004,7 @@ final class PlacesReviewTests: XCTestCase {
             }
             // Every width: the header's Back, the column, the targets.
             XCTAssertGreaterThanOrEqual(places.back.frame.width, 44)
-            XCTAssertGreaterThanOrEqual(places.back.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(places.back.frame.height, Self.minimumTarget)
             switch stage {
             case .browse:
                 XCTAssertEqual(places.tabs.frame.minX, margin, accuracy: 1, "\(state): the tabs start at the column.")
@@ -1152,14 +1155,19 @@ final class PlacesReviewTests: XCTestCase {
         }
     }
 
-    /// Short, momentum-free drags in the right-hand page margin (clear of the leading edge, where
-    /// Places' back swipe starts) until `element` lies between the status bar
+    /// Short, momentum-free drags down the middle of the page until `element` lies between the
+    /// status bar
     /// and the top of the action bar (`bar` is its top action, 13 pt below the bar's top). Both
     /// edges allow 1 pt. An element taller than that space counts once its top is in view. Each
     /// drag is at most half the range of tops that count (and at most 115 pt), so it cannot step
-    /// over that range and back.
+    /// over that range and back. When it gives up, the last frames and the screen are attached.
+    /// The drags run down the middle of the page. The leading edge is where Places' back swipe
+    /// starts; the trailing edge is where the scroll indicator is, and on a page as long as the
+    /// largest text makes it, iOS lets a touch there grab the indicator and scrub the page back
+    /// (build 6ab88011's largest-text scrolls stalled with drags 16 pt from the edge; the indicator
+    /// is the suspected, unverified cause).
     private func scrollIntoView(_ element: XCUIElement, bar: XCUIElement, _ app: XCUIApplication) -> Bool {
-        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0))
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
         for _ in 0..<40 {
             let frame = element.frame, top: CGFloat = 62, bottom = bar.frame.minY - 13
             let slack = (bottom - top) - frame.height
@@ -1178,6 +1186,9 @@ final class PlacesReviewTests: XCTestCase {
                 upper.press(forDuration: 0.05, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.2)
             }
         }
+        attachNote("scrollIntoView gave up on \(element.identifier): element \(element.frame), bar \(bar.identifier) "
+                   + "\(bar.frame).")
+        capture("scroll-gave-up-\(element.identifier)", app)
         return false
     }
 
