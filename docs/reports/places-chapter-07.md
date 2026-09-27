@@ -2,10 +2,14 @@
 
 Date: 2026-09-26. Not production-ready.
 
-**Status:** implemented and statically checked on Linux (domain tests, the UI tests type-checked
-against an XCUITest shim, the project validator, the source gate). The macOS results are reported
-with each build's own artifacts and in the delivery message, since a commit cannot contain its own
-build's result.
+**Status:** **the places scope passed on the Mac at `ea14c0011fa87b28c956640fa95d4eebc2674e7b`**
+(Codemagic build `6ab8639c20c043a028c94e89`).
+- All 13 required executions passed on their first and only attempt, with no retries: 11 methods,
+  on the iPhone 17 Pro Max and the iPhone 17e.
+- The signal and regressions scopes did not run within the chapter's budget (section 8).
+- Two small visual findings on the narrower phone and at the largest text size are open for
+  visual review (section 8).
+- This report's final commit follows the verified revision and changes only documentation.
 
 ## 1. Workspace, dependency and provenance
 
@@ -194,6 +198,7 @@ chapter's code.
 | --- | --- | --- | --- | --- | --- |
 | 1 | `6ab84ede6ba94782f897685a` | places | `71487baf` | 25.75 (26 rounded) | **FAIL**, see below |
 | 2 | `6ab85be69602ff96bb8f8aaf` | places | `44af4491` | 25.75 (26 rounded) | **FAIL**: 9 passed, the smaller iPhone's run cut off by the deadline |
+| 3 | `6ab8639c20c043a028c94e89` | places | `ea14c001` | 21.67 (22 rounded) | **PASS**: 13 of 13 on the first attempt |
 
 **Build 1 compiled the app, the domain tests passed on the Mac, and 9 of the 11 Places methods
 executed and passed.** They are:
@@ -262,10 +267,103 @@ was about to run its tests.
 - The earlier chapters' 43 executions last passed at `1085af3d` (signal) and `b06707ec`
   (regressions), not on the Places revision.
 
-Later builds are reported in the delivery message and in each build's own `verdict.txt`.
+**Build 3: PASS.**
+- **Source.** The source gate matched `ea14c0011fa87b28c956640fa95d4eebc2674e7b`, pinned by
+  `PLACES_EXPECTED_COMMIT`. It is the tip of `places/approved-20260926T213808Z`, confirmed with
+  `git ls-remote`.
+- **Toolchain.** Xcode 26.6 (17F113), iOS 26.5 simulators. The host reported 10 GB of memory and
+  3 CPUs.
+- **Build and gates.** The app compiled unsigned. The domain tests passed on the Mac. The test
+  harness compiled.
+- **Main (iPhone 17 Pro Max), 7 executions:**
+
+  | Test | Seconds |
+  | --- | --- |
+  | The recorded journey | 187.9 |
+  | The Birthday gate on the way back | 35.5 |
+  | The largest text | 91.6 |
+  | Rapid taps and interruptions | 34.7 |
+  | The Reduce Motion preview | 11.7 |
+  | Relaunch | 59.1 |
+  | The seven screens | 73.7 |
+
+- **The iPhone 17e (390 pt), 6 executions:**
+
+  | Test | Seconds |
+  | --- | --- |
+  | Back routes | 64.0 |
+  | The band change | 48.7 |
+  | All twelve combinations | 171.0 |
+  | The largest text | 151.8 |
+  | Missing choices and the guarded explanation | 57.5 |
+  | The seven screens | 82.1 |
+
+- **Totals.** 11 unique methods and 13 executions. None failed, was skipped, was interrupted or
+  was retried, and every run exited 0.
+- **Downloads.** They are on the build page,
+  `https://codemagic.io/app/6ab4d02869609bf0cdd94b08/build/6ab8639c20c043a028c94e89`. Each was
+  downloaded, its size checked against the API and its SHA-256 checked. Every relative link in
+  the offline index resolves: 163 links, 0 broken.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `Places-Review.zip` (289.0 MB) | `fce064228606cabc835c639b2a5e57feba82d835234033ba354d739a5cd88936` |
+  | `Places-Screens.zip` (51.3 MB, 71 screens, none missing) | `0912248ac04c09457f3902a6481fef2c68630903ec4504642849dbf639b6e38a` |
+  | `Places-walkthrough-compact.zip` (59.3 MB) | `6ff39faa5c39cc7f191e444ed4abdd62e87c3a4514a5059842aabacbd1009031` |
+  | `Places-walkthrough-compact.mp4` | `117f88c971e18e9b1065f57bfe4181a429f6cc8c5e7363dd4e65eb4f1cea3e44` |
+  | `Places-walkthrough-original.zip` (155.7 MB) | `9c21c664fd9712963514db0d567502dd4356739a7763e0b062992dec3449015c` |
+  | `Proximeet-Debug-iphonesimulator-ea14c0011fa8.zip` (unsigned simulator app) | `0a3c7750d2b241d131486824abc11126626b1c2231c668acfdf4eeeecd6b89b8` |
+
+- **The compact walkthrough.** It is re-encoded at half size (660 × 1434) and trimmed to the
+  test's own start and end: 94.21 s to 284.06 s of a 340.93 s recording, 189.6 s long. The
+  original is kept unedited.
+- **Visual comparison with the approved board at 1×.** The journey's Now, Common Ground detail
+  and explanation match element for element. The mean difference is 2.6 to 3.3 levels, and the
+  only difference is anti-aliasing. The status bar is present in the captures and absent on the
+  board. The twelve eligibility captures show exactly the approved words.
+
+**Findings for visual review. Not fixed: no build remains to verify a fix.**
+1. **On a 390-pt phone, Upcoming's "View place  →" sits below the fold.**
+   - At default text, Fieldwork's schedule ("Saturday · 10 am–1 pm") and the 140-pt label do not
+     fit side by side in the 286-pt column.
+   - The footer's `ViewThatFits` therefore stacks them. The label then lies under the action bar
+     until the page is scrolled.
+   - The ticket stays one tappable action and scrolls into view (both were checked).
+   - The 440-pt phone is unaffected.
+   - Proposed fix: keep the side-by-side footer and let the schedule wrap to two lines within its
+     44 pt. Stack only at accessibility text sizes.
+2. **At the largest accessibility size, the stacked browse footer draws "View place  →" over the
+   schedule's second line.**
+   - The schedule is set by the Manrope line-box modifier, itself a `ViewThatFits` (one line, else
+     wrapping). Inside the footer's own `ViewThatFits` it appears to be sized as one line and then
+     drawn wrapped.
+   - VoiceOver still reads the whole schedule.
+   - Proposed fix: set the footer schedule as plain wrapping text (no nested `ViewThatFits`).
+3. **On the 390-pt phone, the detail's last line and the explanation's two boundary lines lie
+   below the fold** until scrolled. That is expected for a shorter screen: they were checked
+   reachable, and the 440-pt frames show everything at once.
+
+**Budget.** Three builds used 73.2 exact / 74 rounded free Mac mini M2 minutes of the 90
+authorized (25.75 + 25.75 + 21.67), and no build overlapped another. The account shows 450.2 exact
+/ 463 rounded of 500 minutes used, with 49.8 / 37 left. The 16 minutes left of the chapter's
+allowance cannot hold a fourth build, since every workflow's limit is 24 or 28 minutes.
+
+**Not run in this chapter: the signal and regressions scopes (43 executions, 41 unique
+methods).**
+- They are in the manifest and the harness, ready to run.
+- They last passed at `1085af3d` (signal, build `6ab7e942`) and `b06707ec` (regressions, build
+  `6ab81e22`), before Places.
+- On this revision, the places tests themselves cross into those chapters and passed there:
+  - Signal's Continue preview, and Back with the intent and the approach kept;
+  - the Wristband band change and the Guest List card;
+  - the Pass and the Birthday gate on the way back;
+  - relaunch through Welcome.
+- The five Signal and interaction tests whose endpoint expectation changed have not run on the
+  Mac.
 
 ## 9. Not verified by automation
 
+- The signal and regressions scopes on this revision (section 8).
 - VoiceOver.
 - The system Reduce Motion setting.
 - Composing keyboards.
