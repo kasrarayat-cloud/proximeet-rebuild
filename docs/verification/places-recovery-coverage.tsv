@@ -1,62 +1,64 @@
-# The recovery after the Places correction: every execution of its four builds, which all run one
-# frozen commit (build 1 correction, 2 sweep_places, 3 sweep_signal, 4 regressions), and the earlier
-# execution each one counts as. Its rows are the manifest's rows of those scopes
-# (docs/verification/places-review-manifest.tsv), by build and in manifest order within each;
-# scripts/places_recovery_reconcile.py checks this file against the manifest and joins the four
+# The recovery after the Places correction: every execution of its three builds, which all run one
+# frozen commit (build 2 correction, the correction gate; build 3 sweep; build 4 regressions), and the
+# earlier execution each one counts as. Build 1, the first correction build (Codemagic 6ab8adb4, on
+# 907d7401), passed 14 of its 15 required rows (C12 failed on a product issue); it ran an earlier
+# commit and an earlier manifest, so it counts toward nothing here. Its rows are the manifest's rows of
+# those scopes (docs/verification/places-review-manifest.tsv), by build and in manifest order within
+# each; scripts/places_recovery_reconcile.py checks this file against the manifest and joins the three
 # builds' results by it.
 # Columns (tab-separated): row, build, scope, device, run, test, kind, covers.
 #   row      the manifest row ID in the scope that executes it.
 #   device   main = the selected iPhone 17 Pro Max; small = the smaller iPhone; b = device B, a clone of main.
-#   kind     as in the manifest: required, repeat (B14) or diagnostic (C16 and C17, the optional scroll
-#            probe, never part of any verdict). Only required rows count as coverage.
+#   kind     as in the manifest: required, or repeat (B14, optional). Only required rows count as coverage.
+#            The scroll probe's diagnostic rows C16 and C17 were removed from the manifest after build
+#            6ab8adb4 collected their evidence.
 #   covers   the earlier execution it counts as, <scope>:<row> of the places, signal or regressions scope,
 #            or "-" for a check that has no earlier row (the correction's own tests).
 # The identity rule: an execution counts as an earlier one only when it is the same test method, on the
 # same device class, in the same run type (a recorded "journey" run keeps full holds; every other run
-# uses short holds), at the same frozen commit as the other three builds. By that rule P7 = C9, P8 = C15,
+# uses short holds), at the same frozen commit as the other two builds. By that rule P7 = C9, P8 = C15,
 # S1 = C4, S2 = C5, S7 = C6, S11 = C7 and S14 = C8; the other 49 of the 56 earlier required executions
-# (13 places, 16 signal, 27 regressions) keep their own IDs in builds 2-4. Build 4 is the regressions
-# scope itself, unchanged. 64 required executions in all: 15 + 11 + 11 + 27.
+# (13 places, 16 signal, 27 regressions) keep their own IDs in the sweep (P1-P6, P9-P13 and S3-S6, S8-S10,
+# S12, S13, S15, S16) and in regressions, which is the regressions scope itself, unchanged. 64 required
+# executions in all: 15 + 22 + 27.
 row	build	scope	device	run	test	kind	covers
-C3	1	correction	main	correction_first	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
-C1	1	correction	main	correction_main	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
-C2	1	correction	main	correction_main	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
-C4	1	correction	main	correction_signal	BandSignalInteractionTests/testBandSignalInteraction	required	signal:S1
-C5	1	correction	main	correction_signal	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required	signal:S2
-C9	1	correction	main	correction_signal	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P7
-C6	1	correction	main	correction_signal	SignalReviewTests/testEndpointDuplicateTapsAndBack	required	signal:S7
-C7	1	correction	main	correction_signal	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required	signal:S11
-C8	1	correction	main	correction_signal	SignalReviewTests/testWalkthroughRealJourney	required	signal:S14
-C10	1	correction	small	journey	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required	-
-C12	1	correction	small	correction_small	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
-C13	1	correction	small	correction_small	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
-C14	1	correction	small	correction_small	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
-C15	1	correction	small	correction_small	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required	places:P8
-C11	1	correction	small	correction_small_b	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required	-
-C16	1	correction	main	probe_main	PlacesCorrectionTests/testScrollDiagnosticProbe	diagnostic	-
-C17	1	correction	small	probe_small	PlacesCorrectionTests/testScrollDiagnosticProbe	diagnostic	-
-P1	2	sweep_places	main	journey	PlacesReviewTests/testWalkthroughRealJourney	required	places:P1
-P2	2	sweep_places	main	places_main	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required	places:P2
-P3	2	sweep_places	main	places_main	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P3
-P4	2	sweep_places	main	places_main	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required	places:P4
-P5	2	sweep_places	main	places_main	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required	places:P5
-P6	2	sweep_places	main	places_main	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required	places:P6
-P9	2	sweep_places	small	places_small	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required	places:P9
-P10	2	sweep_places	small	places_small	PlacesReviewTests/testEveryIntentAtEveryVenue	required	places:P10
-P11	2	sweep_places	small	places_small	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P11
-P12	2	sweep_places	small	places_small	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required	places:P12
-P13	2	sweep_places	small	places_small	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P13
-S3	3	sweep_signal	main	signal_main	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	required	signal:S3
-S4	3	sweep_signal	main	signal_main	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S4
-S5	3	sweep_signal	main	signal_main	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	required	signal:S5
-S6	3	sweep_signal	main	signal_main	SignalReviewTests/testAllTwelveStates	required	signal:S6
-S8	3	sweep_signal	main	signal_main	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	required	signal:S8
-S9	3	sweep_signal	main	signal_main	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S9
-S10	3	sweep_signal	main	signal_main	SignalReviewTests/testMissingIntentKeepsSignalClosed	required	signal:S10
-S12	3	sweep_signal	main	signal_main	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required	signal:S12
-S13	3	sweep_signal	main	signal_main	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required	signal:S13
-S15	3	sweep_signal	small	signal_small	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S15
-S16	3	sweep_signal	small	signal_small	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S16
+C3	2	correction	main	correction_first	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
+C1	2	correction	main	correction_main	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
+C2	2	correction	main	correction_main	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
+C4	2	correction	main	correction_signal	BandSignalInteractionTests/testBandSignalInteraction	required	signal:S1
+C5	2	correction	main	correction_signal	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required	signal:S2
+C9	2	correction	main	correction_signal	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P7
+C6	2	correction	main	correction_signal	SignalReviewTests/testEndpointDuplicateTapsAndBack	required	signal:S7
+C7	2	correction	main	correction_signal	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required	signal:S11
+C8	2	correction	main	correction_signal	SignalReviewTests/testWalkthroughRealJourney	required	signal:S14
+C10	2	correction	small	journey	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required	-
+C12	2	correction	small	correction_small	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required	-
+C13	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required	-
+C14	2	correction	small	correction_small	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required	-
+C15	2	correction	small	correction_small	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required	places:P8
+C11	2	correction	small	correction_small_b	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required	-
+P1	3	sweep	main	journey	PlacesReviewTests/testWalkthroughRealJourney	required	places:P1
+P2	3	sweep	main	places_main	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required	places:P2
+P3	3	sweep	main	places_main	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P3
+P4	3	sweep	main	places_main	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required	places:P4
+P5	3	sweep	main	places_main	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	required	places:P5
+P6	3	sweep	main	places_main	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required	places:P6
+S3	3	sweep	main	signal_main	GuestListReviewTests/testKeyboardBackOnTheRealRouteReturnsToTheCompletePass	required	signal:S3
+S4	3	sweep	main	signal_main	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S4
+S5	3	sweep	main	signal_main	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutesAndKeepsTheDrafts	required	signal:S5
+S6	3	sweep	main	signal_main	SignalReviewTests/testAllTwelveStates	required	signal:S6
+S8	3	sweep	main	signal_main	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	required	signal:S8
+S9	3	sweep	main	signal_main	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S9
+S10	3	sweep	main	signal_main	SignalReviewTests/testMissingIntentKeepsSignalClosed	required	signal:S10
+S12	3	sweep	main	signal_main	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required	signal:S12
+S13	3	sweep	main	signal_main	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required	signal:S13
+P9	3	sweep	small	places_small	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required	places:P9
+P10	3	sweep	small	places_small	PlacesReviewTests/testEveryIntentAtEveryVenue	required	places:P10
+P11	3	sweep	small	places_small	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required	places:P11
+P12	3	sweep	small	places_small	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required	places:P12
+P13	3	sweep	small	places_small	PlacesReviewTests/testSevenScreensOnThisPhone	required	places:P13
+S15	3	sweep	small	signal_small	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	required	signal:S15
+S16	3	sweep	small	signal_small	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required	signal:S16
 M1	4	regressions	main	main_early	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	required	regressions:M1
 M2	4	regressions	main	main_early	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required	regressions:M2
 M3	4	regressions	main	main_rest	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	required	regressions:M3

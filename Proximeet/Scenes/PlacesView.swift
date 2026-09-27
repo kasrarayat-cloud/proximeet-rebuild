@@ -381,7 +381,10 @@ struct PlacesView: View {
 private enum PlacesScrollTarget: Hashable {
     /// The header: a stage's beginning.
     case top
-    /// The end of the browse ticket, where View place is.
+    /// The end of the browse ticket, where View place is, and the 25-pt gap below it. (A zero-height
+    /// marker at the ticket's edge left View place up to 3.7 pt under the action bar at the largest
+    /// text on the 390-pt iPhone in build 6ab8adb4: the page stopped about 18 pt lower than the
+    /// marker's alignment while the stage and its bar changed.)
     case ticketEnd
 }
 
@@ -436,8 +439,11 @@ private struct PlacesTicketStage: View {
             }
             .padding(.top, stage == .browse ? 10 : 38)
             if stage == .browse {
+                // The 25-pt gap between the ticket and its line: the target Back to places aligns
+                // with the bottom of the visible page, so the ticket's end, and View place above it,
+                // stop at least this far clear of the action bar.
                 Color.clear
-                    .frame(height: 0)
+                    .frame(height: 25)
                     .id(PlacesScrollTarget.ticketEnd)
                 ZStack(alignment: .top) {
                     WristbandBodyText(text: eligibility.browseBoundary, size: 14, lineHeight: 22,
@@ -446,7 +452,6 @@ private struct PlacesTicketStage: View {
                         .transition(.opacity)
                         .accessibilityIdentifier("places.boundary")
                 }
-                .padding(.top, 25)
                 .transition(.opacity)
             }
         }

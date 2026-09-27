@@ -28,9 +28,9 @@ How chapters are verified on real Apple tooling. Nothing here runs by itself.
 | `signal-approved-files.sha256` | SHA-256 of the approved assets: those of the Wristband, the blank Signal tag, and the six `docs/design/*-approved/` folders |
 | `signal-review-files.sha256` | SHA-256 of every other file, except itself |
 | `signal-review-deletions.txt` | Files removed by the approved chapters, now including the legacy `SignalSelectionView.swift`; the Signal gate confirms they are absent |
-| `places-mac-review.md` | The Places run: the manual, unsigned simulator workflow `proximeet-places-review` (with its 24-minute twin `proximeet-places-review-short` and its 35-minute twin `proximeet-places-review-35`, which also publishes a runnable preview copy of the app), its scopes (places, signal, regressions, the targeted correction, sweep_places, sweep_signal), the four-build recovery on one commit and its reconciliation, source gate, steps and downloads |
-| `places-review-manifest.tsv` | Every execution of every scope (places, signal, regressions, the targeted correction, sweep_places and sweep_signal): device, run, bound and kind; the harness runs it and the results parser judges it |
-| `places-recovery-coverage.tsv` | Every execution of the four recovery builds (correction, sweep_places, sweep_signal, regressions) on one commit, and the earlier places, signal or regressions execution each counts as (same test, same device class, same run type) |
+| `places-mac-review.md` | The Places run: the manual, unsigned simulator workflow `proximeet-places-review` (with its 24-minute twin `proximeet-places-review-short` and its 35-minute twin `proximeet-places-review-35`, which also publishes a runnable preview copy of the app), its scopes (places, signal, regressions, the targeted correction and the sweep), the three-build recovery on one commit (correction gate, sweep, regressions; the scroll probe rows removed) and its reconciliation, source gate, steps and downloads |
+| `places-review-manifest.tsv` | Every execution of every scope (places, signal, regressions, the targeted correction and the sweep, which runs the places and signal rows the correction does not): device, run, bound and kind; the harness runs it and the results parser judges it |
+| `places-recovery-coverage.tsv` | Every execution of the three recovery builds (2 correction, 3 sweep, 4 regressions; build 1, the first correction build, ran an earlier commit) on one commit, and the earlier places, signal or regressions execution each counts as (same test, same device class, same run type) |
 | `places-correction-before/` | 1× copies of build 6ab8639c's defect captures, with `provenance.json` (each original's name and SHA-256), shown beside the correction's captures |
 | `places-approved-files.sha256` | SHA-256 of the approved assets: those of Signal, the three Places scenes, and the seven `docs/design/*-approved/` folders |
 | `places-review-files.sha256` | SHA-256 of every other file, except itself |
@@ -52,8 +52,9 @@ The harness consists of:
 - `scripts/places_review.sh`, `scripts/places_review_results.py`, `scripts/places_review_package.py` and
   `scripts/places_source_manifests.py`: the Places steps, driven and judged by `places-review-manifest.tsv`
   (`PLACES_REVIEW_SCOPE`), its packages and its source-gate manifests;
-- `scripts/places_recovery_reconcile.py`: joins the four recovery builds' results by
-  `places-recovery-coverage.tsv`; passes only when every required row passed on one commit;
+- `scripts/places_recovery_reconcile.py`: joins the three recovery builds' results by
+  `places-recovery-coverage.tsv`; passes only when all 64 required rows passed on one commit and all
+  56 earlier required executions are covered;
 - `ProximeetUITests/PlacesReviewTests.swift`: skipped unless the runner gets `PROXIMEET_PLACES_REVIEW=1`;
 - `ProximeetUITests/WelcomeReviewTests.swift`: skipped unless the runner gets `PROXIMEET_WELCOME_REVIEW=1`;
 - `scripts/analyze_welcome_review.py`: off-machine analysis that needs ffmpeg; `--self-test` checks it against the approved references only.

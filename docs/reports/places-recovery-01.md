@@ -2,7 +2,9 @@
 
 Date: 2026-09-27. Not production-ready.
 
-**Status: pre-build. No Mac build has run on this branch; every Mac result below is PENDING.**
+**Status: recovery build 1 (`6ab8adb429a3df446d9749a3`, on `907d7401`) passed 14 of its 15 required
+correction rows; C12 found a real (small) product defect, fixed after it (§7). The later builds are
+PENDING.**
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
 correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
 - diagnoses that build's five failures and one interruption from its logs, keeping what is proven
@@ -12,7 +14,8 @@ correction: 8 of 13 required executions passed (`places-correction-01.md` §6). 
   diagnosis switch (§3);
 - records the lead's ruling on the DEMO badge and the obsolete banner (§4), and why no browser
   preview was opened (§5);
-- plans four sequential builds on one frozen commit (§6).
+- plans four sequential builds on one frozen commit (§6); after build 1 changed the product, three
+  remain on a new frozen commit: the correction gate again, one merged sweep, the regressions.
 
 Linux cannot compile the SwiftUI app, so no check on the VPS shows the app working. The Linux checks
 of the frozen commit are recorded in §7 when it exists.
@@ -348,66 +351,108 @@ test fixtures.
 
 ## 6. The build plan
 
-Four builds, one at a time, in this order, all on one frozen commit. That commit holds this
-recovery's product, test, manifest, harness and workflow changes; it is pinned by
+**As planned before build 1:** four builds on one frozen commit (`907d7401`): the correction gate,
+then `sweep_places`, `sweep_signal` and `regressions`. Build 1 ran the correction gate and found a
+product defect (§7), and the fix changes product code. Nothing measured at `907d7401` can count
+toward the final verdict, so the plan was revised.
+
+**Now: three builds, one at a time, on one new frozen commit.** That commit holds the product fix,
+this recovery's tests, manifest, harness and workflow. Each build is pinned by
 `PLACES_EXPECTED_COMMIT`, and the source gate rejects anything else.
 
 | | |
 | --- | --- |
-| Frozen commit | PENDING |
-| Workflow | `proximeet-places-review-35`, a 35-minute twin of `proximeet-places-review` that sets `PLACES_UI_DEADLINE_SECONDS=1680`, with the harness accepting 600–1680 s. At `ae908de` the workflow's limit was 28 minutes (`codemagic.yaml:447`) and the harness accepted 600–1380 s only (`scripts/places_review.sh:103-110`, `:565-567`); build 1 is predicted to finish its UI tests near a 1380-s deadline |
+| Frozen commit | PENDING (the commit that adds this section) |
+| Workflow | `proximeet-places-review-35`: 35 minutes, `PLACES_UI_DEADLINE_SECONDS=1740` (the harness accepts 600–1740). It was 1680 for build 1. It was raised because build 1 measured the main device's first test about 600 s after the harness start. The worst-case end is 2032 s of the 2100 |
 | Machine | Mac mini M2 (`mac_mini_m2`), Xcode 26.6, unsigned simulator; retries off |
 | Order | A build starts only after the previous one has passed and its verdict has been read |
 
-Rows by build and device, with each run's bound in seconds, as in
-`docs/verification/places-review-manifest.tsv` when this was written. The frozen commit's manifest
-governs.
-
 | Build | Scope | iPhone 17 Pro Max ("main") | Other device |
 | --- | --- | --- | --- |
-| 1 | `correction` | `correction_first` [C3] 600 → `correction_main` [C1, C2] 700 → `correction_signal` [C4, C5, C9, C6, C7, C8] 600 → `probe_main` [C16, diagnostic] 300 | iPhone 17e: `journey` [C10, recorded] 420 → `correction_small` [C12, C13, C14, C15] 780 → `correction_small_b` [C11] 240 → `probe_small` [C17, diagnostic] 300 |
-| 2 | `sweep_places` | `journey` [P1, recorded, full holds] 720 → `places_main` [P2–P6] 600 | iPhone 17e: `places_small` [P9–P13] 900 |
-| 3 | `sweep_signal` | `signal_main` [S3, S4, S5, S6, S8, S9, S10, S12, S13] 900 | iPhone 17e: `signal_small` [S15, S16] 420 |
+| 2 | `correction` (C16/C17 probes removed) | `correction_first` [C3] 600 → `correction_main` [C1, C2] 700 → `correction_signal` [C4, C5, C9, C6, C7, C8] 600 | iPhone 17e: `journey` [C10, recorded] 420 → `correction_small` [C12, C13, C14, C15] 780 → `correction_small_b` [C11] 240 |
+| 3 | `sweep` | `journey` [P1, recorded, full holds] 720 → `places_main` [P2–P6] 600 → `signal_main` [S3, S4, S5, S6, S8, S9, S10, S12, S13] 900 | iPhone 17e: `places_small` [P9–P13] 900 → `signal_small` [S15, S16] 420 |
 | 4 | `regressions`, rows unchanged | `main_early` [M1, M2] 780 → `main_rest` [M3–M13] 1000 | device B (a Pro Max clone): `paste_b` [B1] 480 → `regressions_b` [B2–B13] 1000 → `paste_repeat_b` [B14, repeat, time-gated] 300 → `hardware_keys_b` [B15] 240 |
 
-- **Coverage.** Build 1 now requires C9 and C15: 15 required executions. Seven of them are the same
-  check as an earlier row: same method, device, commit and kind of run (P7 = C9, P8 = C15, S1 = C4,
-  S2 = C5, S7 = C6, S11 = C7, S14 = C8). The other 49 earlier executions run in builds 2–4
-  (11 + 11 + 27). In all, 64 required executions, plus the optional B14, C16 and C17. No required
-  coverage is dropped. `docs/verification/places-recovery-coverage.tsv` lists every execution of
-  the four builds and the earlier row each counts as, and `scripts/places_recovery_reconcile.py`
-  joins the four builds' results by it.
-- **Predicted minutes, rounded** (from the step and test timings of builds 6ab7e942 to 6ab88011:
-  build 3's tests from 6ab7e942's signal run, build 4 scaled from 6ab81e22's 1427-s run; the
-  durations of C1, C2, C12 and C13 are estimates, since no passing run of them exists): build 1
-  about 25 (worst 30), build 2 about 21 (26), build 3 about 18 (22), build 4 about 27 (28). In all
-  about 91, worst 106. Build 1's estimate was made for a slightly different order of its main runs.
+- **Coverage.** 64 required executions across the three builds (15 + 22 + 27), plus the optional B14.
+  - Seven correction rows are the same check as an earlier row: same method, device, commit and kind
+    of run (P7 = C9, P8 = C15, S1 = C4, S2 = C5, S7 = C6, S11 = C7, S14 = C8).
+  - The other 49 earlier executions run in `sweep` and `regressions`.
+  - `docs/verification/places-recovery-coverage.tsv` lists every execution. The command
+    `scripts/places_recovery_reconcile.py <three build folders>` passes only when every required row
+    passed on its device, on one commit.
+- **Predicted, from measured timings.**
+  - **Build 2:** like build 1, about 25 minutes. Build 1's main lane ended 341 s before its
+    1680-s deadline.
+  - **Build 3:** build 6ab8639c's main lane reached its recorded P1 at harness-start + 590 s, and
+    runs were about 70–80 s apart. That puts the sweep's main lane at about harness-start + 1540 s,
+    about 200 s before the new deadline. The margin is thin.
+  - **Build 4:** at about harness-start + 1500–1550 s on each lane, a margin of about 190–240 s.
+    B14 will probably be left unrun for time, which is allowed.
+  - **Minutes:** about 25 + 30 + 28 on top of build 1's 25, so about 108 of the 120.
 
 **Budget.**
 
 | | |
 | --- | --- |
 | Rate | Mac mini M2, pay as you go: $0.095 a minute, published at codemagic.io/pricing, read 2026-09-27 |
-| Caps | 120 build minutes and USD 15 for the four builds |
-| Free minutes | 15 rounded (28.1 exact) of the account's 500 were left before this assignment (`places-correction-01.md` §6, read from the account's build list). Codemagic resets a personal account's 500 free minutes on the 1st of each month (docs.codemagic.io/billing/pricing, read 2026-09-27; no time zone given), so none come back before 2026-10-01 |
-| Cost, if every minute past the free 15 is billed | about $7.22 for the central 91 (76 billed), about $8.65 for the worst 106 (91 billed) |
-| Cost at the cap | $11.40 for 120 minutes, even if no free minute applied. USD 15 buys about 158 minutes, so the 120-minute cap binds first |
-| Guard | Four 35-minute limits total 140 minutes, more than the cap. A build therefore starts only while at least 35 minutes remain under it |
+| Caps | 120 build minutes and USD 15 for this assignment |
+| Free minutes | 15 rounded (28.1 exact) were left before build 1; after it the account shows 510 rounded / 496.3 exact of 500. Codemagic resets a personal account's 500 free minutes on the 1st of each month (docs.codemagic.io/billing/pricing, read 2026-09-27), so none come back before 2026-10-01 |
+| Cost estimate | each further build is fully billable: about $2.40–3.30 per build. At most $11.40 if all 120 minutes were billed |
+| Guard | A build starts only while its 35-minute limit fits under what is left of the 120 |
 
-Codemagic's pricing and billing pages do not say how minutes are rounded; the rounded figures here
-round each build up to the whole minute, as this project's usage counter does. Whether the account
-can run past its free minutes was not checked from the VPS.
+Codemagic's pages do not say how minutes are rounded; the rounded figures here round each build up
+to the whole minute, as this project's usage counter does. The account's actual invoice is not
+readable through the API.
 
 ## 7. Results
 
-**PENDING.** Nothing here has run.
-
-| Build | Scope | Codemagic build | Commit | Minutes | Result |
+| Build | Scope | Codemagic build | Commit | Minutes (exact / rounded) | Result |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `correction` | PENDING | PENDING | PENDING | PENDING |
-| 2 | `sweep_places` | PENDING | PENDING | PENDING | PENDING |
-| 3 | `sweep_signal` | PENDING | PENDING | PENDING | PENDING |
+| 1 | `correction` | `6ab8adb429a3df446d9749a3` | `907d7401ec8b97a10138c2764094a9c564d0e4ce` | 24.45 / 25 | **FAIL**: 14 of 15 required passed; C12 failed (below) |
+| 2 | `correction` | PENDING | PENDING | PENDING | PENDING |
+| 3 | `sweep` | PENDING | PENDING | PENDING | PENDING |
 | 4 | `regressions` | PENDING | PENDING | PENDING | PENDING |
+
+**Build 1** (05:46:37–06:11:04 UTC, Mac mini M2, Xcode 26.6, iOS 26.5). The app and the new escape
+routing compiled; the domain tests passed on the Mac; the preview copy of the app was published as
+`Proximeet.app` (with `Proximeet-Debug-iphonesimulator-907d7401ec8b.zip`).
+- Passed on their first and only attempt: C1, C2, C3 (main: the stage starts and endings at the
+  largest text, the largest-text footers, the default-text footers with the approved 440-pt
+  geometry), C4–C8 (the five Signal tests, including the real onboarding route), C9 (the seven
+  screens, now required); C10, C11, C13, C14, C15 (smaller iPhone: the recorded walkthrough, the back
+  gestures and controls with the `places.screen` containment check, the largest-text and
+  default-text footers, the Back routes).
+- **C12 failed** (smaller iPhone, largest text): after Back to places from Common Ground's detail,
+  View place's bottom was at 738.3 pt and the action bar's top at 734.7 pt: 3.7 pt of the button sat
+  under the bar. That is a product defect in this correction's "Back to places shows the ticket's
+  end": the page stopped about 18 pt below the zero-height ticket-end marker's alignment (C13's
+  Back to Upcoming on the same phone stopped above it and passed). **Fix, after build 1:** the marker
+  is now the existing 25-pt gap between the ticket and its line (layout unchanged), so the page stops
+  with View place at least that far clear of the bar. It changes product code, so the whole
+  correction gate reruns (build 2).
+- **The scroll diagnosis is settled by evidence.** The new helper made 138 traced drags (59 on the
+  iPhone 17 Pro Max, 79 on the iPhone 17e) and none stalled: each moved the page its finger travel
+  less 9.6–10.4 pt, including the largest-text detail and explanation pages that C1 and C12 could not
+  scroll in build 6ab88011. 54 of them started on the browse ticket's paper (the helper's fallback
+  when no other clear point exists) and none opened anything. The optional probe (C17, smaller iPhone, largest text) measured, five drags each:
+
+  | Pattern | Browsing (Now) | Common Ground's detail |
+  | --- | --- | --- |
+  | A: 0.96 of the width, next drag at once (the old helper) | +105, −105, +105, −105, +105 | +105, −105, +105, −105, +105 |
+  | B: 0.96 of the width, 1.5 s between drags | +105 × 5 | +105 × 5 |
+  | C: the column, away from controls, 0.7 s between drags | +105 × 5 | +105 × 5 |
+  | C with iOS 26's content pop kept enabled (debug switch) | not run | +105 × 5 |
+
+  So the old helper's stalls came from its own drags: back-to-back drags at the trailing edge moved
+  the page back as often as forwards. The app scrolls normally, and holding off the content pop on a
+  detail does not affect scrolling. Why a quick second drag at the edge reverses (the scroll
+  indicator is the likeliest) is not established. The main-device probe (C16) was left unrun for
+  time, as a diagnostic may be.
+- Durations: C1 97.3 s, C2 64.1 s, C3 33.7 s, C12 112.9 s (to its failure), C13 75.7 s; the UI step
+  took 18.0 minutes; the main device's first run reached its first test about 5 minutes after the
+  UI step began, as in build 6ab88011.
+- Downloads: every artifact matched its published size and SHA-256; the review page's 149 links all
+  resolve.
 
 Linux checks of the frozen commit, each PENDING: the domain suite (`swift test`), the project
 validator, the source-gate manifests (`scripts/places_source_manifests.py --check`), and the UI

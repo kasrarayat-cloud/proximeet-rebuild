@@ -1,34 +1,40 @@
 #!/usr/bin/env python3
-"""Proximeet Places recovery: join the four builds' results and say whether the recovery passed.
+"""Proximeet Places recovery: join the three builds' results and say whether the recovery passed.
 
     python3 scripts/places_recovery_reconcile.py [--manifest PATH] [--coverage PATH] [--expect-sha SHA]
                                                  [--tsv OUT] BUILD [BUILD ...]
 
-The recovery after the Places correction is four builds on one frozen commit: build 1 correction,
-build 2 sweep_places, build 3 sweep_signal, build 4 regressions. Each BUILD is one build's results: its
-downloaded review archive (Places-Correction-Review.zip, Places-Sweep-Places-Review.zip,
-Places-Sweep-Signal-Review.zip or Places-Regressions-Review.zip), the folder that archive unpacks to, or
-a folder holding the build's results (build/artifacts itself works). From each it reads executions.tsv,
-source-checkpoint.txt (git_head and scope; failing that metadata/source.txt's git_head and
-ui-review-tests.txt's scope), verdict.txt and places-review-manifest.tsv where present.
+The recovery after the Places correction is three builds on one frozen commit, in this order:
+correction (the correction gate), sweep, regressions; docs/verification/places-recovery-coverage.tsv
+numbers them recovery builds 2, 3 and 4 (build 1, the first correction build 6ab8adb4, ran on an
+earlier commit and counts toward none of it). Each BUILD is one build's results: its downloaded
+review archive (Places-Correction-Review.zip, Places-Sweep-Review.zip or Places-Regressions-Review.zip),
+the folder that archive unpacks to, or a folder holding the build's results (build/artifacts itself
+works). From each it reads executions.tsv, source-checkpoint.txt (git_head and scope; failing that
+metadata/source.txt's git_head and ui-review-tests.txt's scope), verdict.txt and
+places-review-manifest.tsv where present.
 
 It first checks docs/verification/places-recovery-coverage.tsv (--coverage) against
-docs/verification/places-review-manifest.tsv (--manifest): every row of the four scopes listed once
-with the same device, run, test and kind, and every "covers" target an earlier row of the places,
-signal or regressions scope with the same test, on the same device, in the same run type (a recorded
-"journey" run keeps full holds; every other run uses short holds) and of the same kind. Then it prints one line per
-execution of the four builds and exits 0 only when all of these hold:
-- one build of each of the four scopes was given, and all four name the same 40-hex git_head (the one
-  given by --expect-sha, when given) and ran the manifest given here;
-- every required row of the four scopes executed once, on its device, and passed;
+docs/verification/places-review-manifest.tsv (--manifest): every row of the three scopes listed once
+with the same device, run, test and kind and its scope's build number, the plan's row counts (15
+correction, 22 sweep and 27 regressions required rows, 64 in all; 56 earlier required executions),
+and every "covers" target an earlier row of the places, signal or regressions scope with the same
+test, on the same device, in the same run type (a recorded "journey" run keeps full holds; every other
+run uses short holds) and of the same kind. Then it prints one line per execution of the three builds
+and exits 0 only when all of these hold:
+- one build of each of the three scopes was given, and all three name the same 40-hex git_head (the
+  one given by --expect-sha, when given) and ran the manifest given here;
+- every required row of the three scopes (64) executed once, on its device, and passed;
 - no optional row (a repeat or an extra) that ran failed, and no build executed a test outside its rows
-  (a diagnostic row, the scroll probe, is only reported);
+  (a diagnostic row would only be reported; none is in the manifest since the scroll probe's rows were
+  removed);
 - every build's own verdict, where one was supplied, is PASS;
 - all 56 earlier required executions (13 places, 16 signal, 27 regressions) are covered by a passed
   required row.
 Otherwise it lists exactly which rows are missing, failed, interrupted or not run, which SHAs differ
 and anything else that failed, and exits 1. A usage error exits 2. --tsv also writes the joined table.
-Standard library only; Python 3.8+.
+A build of a retired scope (sweep_places, sweep_signal) or of any other scope is refused as not one of
+the three. Standard library only; Python 3.8+.
 """
 import os
 import re
@@ -38,7 +44,12 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST = os.path.join(ROOT, "docs/verification/places-review-manifest.tsv")
 COVERAGE = os.path.join(ROOT, "docs/verification/places-recovery-coverage.tsv")
-RECOVERY = ("correction", "sweep_places", "sweep_signal", "regressions")
+RECOVERY = ("correction", "sweep", "regressions")
+# Each scope's build number in the coverage file (build 1 was the first correction build, on an earlier
+# commit), and the plan's required rows per scope.
+BUILD = {"correction": "2", "sweep": "3", "regressions": "4"}
+PLAN_REQUIRED = {"correction": 15, "sweep": 22, "regressions": 27}
+PLAN_EARLIER = 56
 EARLIER = ("places", "signal", "regressions")
 WANTED = ("executions.tsv", "source-checkpoint.txt", "verdict.txt", "ui-review-tests.txt", "source.txt",
           "places-review-manifest.tsv")
@@ -166,10 +177,10 @@ def main(argv):
         listed[key] = entry
         row = manifest.get(key)
         if entry["scope"] not in RECOVERY:
-            problems.append("coverage row %s names scope %r, not one of the four builds" % (entry["order"], entry["scope"]))
-        elif entry["build"] != str(RECOVERY.index(entry["scope"]) + 1):
-            problems.append("coverage row %s %s says build %s; %s is build %d" % (
-                entry["scope"], entry["order"], entry["build"], entry["scope"], RECOVERY.index(entry["scope"]) + 1))
+            problems.append("coverage row %s names scope %r, not one of the three builds" % (entry["order"], entry["scope"]))
+        elif entry["build"] != BUILD[entry["scope"]]:
+            problems.append("coverage row %s %s says build %s; %s is build %s" % (
+                entry["scope"], entry["order"], entry["build"], entry["scope"], BUILD[entry["scope"]]))
         if row is None:
             problems.append("coverage row %s %s is not in the manifest" % key)
             continue
@@ -194,6 +205,15 @@ def main(argv):
         if row["scope"] in RECOVERY and key not in listed:
             problems.append("manifest row %s %s is missing from the coverage file" % key)
     earlier_required = [row for row in manifest.values() if row["scope"] in EARLIER and row["kind"] == "required"]
+    # The plan's counts, so a row dropped from both the manifest and the coverage file cannot pass unseen.
+    for scope in RECOVERY:
+        planned = sum(1 for entry in coverage if entry["scope"] == scope and entry["kind"] == "required")
+        if planned != PLAN_REQUIRED[scope]:
+            problems.append("the coverage file lists %d required %s rows; the recovery plan has %d" % (
+                planned, scope, PLAN_REQUIRED[scope]))
+    if len(earlier_required) != PLAN_EARLIER:
+        problems.append("the manifest has %d earlier required executions; the recovery plan covers %d" % (
+            len(earlier_required), PLAN_EARLIER))
 
     # 2. The builds.
     by_scope = {}
@@ -218,7 +238,7 @@ def main(argv):
                   "executions": executions, "has_executions": "executions.tsv" in files,
                   "manifest": files.get("places-review-manifest.tsv")}
         if scope not in RECOVERY:
-            problems.append("%s: scope %r is not one of the four builds (%s)" % (path, scope or "unknown", ", ".join(RECOVERY)))
+            problems.append("%s: scope %r is not one of the three builds (%s)" % (path, scope or "unknown", ", ".join(RECOVERY)))
             continue
         if scope in by_scope:
             problems.append("two builds of scope %s were given: %s and %s" % (scope, by_scope[scope]["path"], path))
@@ -234,7 +254,7 @@ def main(argv):
             problems.append("build %s verdict is not PASS: %s" % (scope, headline))
     for scope in RECOVERY:
         if scope not in by_scope:
-            problems.append("no build of scope %s (build %d) was given" % (scope, RECOVERY.index(scope) + 1))
+            problems.append("no build of scope %s (build %s) was given" % (scope, BUILD[scope]))
 
     # 3. One commit.
     heads = {scope: record["head"] for scope, record in by_scope.items()}
@@ -253,7 +273,7 @@ def main(argv):
     one_commit = len(by_scope) == len(RECOVERY) and bool(re.fullmatch(r"[0-9a-f]{40}", common)) and \
         (not expect or common == expect)
 
-    # 4. Every execution of the four builds.
+    # 4. Every execution of the three builds.
     table, passed_rows = [], set()
     for entry in coverage:
         record = by_scope.get(entry["scope"])
@@ -282,7 +302,7 @@ def main(argv):
                 problems.append("build %s %s %s %s (%s, required): %s" % (
                     entry["build"], entry["scope"], entry["order"], entry["test"], entry["device"], outcome))
         elif entry["kind"] == "diagnostic":
-            pass  # the scroll probe: reported in the table, never part of the verdict
+            pass  # a diagnostic (none in the manifest now): reported in the table, never part of the verdict
         elif not ok and not outcome.startswith(("not run", "not judged")):
             problems.append("build %s %s %s %s (%s, %s, optional; if it runs it must pass): %s" % (
                 entry["build"], entry["scope"], entry["order"], entry["test"], entry["device"], entry["kind"], outcome))
@@ -318,7 +338,7 @@ def main(argv):
     out += ["", "Builds:"]
     for scope in RECOVERY:
         record = by_scope.get(scope)
-        out.append("  %d %-12s %s" % (RECOVERY.index(scope) + 1, scope, (
+        out.append("  %s %-12s %s" % (BUILD[scope], scope, (
             "git_head=%s  %s  %s  (%s)" % (record["head"] or "unknown", ("Codemagic " + record["build_id"]) if record["build_id"]
                                            else "build id not read", record["headline"] or "verdict not supplied",
                                            record["path"])) if record else "NOT GIVEN"))
@@ -331,7 +351,7 @@ def main(argv):
         out += ["", "Notes:"] + ["  " + n for n in notes]
     if problems:
         out += ["", "Problems (%d):" % len(problems)] + ["  " + p for p in problems]
-    out += ["", "RECOVERY: " + ("PASS (four builds, one commit %s; every required row passed; manual review still "
+    out += ["", "RECOVERY: " + ("PASS (three builds, one commit %s; every required row passed; manual review still "
                                 "outstanding)" % common if not problems else "FAIL (%d problems)" % len(problems))]
     print("\n".join(out))
     if tsv_path:

@@ -3,8 +3,8 @@
 
     python3 scripts/places_review_results.py MANIFEST SCOPE RUNS OUT_TXT OUT_TSV MAIN_UDID B_UDID SMALL_UDID LOG [LOG ...]
 
-MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (correction,
-sweep_places, sweep_signal, regressions, places or signal) are judged. RUNS is the stage's runs.txt
+MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (correction, sweep,
+regressions, places or signal) are judged; a scope with no rows is a FAIL. RUNS is the stage's runs.txt
 ("<run> <bundle> <exit> <kind>", kind no | infra | time | device). The LOGs are the lanes' xcodebuild
 logs, in which every run starts with a "$ ..." line naming its destination and result bundle. B_UDID
 or SMALL_UDID may be "" when that device was not used (device B's rows then run on the selected
@@ -15,9 +15,10 @@ or FAIL; the verdict decides.
 Automatic retries are off in every scope, so every execution counts: a required test passes only if
 its run executed it exactly once, on its device, and it passed. A planned repeat is its own row; it
 may be left unrun for time (runs.txt says so), but if it runs it must pass; so may an extra. A
-diagnostic row (the correction's scroll probe, runs probe_*) starts like an extra, but its outcome and
-its run's exit are only reported: they never count toward the verdict. A skipped test, an interrupted one (started, no outcome) and a run that did
-not exit 0 are failures. Standard library only; Python 3.8+.
+diagnostic row starts like an extra, but its outcome and its run's exit are only reported: they never
+count toward the verdict (no manifest row is a diagnostic since the correction's scroll probe rows,
+runs probe_*, were removed; the handling stays for any later one). A skipped test, an interrupted one
+(started, no outcome) and a run that did not exit 0 are failures. Standard library only; Python 3.8+.
 """
 import os
 import re
