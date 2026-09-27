@@ -1,0 +1,419 @@
+# Places recovery 01: diagnosis, corrections and the verification plan
+
+Date: 2026-09-27. Not production-ready.
+
+**Status: pre-build. No Mac build has run on this branch; every Mac result below is PENDING.**
+Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
+correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
+- diagnoses that build's five failures and one interruption from its logs, keeping what is proven
+  apart from what is a hypothesis (§2);
+- makes one product change, a shared one-stage Places Back that now also answers VoiceOver's escape,
+  replaces the UI tests' scroll helper with one that checks its own progress, and adds a debug-only
+  diagnosis switch (§3);
+- records the lead's ruling on the DEMO badge and the obsolete banner (§4), and why no browser
+  preview was opened (§5);
+- plans four sequential builds on one frozen commit (§6).
+
+Linux cannot compile the SwiftUI app, so no check on the VPS shows the app working. The Linux checks
+of the frozen commit are recorded in §7 when it exists.
+
+## 1. Baseline and provenance
+
+| | |
+| --- | --- |
+| Recovery branch | `places-recovery/verification-20260927T035353Z`, created from `ae908de411859dad61db27aa34a647ff6604a3a4` with `git worktree add` at `/home/proximeet/proximeet-cloud-places-recovery-20260927T035353Z`. Earlier branches and worktrees are untouched |
+| Mac-tested source | `358f59f1204c02fa167d21ebd9e6226d8799ff02`: build `6ab8801175ac3236c0f1514f`, scope `correction`, AUTOMATED VERDICT: FAIL (8 of 13) |
+| `ae908de` against it | One commit on top of `358f59f1` (`git merge-base --is-ancestor` confirms the ancestry). `git diff --name-status 358f59f1204c02fa167d21ebd9e6226d8799ff02 ae908de411859dad61db27aa34a647ff6604a3a4` lists four modified files and nothing else: `ProximeetUITests/PlacesCorrectionTests.swift`, `ProximeetUITests/PlacesReviewTests.swift`, `docs/reports/places-correction-01.md` and `docs/verification/places-review-files.sha256`. No product, project, workflow or script file differs |
+| `ae908de`'s test repairs | Mid-page drags (`dx: 0.5`) in both scroll helpers (at `ae908de`: `PlacesCorrectionTests.swift:589`, `PlacesReviewTests.swift:1170`), a give-up note (`PlacesCorrectionTests.swift:608`), and `minimumTarget = 44 − 0.001` (`PlacesReviewTests.swift:78`) in the review tests only. None ran on a Mac. §3 replaces the helper and the tolerance |
+| Preserved | the approved artwork, fonts, copy, layout, motion, catalog, fictional venue schedule and eligibility policy; DEMO and "Demo · no location or camera used."; no location or camera use; no permission strings |
+| Evidence of build 6ab88011 | `/home/proximeet/proximeet-places-correction-review-6ab88011/Places-Correction-Review.zip`, SHA-256 `c6b68d1000340df24d9c1814560cf62d6fe7657c9d134a379e335c4dff80a9bc` (matches its `.sha256`), with `Places-Correction-Screens.zip` and `Places-Correction-walkthrough.zip`. Log line numbers below are in that package's `logs/` folder |
+
+## 2. Why build 6ab88011 failed: evidence and hypotheses
+
+Code references in this section are to `358f59f1`, as built (`git show 358f59f1:<path>`). The main
+lane's log is `places-ui-review.log` (iPhone 17 Pro Max, 440 pt); the smaller lane's is
+`places-ui-review-device-b.log` (iPhone 17e, 390 pt).
+
+All four scrolling failures used the same helper, `scrollIntoView`
+(`PlacesCorrectionTests.swift:582-604`, and its twin in `PlacesReviewTests.swift:1161`):
+- up to 40 drags, each from y 217 to y 102, pressed at 96 % of the width (`:584`): x 422.4 on the
+  440-pt phone, x 374.4 on the 390-pt phone;
+- no frame, position or screenshot was logged inside the loop, so where each loop stopped is
+  unknown.
+
+| Row | Classification | Confidence |
+| --- | --- | --- |
+| C3 | Time budget | Proven |
+| C15 | Floating-point representation in an exact comparison | Proven |
+| C2 | Harness; the mechanism is unproven | High that it is not a product defect; medium on the mechanism |
+| C12 | Harness; the mechanism is unproven | Medium |
+| C13 | Harness; the mechanism is unproven | Medium |
+| C1 | Open | — |
+
+**C3 (main, the default-text footers): the run's time bound. Proven.**
+- The run `correction_main` (C1, C2, C3) was bounded at 600 s (`places-ui-review.log:360`). Its
+  test runner printed "Running tests..." at 02:42:33.8 (`:378`), about five minutes after the run
+  began.
+- C1 started at 02:43:10.08 (`:386`), C2 at 02:45:59.78 (`:1122`) and C3 at 02:47:16.06 (`:1673`).
+  The bound stopped the run 6.46 s into C3's launch (`:1682-1683`), before any assertion, and the
+  run exited 142 (`:2222`).
+- C1 and C2 together took 246 s. The analysis of their step timestamps puts about 150 s of that in
+  the two loops that stalled.
+- The same test on the smaller phone (C14) passed in 27.2 s.
+- Not ruled out: nothing about the product. The approved 440-pt footer at the default text is
+  simply unverified. Why the main runner needed about five minutes to start is unknown.
+
+**C15 (smaller, Back routes): floating-point representation. Proven.**
+- The failing assertion is `XCTAssertGreaterThanOrEqual(tab.frame.height, 44)`
+  (`PlacesReviewTests.swift:897`), logged at `places-ui-review-device-b.log:2476`:
+  "43.99999999999997 is less than 44.0".
+- 43.99999999999997 is 44 − 2.84 × 10⁻¹⁴, four units in the last place below 44. The tab's layout
+  minimum is 44 (`PlacesView.swift:502`, `.frame(maxWidth: .infinity, minHeight: 44)`).
+- A frame at a fractional position gives exactly that value: `(y + 44) − y` is 43.99999999999997 for
+  y = k + 2/3 with k from 212 to 255, and 44.0 for k from 128 to 211 (checked in Python on the VPS).
+- It came right after `places.back.doubleTap()` from Afterglow's detail
+  (`PlacesReviewTests.swift:383`). At `358f59f1`, going back from a detail scrolls browsing to the
+  originating ticket's end (`PlacesView.swift:284`), which can leave the tabs at a fractional y.
+  `ea14c001` had no such scroll, and build 6ab8639c passed this test (P8, 64.0 s).
+- Classification: the test's exact comparison, not a product defect. A product change (the scroll on
+  Back) exposed it.
+- The same hazard was left at `ae908de` in `PlacesCorrectionTests.swift:490`
+  (`XCTAssertGreaterThanOrEqual(button.height, 44, …)`); `ae908de` changed only the review tests.
+
+**C2 (main, largest text): the harness. The mechanism is unproven.**
+- Decisive: C2 scrolled the same page (Now, 440 pt, largest text), on the same device, with the same
+  helper and x, as C1's first loop, which reached View place in 14 drags (`places-ui-review.log`
+  lines 401–570). C2 made 40 drags (lines 1151–1658) and failed at `PlacesCorrectionTests.swift:176`
+  (`:1669`): "Common Ground: View place reachable."
+- The only difference in app state is a tap on the Now tab, which was already selected. That tap
+  changes nothing: `DemoFlow.choosePlaceCategory` returns false for the selected category
+  (`DemoFlow.swift:280`).
+- What differed was the pace. Of C2's drags that started within 0.2 s of the previous release, 16
+  of 23 were followed by at least 0.2 s of app activity. In C1's loops that happened once, and in
+  build 6ab8639c's passing largest-text loop on the 440-pt phone (left-margin drags, `dx` 0.04)
+  never, in 9 such drags. These counts come from the XCTest step timestamps; they are a
+  correlation, not a mechanism.
+- Not ruled out: whether the page moved backwards or stood still (no frames), and which mechanism
+  took the drags. The candidates:
+  - **The scroll indicator.** Public user sources (not Apple documentation) describe pressing on
+    the iOS scroll bar to grab it and scrub the page. The drags pressed about 11.6 pt left of the
+    visible 3-pt bar on the 440-pt phone (9.6 pt on the 390-pt phone). The bar stays visible about
+    1.1 s after the page stops, so a drag that follows quickly lands while it is shown. A grabbed
+    bar dragged upward scrolls the page back, which fits 40 drags without progress. The bar's touch
+    target and hold time are not documented, and a grab was never observed.
+  - **The window-wide repeat-tap guard** (`RepeatTapGuard.swift:56`, `tapCount > 1`, which cancels
+    the touch, `:49`). It existed unchanged in build 6ab8639c, whose left-margin drags with gaps of
+    0.15–0.19 s were not swallowed, so it is unlikely. C2's shortest gaps were 0.09 s, so it is not
+    excluded.
+  - **Unlikely: the new edge pan** (`PlacesEdgeBack.swift:141-148`), which every scroll-view pan
+    waits for. It fails at once for a touch that does not start at the leading edge, and the C10
+    recording shows a right-edge drag moving the page 107 pt for a 115-pt finger movement from the
+    first changed frame. A timing interaction with it at the largest text was not tested.
+
+**C12 and C13 (smaller, largest text): the harness. The mechanism is unproven.**
+- C12's first scroll, 40 drags from (374.4, 217) to (374.4, 102)
+  (`places-ui-review-device-b.log` lines 926–1433), never brought View place into range; it failed
+  at `PlacesCorrectionTests.swift:210` (`:1444`).
+- C13's first two drags (lines 1465 and 1478, 1.11 s apart) reached its tab. After the tap on Now
+  (line 1491), 40 more (lines 1503–2010) did not reach View place; it failed at
+  `PlacesCorrectionTests.swift:176` (`:2021`).
+- Both show C2's signature: of the drags that started within 0.2 s of a release, 17 of 18 (C12) and
+  15 of 19 (C13) were followed by at least 0.2 s of app activity, and the press-to-press intervals
+  alternate (about 1.12 / 1.57 s in C12, 1.18 / 1.7 s in C13).
+- Not ruled out: reaching View place at the largest text on the 390-pt phone was never observed in
+  this build. Forty drags against the roughly 15 the page needs suggest movement backwards, not just
+  lost drags.
+
+**C1 (main, largest text, where a stage starts): open.**
+- The first loop, on browsing, reached View place in 14 drags (lines 401–570), and the detail it
+  opened started at its beginning (capture). The second loop, 40 drags on Common Ground's detail
+  (lines 600–1107), never reached the detail's last line; the test failed at
+  `PlacesCorrectionTests.swift:219` (`:1118`).
+- C2's timing signature is absent: of the 53 drags in C1 that followed another drag, only 3 started
+  within 0.2 s of its release. The main simulator was slower instead (each drag took 1.2–3.2 s),
+  most likely from the other lane's load on the shared Mac.
+- **No drag in this build ever scrolled a detail, at any text size.** Two product changes on the
+  detail are therefore unobserved rather than cleared:
+  - scrolling after `revealStart`'s animated `scrollTo(.top)` (`PlacesView.swift:276-291`);
+  - scrolling while iOS 26's swipe-from-anywhere pop is held off on inner stages
+    (`PlacesEdgeBack.swift:83-93`, `contentPop.isEnabled = !innerStage` at `:92`). A disabled
+    recognizer should not block others; that is expected, not shown.
+- Build 6ab8639c (left-margin drags, before `PlacesEdgeBack` and `revealStart` existed) passed the
+  largest-text reachability tests on both phones (P3, P11). Between its commit and `358f59f1` the
+  product changed only in `PlacesView.swift` and the new `PlacesEdgeBack.swift`, including the
+  ticket that the detail shares with browsing.
+- Neither a harness cause nor a product cause is established. There is no give-up screenshot and no
+  frame.
+
+**What the next build decides.**
+- **The new scroll helper (§3)** prints one `PLACES_SCROLL` line per drag (the touch-down, the
+  travel, the target's top before and after, how far the header moved, any sideways movement, the
+  stage's last line and the bar). A failure is tagged:
+  - `Scroll PRODUCT:` when the page has reached its end (the stage's last line is above the bar) or
+    its start with the element still out of range: a product finding;
+  - `Scroll HARNESS:` when a drag moved the page the wrong way, sideways, further than the finger
+    twice, or not at all twice, or the screen changed: the per-drag trace then shows which drag.
+
+  It attaches a note and a screenshot either way. Its drags touch down inside the content column,
+  away from both screen edges and every control, at least 0.7 s after the previous lift, so both
+  suspected mechanisms are avoided. If C1, C2, C12 and C13 pass with it, that shows the Places
+  pages reach their targets; it does not say which mechanism stopped the old drags.
+- **The optional probe**, `PlacesCorrectionTests/testScrollDiagnosticProbe` (C16 on main, C17 on
+  the smaller phone; kind "diagnostic": it runs last on each device only when it fits, and its
+  outcome is reported but never counts toward a verdict), exists to answer that. At the largest text, on
+  browsing (Now) and on Common Ground's detail, each launched fresh at its top, it makes five drags
+  from y 217 to y 102 in each pattern and prints a `PLACES_PROBE` line per drag (the gap since the
+  previous release, and how far the header moved):
+  - A, `edge-fast`: the old helper's, at 0.96 of the width, the next drag at once;
+  - B, `edge-spaced`: the same, with 1.5 s between one release and the next drag;
+  - C, `column-spaced`: in the page's column, on no control, 0.7 s apart;
+  - on the detail, C again with the debug-only `-ProximeetPlacesKeepContentPop YES` (§3), which
+    leaves iOS 26's swipe-from-anywhere pop enabled.
+
+  It records and does not judge. How to read it:
+  - A stalling where B moves points to the pace at the edge.
+  - A and B stalling where C moves points to the edge position.
+  - C stalling on the detail only without the switch points to the held-off pop.
+  - C stalling on the detail with and without it points to the app.
+
+  It cannot by itself tell the scroll indicator from the repeat-tap guard, since both need a quick
+  second touch. PENDING. If its run does not fit before the deadline it is listed as not run, and
+  nothing required depends on it.
+
+## 3. The corrections in this recovery
+
+Each item is the intended behaviour and the rows that check it. No result exists yet. Files in
+this section are cited by symbol: several changed while this report was written.
+
+1. **One shared, one-stage Places Back (product).**
+   - `DemoFlow.placesBack(from:)` (domain, `@discardableResult`, mutating) goes back one stage from
+     the stage the request was made on: browsing to the actual Signal (`leavePlaces()`), a detail to
+     its originating category (`leavePlaceDetail()`), the explanation to Common Ground's detail
+     (`backToPlace()`). A request from a stage that is no longer showing, or from off Places, does
+     nothing, so one request never goes back two stages. The intent, approach, introduction and
+     category are kept. `DemoSession.placesBack(from:)` forwards to it.
+   - Every Back on Places goes through `PlacesView.back(from:)` and that function: the header's
+     Back, the bottom Back on browsing (before, it called `leavePlaces()` directly), "Back to
+     places", "Back to place", a completed swipe from the leading edge, and VoiceOver's escape.
+   - **VoiceOver's escape is new.** Each Places stage is one unlabelled accessibility container,
+     `places.screen` (`.accessibilityElement(children: .contain)`), which owns the escape action
+     and sits above every element, so the stack's own pop (which would leave the whole destination
+     for Signal) is not what answers it. Escape is ignored while a completed swipe is finishing, as
+     a second swipe is. The elements keep their identifiers, labels, traits and order.
+   - Motion is unchanged: browsing leaves by the stack's native pop; an inner stage dissolves
+     (240 ms, none under VoiceOver) or, after a completed swipe, changes at once.
+   - This supersedes `places-correction-01.md` §3's "VoiceOver's escape gesture is not handled by
+     Places", which describes `358f59f1`.
+   - Checked by:
+     - on Linux (§7): `PlacesBackTests` (the route from every stage, requests from a stage no longer
+       shown, nothing off Places), `PlacesBackWiringTests` (reads `PlacesView.swift` as text: one
+       `places.screen` container owning the escape action, and every Back control through the
+       shared route), and the random-action `DemoFlowInvariantTests`;
+     - on the Mac: C11, which also asserts exactly one `places.screen` on browsing, a detail and the
+       explanation, with the stage's headline or name, header Back and bottom actions found by
+       queries scoped to it; C10 and C15 (swipes, the Back controls, a double tap on the header
+       Back); and every Places UI test, which would fail to find its elements if the container hid
+       them.
+
+     That is the structure escape relies on, not escape itself. XCUITest cannot perform VoiceOver's
+     escape and VoiceOver does not run in the Simulator: **PENDING FOUNDER**, on a device (§8).
+2. **A scroll helper that checks its own progress (tests).** It replaces `scrollIntoView` in
+   `PlacesCorrectionTests` and `PlacesReviewTests` with one identical block.
+   - Where it touches: a half, a quarter or three quarters across the page's column (81 pt or more
+     from either screen edge on the 390-pt phone), clear of every control by 12 pt, and off
+     browsing's ticket unless no other point exists. It waits at least 0.7 s after each lift and
+     prefers a point 60 pt from the last drag.
+   - What it checks: after each drag, the target's settled frame. The page must move the right way
+     by a quarter of the drag and at least 2 pt; no drag may carry the element past the far side of
+     the accepted range. The acceptance rule itself is unchanged.
+   - What it reports: the `PLACES_SCROLL` trace and the PRODUCT or HARNESS verdict (§2). It still
+     returns `Bool`, so no call site changed.
+   - Checked by: C1, C2, C12 and C13 (build 1), and every Places review row that scrolls, among them
+     P3 and P11 (build 2). On Linux it can only be type-checked against a shim of the XCUITest types
+     (§7), so the real `XCUIElement.snapshot()` and `XCUIElementSnapshot` signatures are unconfirmed
+     until the Mac compiles them.
+3. **A documented 1e-6 epsilon for the 44-pt target checks (tests).** A 44-pt control may measure
+   44 − 1e-6 or more; a real shortfall is far larger than any floating-point error. It replaces
+   `ae908de`'s `44 − 0.001` and the exact comparison it left in `PlacesCorrectionTests`. Checked by
+   C15 (= P8) and every row that asserts a 44-pt target.
+4. **A debug-only diagnosis switch (app, DEBUG builds only).** With `-ProximeetPlacesKeepContentPop
+   YES` in a DEBUG build's launch arguments, `PlacesEdgeBack` leaves iOS 26's
+   `interactiveContentPopGestureRecognizer` enabled on a detail and the explanation instead of
+   holding it off. Without the switch nothing changes, and a Release build never reads it (`#if
+   DEBUG`). Only the probe's last detail pattern uses it (C16, C17, diagnostic), and the probe records
+   rather than judges, so nothing asserts the switch's effect. The default behaviour, without it, is
+   what C10 and C11 check.
+
+Nothing else in the product changed: no copy, layout, motion, artwork, catalog, eligibility,
+permission, location or camera behaviour.
+
+## 4. The DEMO disclosure and the banner
+
+**The lead's ruling.** The earlier Project Halo doctrine required a literal "PROTOTYPE — mock data
+only." banner, gated on a `PROTOTYPE` build condition, with brand strings in `BrandConfig.swift` and
+its own bundle identifier. For these rebuilt screens that literal requirement is obsolete. No banner
+is added, because no approved design has one: Welcome's approved handoff says "do not add an
+unapproved banner that changes the settled Welcome composition"
+(`docs/design/welcome-approved/CLAUDE_PROMPT.md:115`), and Welcome's runtime check 2.5 is "no
+banner, badge, navigation bar or demo label on Welcome"
+(`docs/verification/welcome-runtime-review.md:36`).
+The disclosure the banner served is not weakened: the app must make clear it is a demo with
+fictional data that uses no location or camera. The fictional venue schedule, the eligibility rules
+and the no-location, no-camera behaviour are kept. The ruling is now in `CLAUDE.md:7` and in
+`places-correction-01.md` §3.
+
+**Where the app discloses it.**
+
+| Screen | What it shows | Where |
+| --- | --- | --- |
+| Welcome | No badge, as approved. The only way on, into Birthday, is "Continue the demo (no account)" | `Proximeet/Scenes/WelcomeView.swift:223` |
+| Pass | DEMO badge; "No age or identity verification is performed." | `Proximeet/Scenes/PassView.swift:92`, `:48-49` |
+| Guest List | DEMO PROFILE badge | `Proximeet/Scenes/GuestListView.swift:137` |
+| Wristband | DEMO badge | `Proximeet/Scenes/WristbandView.swift:99` |
+| Signal | DEMO badge | `Proximeet/Scenes/SignalView.swift:121` |
+| Places, every stage | DEMO badge in the shared header (`places.demoBadge`) | `Proximeet/Scenes/PlacesView.swift`, `header(_:)` |
+| Places browsing | "Fictional venues · demo Thursday, 8 pm" | `ProximeetDomain/Sources/ProximeetDomain/Places.swift:10` |
+| Places tickets | "Fictional venue · Café", "… · Listening lounge", "… · Creative workshop" | `Places.swift:68-70` |
+| Places explanation | "Fictional venue · Today, 6–10 pm" and "Demo · no location or camera used." | `Places.swift:194`, `:200` |
+
+Birthday shows no badge, as approved; it is reached only through Welcome's demo route.
+- The bundle identifier is the provisional `com.proximeet.demo`
+  (`Proximeet.xcodeproj/project.pbxproj:498`, `:525`), as `docs/tasks/TASK_01.md:6` requires. There
+  is no `BrandConfig.swift` and no `PROTOTYPE` condition.
+- The project sets no permission usage strings (`scripts/validate_project.py:640-642`). The
+  validator forbids location APIs (`:954-960`) and the legacy bundle identifier in every non-`docs/`
+  text file (`:973-978`).
+
+## 5. A browser preview: not opened
+
+**Codemagic App Preview.**
+- The docs say: "This feature is available for teams only."
+  (docs.codemagic.io/yaml-distributing/app-preview/, read 2026-09-27).
+- This account appears to be personal: it builds on the 500 free monthly M2 minutes, which Codemagic
+  reserves for personal accounts. The API calls available did not confirm it; they return only an
+  owner id.
+- Enabling it would need a paid team ("Teams is a paid feature on Codemagic") and a transfer of the
+  app into it, which is permanent ("Once an application has been transferred to a team, it cannot
+  be transferred back to the personal account or to other teams"). The assignment forbids both.
+- Also, Quick Launch is offered next to a `.app` artifact of a successful build. None of the eight
+  builds whose artifact lists were saved published one, and build 6ab88011 failed.
+
+**Appetize.**
+- It needs the founder's own sign-in or an Appetize API token. There is no token on the VPS. The
+  only one known is a GitHub Actions secret on the legacy repository, which is write-only and usable
+  only by that repository's own workflow runs.
+- The agent could not operate a browser session and did not test one.
+
+**The upload-ready artifact.**
+
+| | |
+| --- | --- |
+| File | `Proximeet-Debug-iphonesimulator-358f59f1204c.zip`, inside `Places-Correction-Review.zip` at `Places-Correction-Review/app/` |
+| Size and SHA-256 | 24,732,698 bytes; `48e1d333b758277a3f07ea4cddc1ebf47e576be36ce2b6724911746a623260f8` (matches its `.sha256`) |
+| Source | `358f59f1`, built by build 6ab88011: unsigned Debug, iOS Simulator, arm64 only, bundle `com.proximeet.demo`, minimum iOS 17.0, iPhone Simulator SDK 26.5 |
+| Label | "Prototype — Places verification pending" |
+| Caution | It predates this recovery's product change (§3): it has the one-stage Back controls and swipe, not the escape action |
+
+**The founder's steps, if he chooses to preview it.** A plain launch on the real route, with no
+test fixtures.
+1. Sign in at appetize.io in your own browser, on the account that already holds the earlier
+   preview.
+2. Before uploading, go to Organization → Session Defaults → Permissions (Legacy). Set **run** to
+   authenticated, and the same for debugLog, networkProxy and networkIntercept, so the new build is
+   never runnable by anyone who has its link.
+3. Upload the inner file, `Proximeet-Debug-iphonesimulator-358f59f1204c.zip`, not the review zip,
+   with the note "Prototype — Places verification pending". It creates a new app,
+   `com.proximeet.demo`. Do not update the earlier preview's entry. If the plan refuses a second
+   app, stop and decide.
+4. Open the build → Settings → App Permissions and confirm **run = authenticated**.
+5. Open the app's link while signed in. Choose the iPhone 17 Pro Max and iOS 26.0, and launch it
+   with no launch arguments. It opens at Welcome: More options → "Continue the demo (no account)" →
+   Birthday → the Pass → the Guest List → the Wristband → Signal → Continue preview → Places.
+6. Optional, your decision: to let the agent drive sessions without a browser, generate an API token
+   (Organization → API Tokens, Developer role) and put it in a file on the VPS readable only by the
+   agent's account, never in git or chat. Whether a token-started session may run a build set to
+   authenticated is inferred, not documented, and sessions use your metered minutes.
+
+**Parity gaps.**
+- Build 6ab88011's tests ran on iOS 26.5 simulators. Appetize's device list (fetched 2026-09-27)
+  offers the iPhone 17 Pro Max on iOS 26.0 only, its highest version, so a preview is not the tested
+  runtime. That the app installs there is inferred from its iOS 17.0 minimum.
+- Appetize has no iPhone 17e.
+- A plain launch shows the default text size, so the largest-text rows are not reproduced by it.
+
+## 6. The build plan
+
+Four builds, one at a time, in this order, all on one frozen commit. That commit holds this
+recovery's product, test, manifest, harness and workflow changes; it is pinned by
+`PLACES_EXPECTED_COMMIT`, and the source gate rejects anything else.
+
+| | |
+| --- | --- |
+| Frozen commit | PENDING |
+| Workflow | `proximeet-places-review-35`, a 35-minute twin of `proximeet-places-review` that sets `PLACES_UI_DEADLINE_SECONDS=1680`, with the harness accepting 600–1680 s. At `ae908de` the workflow's limit was 28 minutes (`codemagic.yaml:447`) and the harness accepted 600–1380 s only (`scripts/places_review.sh:103-110`, `:565-567`); build 1 is predicted to finish its UI tests near a 1380-s deadline |
+| Machine | Mac mini M2 (`mac_mini_m2`), Xcode 26.6, unsigned simulator; retries off |
+| Order | A build starts only after the previous one has passed and its verdict has been read |
+
+Rows by build and device, with each run's bound in seconds, as in
+`docs/verification/places-review-manifest.tsv` when this was written. The frozen commit's manifest
+governs.
+
+| Build | Scope | iPhone 17 Pro Max ("main") | Other device |
+| --- | --- | --- | --- |
+| 1 | `correction` | `correction_first` [C3] 600 → `correction_main` [C1, C2] 700 → `correction_signal` [C4, C5, C9, C6, C7, C8] 600 → `probe_main` [C16, diagnostic] 300 | iPhone 17e: `journey` [C10, recorded] 420 → `correction_small` [C12, C13, C14, C15] 780 → `correction_small_b` [C11] 240 → `probe_small` [C17, diagnostic] 300 |
+| 2 | `sweep_places` | `journey` [P1, recorded, full holds] 720 → `places_main` [P2–P6] 600 | iPhone 17e: `places_small` [P9–P13] 900 |
+| 3 | `sweep_signal` | `signal_main` [S3, S4, S5, S6, S8, S9, S10, S12, S13] 900 | iPhone 17e: `signal_small` [S15, S16] 420 |
+| 4 | `regressions`, rows unchanged | `main_early` [M1, M2] 780 → `main_rest` [M3–M13] 1000 | device B (a Pro Max clone): `paste_b` [B1] 480 → `regressions_b` [B2–B13] 1000 → `paste_repeat_b` [B14, repeat, time-gated] 300 → `hardware_keys_b` [B15] 240 |
+
+- **Coverage.** Build 1 now requires C9 and C15: 15 required executions. Seven of them are the same
+  check as an earlier row: same method, device, commit and kind of run (P7 = C9, P8 = C15, S1 = C4,
+  S2 = C5, S7 = C6, S11 = C7, S14 = C8). The other 49 earlier executions run in builds 2–4
+  (11 + 11 + 27). In all, 64 required executions, plus the optional B14, C16 and C17. No required
+  coverage is dropped. `docs/verification/places-recovery-coverage.tsv` lists every execution of
+  the four builds and the earlier row each counts as, and `scripts/places_recovery_reconcile.py`
+  joins the four builds' results by it.
+- **Predicted minutes, rounded** (from the step timings of builds 6ab84ede to 6ab88011; the
+  durations of C1, C2, C12 and C13 are estimates, since no passing run of them exists): build 1
+  about 25 (worst 30), build 2 about 21 (26), build 3 about 18 (22), build 4 about 27 (28). In all
+  about 91, worst 106. Build 1's estimate was made for a slightly different order of its main runs.
+
+**Budget.**
+
+| | |
+| --- | --- |
+| Rate | Mac mini M2, pay as you go: $0.095 a minute, published at codemagic.io/pricing, read 2026-09-27 |
+| Caps | 120 build minutes and USD 15 for the four builds |
+| Free minutes | 15 rounded (28.1 exact) of the account's 500 were left before this assignment (`places-correction-01.md` §6, read from the account's build list). The reset date is unknown |
+| Cost, if every minute past the free 15 is billed | about $7.22 for the central 91 (76 billed), about $8.65 for the worst 106 (91 billed) |
+| Cost at the cap | $11.40 for 120 minutes, even if no free minute applied. USD 15 buys about 158 minutes, so the 120-minute cap binds first |
+| Guard | Four 35-minute limits total 140 minutes, more than the cap. A build therefore starts only while at least 35 minutes remain under it |
+
+Codemagic's pricing and billing pages do not say how minutes are rounded; the rounded figures here
+round each build up to the whole minute, as this project's usage counter does. Whether the account
+can run past its free minutes was not checked from the VPS.
+
+## 7. Results
+
+**PENDING.** Nothing here has run.
+
+| Build | Scope | Codemagic build | Commit | Minutes | Result |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `correction` | PENDING | PENDING | PENDING | PENDING |
+| 2 | `sweep_places` | PENDING | PENDING | PENDING | PENDING |
+| 3 | `sweep_signal` | PENDING | PENDING | PENDING | PENDING |
+| 4 | `regressions` | PENDING | PENDING | PENDING | PENDING |
+
+Linux checks of the frozen commit, each PENDING: the domain suite (`swift test`), the project
+validator, the source-gate manifests (`scripts/places_source_manifests.py --check`), and the UI
+tests type-checked against an XCUITest shim. None of them shows the app working.
+
+## 8. Not verified by automation
+
+- VoiceOver, hands-on, including the new escape action from each stage: browsing → Signal; a detail
+  → its category; the explanation → Common Ground's detail → browsing → Signal; the same with Reduce
+  Motion on. XCUITest cannot perform the escape and VoiceOver does not run in the Simulator.
+- The system Reduce Motion setting (only the app's preview flag is tested).
+- Composing keyboards.
+- A physical device: smoothness and gestures.
+- The browser preview (§5).
+- Visual approval, which is the founder's.

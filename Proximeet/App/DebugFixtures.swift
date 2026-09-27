@@ -21,9 +21,14 @@ import ProximeetDomain
 /// through Preview check-in, which only an eligible intent at Common Ground opens: otherwise the
 /// fixture stays on the detail, as the app would). They need an explicit band and approach too.
 ///     -ProximeetReduceMotionPreview YES
+///     -ProximeetPlacesKeepContentPop YES
 ///
-/// The last one is an app-level presentation override for captures; it does not change
-/// the system Reduce Motion setting.
+/// `-ProximeetReduceMotionPreview` is an app-level presentation override for captures; it does not
+/// change the system Reduce Motion setting. `-ProximeetPlacesKeepContentPop` is a diagnosis switch
+/// for the Places scroll probe, not a product mode: `PlacesEdgeBack` then leaves the navigation
+/// stack's swipe-from-anywhere pop (iOS 26) enabled on a detail and the explanation instead of
+/// holding it off, so a scroll can be compared with and without it. Without the switch nothing
+/// changes; Release builds never read it.
 enum DebugLaunch {
     static func session(arguments: [String]) -> DemoSession? {
         guard let name = value(after: "-ProximeetFixture", in: arguments),
@@ -46,6 +51,13 @@ enum DebugLaunch {
     static func prefersReducedMotionPreview(arguments: [String]) -> Bool {
         value(after: "-ProximeetReduceMotionPreview", in: arguments) == "YES"
     }
+
+    static func keepsPlacesContentPop(arguments: [String]) -> Bool {
+        value(after: "-ProximeetPlacesKeepContentPop", in: arguments) == "YES"
+    }
+
+    /// `-ProximeetPlacesKeepContentPop YES` in this process's launch arguments, read once.
+    static let launchKeepsPlacesContentPop = keepsPlacesContentPop(arguments: ProcessInfo.processInfo.arguments)
 
     private static func value(after flag: String, in arguments: [String]) -> String? {
         guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else {

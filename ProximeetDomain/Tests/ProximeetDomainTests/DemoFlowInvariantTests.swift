@@ -27,6 +27,8 @@ final class DemoFlowInvariantTests: XCTestCase {
         case leavePlaceDetail
         case backToPlace
         case exploreOtherPlaces
+        /// Places' shared one-stage Back, asked from any scene (stale requests included).
+        case placesBack(DemoScene)
         case reconcileRoute
         /// The current scene's own forward step (legacy or approved), so deep paths are reached by
         /// design rather than by luck: `choice` picks the intent and, on Signal, Places or the
@@ -67,7 +69,12 @@ final class DemoFlowInvariantTests: XCTestCase {
         case 19: return .choosePlaceCategory(PlaceCategory.allCases[rng.next(below: 3)])
         case 20: return .openPlaceDetail
         case 21: return .previewCheckIn
-        case 22: return [.leavePlaces, .leavePlaceDetail][rng.next(below: 2)]
+        case 22:
+            switch rng.next(below: 3) {
+            case 0: return .leavePlaces
+            case 1: return .leavePlaceDetail
+            default: return .placesBack(DemoScene.allCases[rng.next(below: DemoScene.allCases.count)])
+            }
         case 23: return [.backToPlace, .exploreOtherPlaces][rng.next(below: 2)]
         case 24: return .reconcileRoute
         case 25:
@@ -123,6 +130,7 @@ final class DemoFlowInvariantTests: XCTestCase {
         case .leavePlaceDetail: flow.leavePlaceDetail()
         case .backToPlace: flow.backToPlace()
         case .exploreOtherPlaces: flow.exploreOtherPlaces()
+        case .placesBack(let scene): flow.placesBack(from: scene)
         case .reconcileRoute: flow.reconcileRoute()
         case .progress(let choice):
             switch flow.currentScene {

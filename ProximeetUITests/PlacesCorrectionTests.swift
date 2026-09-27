@@ -42,6 +42,11 @@ final class PlacesCorrectionTests: XCTestCase {
 
     private static let largestText = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
 
+    /// 44 pt, less floating-point error, for every 44-pt target check: build 6ab88011 measured a
+    /// 44-pt tab as 43.99999999999997, 4 ULPs below 44, once a fractional scroll offset had moved it.
+    /// 1e-6 pt is far above that error and far below anything that can be drawn.
+    private static let minimumTarget: CGFloat = 44 - 1e-6
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         try XCTSkipUnless(
@@ -265,15 +270,23 @@ final class PlacesCorrectionTests: XCTestCase {
     /// for Dating", and each completed swipe goes back exactly one stage. A double tap on the header
     /// Back stops one stage up. Last, with the app's Reduce Motion preview flag, a swipe from a detail
     /// still goes back one stage and an uncompleted one still changes nothing.
+    ///
+    /// On browsing, a detail and the explanation there is exactly one `places.screen` container, and
+    /// the stage's headline (or venue name), its header Back and its bottom actions are found by
+    /// queries scoped to it: the container that owns Places' VoiceOver escape action is an ancestor
+    /// of the stage's elements. That is the structure escape relies on, not escape itself: XCUITest
+    /// cannot perform VoiceOver's escape, and VoiceOver does not run in the Simulator.
     func testBackGesturesMatchTheBackControls() throws {
         let app = launch(fixture: "places", category: "later")
         let places = CorrectionPlaces(app: app)
         let signal = CorrectionSignal(app: app)
         let band = CorrectionWristband(app: app)
         waitForLabel(places.headline, "Find your kind of place.")
+        assertInsideScreen(app, ["places.headline", "places.back", "places.viewPlace", "places.secondary"], "Browsing")
 
         // A detail: a cancelled swipe, a mid-screen swipe, then a completed swipe.
         openDetail(places, app, "Afterglow")
+        assertInsideScreen(app, ["place.name", "places.back", "place.primary", "place.secondary"], "Afterglow's detail")
         edgeSwipe(app, completing: false)
         hold(0.6)
         XCTAssertEqual(places.name.label, "Afterglow", "Not completed: still Afterglow's detail.")
@@ -304,6 +317,8 @@ final class PlacesCorrectionTests: XCTestCase {
         openDetail(places, app, "Common Ground")
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
+        assertInsideScreen(app, ["explanation.headline", "places.back", "explanation.primary", "explanation.secondary"],
+                           "The explanation")
         edgeSwipe(app, completing: false)
         hold(0.6)
         XCTAssertTrue(places.explanationHeadline.exists, "Not completed: still the explanation.")
@@ -394,6 +409,117 @@ final class PlacesCorrectionTests: XCTestCase {
         capture("correction-gesture-reduce-motion-to-later-fixture", reduced)
     }
 
+    // MARK: - Scroll diagnosis
+
+    /// Diagnosis only, never required (its manifest kind is "extra"): how drags scroll Places at the
+    /// largest text on this phone. It records and does not judge, so it passes whenever the app
+    /// launches and each stage opens. Browsing (fixture `places`, Now) and Common Ground's detail
+    /// (fixture `place-detail`, Now) are launched fresh, at their top, for each pattern of five drags
+    /// from y 217 up to 102 (press 0.05 s, slow, held 0.2 s before release):
+    /// - "edge-fast", the old helper's: 0.96 of the width across, the next drag at once;
+    /// - "edge-spaced", the same with 1.5 s between one drag's release and the next;
+    /// - "column-spaced", in the page's column on a point that is not a control, chosen as
+    ///   `scrollTouchPoint` chooses it (browsing's ticket only when nothing else is free), from the
+    ///   same height when it can, 0.7 s apart;
+    /// - last, on the detail, "column-spaced-keep-pop": the same with `-ProximeetPlacesKeepContentPop
+    ///   YES`, the DEBUG switch that leaves iOS 26's swipe-from-anywhere pop on in a detail.
+    /// For every drag the header's Back (it scrolls with the content) is read before and after, and a
+    /// `PLACES_PROBE` line printed: its gap is the time since the previous release (for the first
+    /// drag, since the stage showed). One note per stage, and a screenshot after each pattern.
+    func testScrollDiagnosticProbe() throws {
+        let started = Date()
+        for stage in ["browse", "detail"] {
+            var lines: [String] = []
+            for pattern in ProbePattern.allCases {
+                lines += probeScrolling(stage, pattern.rawValue, pattern)
+            }
+            if stage == "detail" {
+                lines += probeScrolling(stage, "column-spaced-keep-pop", .columnSpaced,
+                                        extra: ["-ProximeetPlacesKeepContentPop", "YES"])
+            }
+            attachNote("Scroll probe, \(stage), largest text:\n" + lines.joined(separator: "\n"))
+        }
+        print("PLACES_PROBE_DONE \(Self.pt(CGFloat(Date().timeIntervalSince(started)))) s")
+    }
+
+    private enum ProbePattern: String, CaseIterable {
+        case edgeFast = "edge-fast"
+        case edgeSpaced = "edge-spaced"
+        case columnSpaced = "column-spaced"
+    }
+
+    /// One pattern: a fresh launch at the largest text, five drags, a line for each (printed and
+    /// returned) and a screenshot. Reads with `snapshot()`, so a Back that has gone is recorded, not
+    /// failed.
+    private func probeScrolling(_ stage: String, _ label: String, _ pattern: ProbePattern,
+                                extra: [String] = []) -> [String] {
+        let detail = stage == "detail"
+        let app = launch(fixture: detail ? "place-detail" : "places", category: "now", extra: Self.largestText + extra)
+        let places = CorrectionPlaces(app: app)
+        if detail {
+            waitForLabel(places.name, "Common Ground")
+        } else {
+            waitForLabel(places.headline, "Find your kind of place.")
+        }
+        var lifted = Date()
+        waitQuietly(0.5)
+        let barID = detail ? "place.primary" : "places.secondary"
+        let width = app.frame.width
+        let content = min(376, width - 64), column = (width - content) / 2 + content / 2
+        let pause: TimeInterval
+        switch pattern {
+        case .edgeFast: pause = 0
+        case .edgeSpaced: pause = 1.5
+        case .columnSpaced: pause = 0.7
+        }
+        var lines = ["\(label), \(Int(width.rounded())) pt\(extra.isEmpty ? "" : ", " + extra.joined(separator: " ")):"]
+        var previous: [CGPoint] = []
+        func header() -> CGFloat? {
+            try? places.back.snapshot().frame.minY
+        }
+        func text(_ value: CGFloat?) -> String {
+            value.map { Self.pt($0) } ?? "gone"
+        }
+        for drag in 1...5 {
+            var x = width * 0.96, y0: CGFloat = 217, tier = "edge"
+            if pattern == .columnSpaced {
+                x = column
+                tier = "column middle: nothing free"
+                if let look = try? scrollLook(places.back, barID: barID, app), let bar = look.bar,
+                   let touch = scrollTouchPoint(look, travel: 115, fingerUp: true, bandTop: 72, bandBottom: bar.minY - 13 - 10,
+                                                awayFrom: previous, around: 217) {
+                    x = touch.point.x
+                    y0 = touch.point.y
+                    tier = touch.tier
+                }
+            }
+            let quiet = Date().timeIntervalSince(lifted)
+            if quiet < pause {
+                waitQuietly(pause - quiet)
+            }
+            let before = header()
+            let gap = Date().timeIntervalSince(lifted)
+            let y1 = y0 - 115
+            let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            origin.withOffset(CGVector(dx: x, dy: y0))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: x, dy: y1)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            lifted = Date()
+            previous = [CGPoint(x: x, y: y0), CGPoint(x: x, y: y1)]
+            let after = header()
+            var moved = "n/a"
+            if let before, let after {
+                moved = Self.pt(before - after)
+            }
+            let entry = "PLACES_PROBE \(stage) \(label) drag \(drag) x=\(Self.pt(x)) y=\(Self.pt(y0))→\(Self.pt(y1)) "
+                + "gapBefore=\(Self.pt(CGFloat(gap))) headerBefore=\(text(before)) headerAfter=\(text(after)) moved=\(moved)"
+            print(entry)
+            lines.append(entry + (pattern == .columnSpaced ? " (\(tier))" : ""))
+        }
+        capture("probe-\(stage)-\(label)-\(Int(width.rounded()))pt-largest-fixture", app)
+        return lines
+    }
+
     // MARK: - Route helpers
 
     private func launch(fixture: String, band: String = "social", approach: String = "chatFirst", category: String? = nil,
@@ -444,6 +570,19 @@ final class PlacesCorrectionTests: XCTestCase {
 
     // MARK: - Assertions
 
+    /// Exactly one `places.screen` (the container that owns Places' VoiceOver escape action), and
+    /// each of `identifiers` found by a query scoped to it, so the container is their ancestor. The
+    /// structure escape relies on, not escape itself, which XCUITest cannot perform.
+    private func assertInsideScreen(_ app: XCUIApplication, _ identifiers: [String], _ state: String) {
+        let containers = app.descendants(matching: .any).matching(identifier: "places.screen")
+        XCTAssertEqual(containers.count, 1, "\(state): exactly one places.screen container.")
+        let screen = containers.firstMatch
+        for identifier in identifiers {
+            XCTAssertTrue(screen.descendants(matching: .any).matching(identifier: identifier).firstMatch.exists,
+                          "\(state): \(identifier) is inside places.screen.")
+        }
+    }
+
     /// A stage that has just opened starts at its beginning: the header is where it rests on a
     /// screen that has not scrolled, and its Back can be tapped.
     private func assertStartsAtBeginning(_ places: CorrectionPlaces, restingHeader: CGFloat, _ state: String) {
@@ -487,7 +626,7 @@ final class PlacesCorrectionTests: XCTestCase {
             XCTAssertLessThanOrEqual(schedule.maxX, columnRight + 1, "\(state): the schedule does not run past the column.")
             XCTAssertGreaterThanOrEqual(button.minX, columnLeft - 1, "\(state): View place starts in the column.")
             XCTAssertLessThanOrEqual(button.maxX, columnRight + 1, "\(state): View place ends in the column.")
-            XCTAssertGreaterThanOrEqual(button.height, 44, "\(state): View place is at least 44 pt tall.")
+            XCTAssertGreaterThanOrEqual(button.height, Self.minimumTarget, "\(state): View place is at least 44 pt tall.")
             XCTAssertGreaterThanOrEqual(button.width, 139, "\(state): View place is at least 140 pt wide.")
             XCTAssertFalse(schedule.intersects(button), "\(state): View place covers part of the schedule.")
             let stacked = button.minY >= schedule.maxY - 0.5
@@ -575,41 +714,390 @@ final class PlacesCorrectionTests: XCTestCase {
         return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 
-    /// Short, momentum-free drags until `element` lies between the status bar and the top of the
-    /// action bar (`bar` is its top action, 13 pt below the bar's top), with `clearance` more below
-    /// it. An element taller than that space counts once its top is in view. When it gives up, the
-    /// last frames and the screen are attached.
-    /// The drags run down the middle of the page. The leading edge is where Places' back swipe
-    /// starts; the trailing edge is where the scroll indicator is, and on a page as long as the
-    /// largest text makes it, iOS lets a touch there grab the indicator and scrub the page back
-    /// (build 6ab88011's largest-text scrolls stalled with drags 16 pt from the edge; the indicator
-    /// is the suspected, unverified cause).
-    private func scrollIntoView(_ element: XCUIElement, bar: XCUIElement, _ app: XCUIApplication,
-                                clearance: CGFloat = 0) -> Bool {
-        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-        for _ in 0..<40 {
-            let frame = element.frame, top: CGFloat = 62, bottom = bar.frame.minY - 13 - clearance
-            let slack = (bottom - top) - frame.height
-            let fits = slack > 2
-            let lowestTop = fits ? bottom + 1 - frame.height : bottom - 44
-            let low = frame.minY > lowestTop, high = frame.minY < top - 1
+    // MARK: - Scrolling
+
+    /// Brings `element` between the status bar (62) and the top of the fixed action bar (`bar` is its
+    /// top action, 13 pt below the bar's top), with `clearance` more below it. An element taller than
+    /// that space counts once its top is in view. Both edges allow 1 pt. Returns whether it did; when
+    /// it did not, it has already failed the test at the caller's line.
+    ///
+    /// Short, momentum-free drags (press 0.05 s, slow, held 0.2 s before release), each touching down
+    /// in the page's column on nothing that is a control (`scrollTouchPoint`), never nearer than
+    /// 44 pt to either screen edge: the leading edge is Places' back swipe, the trailing edge the
+    /// scroll indicator (build 6ab88011's largest-text scrolls stalled with drags 16 pt from it; the
+    /// cause is unverified). A drag never travels further than would carry the element's top past the
+    /// far side of the range, so it cannot overshoot; it aims 16 pt inside the near side (the middle
+    /// of a narrower range), adds what the last drag lost before the scroll view took it, and is at
+    /// least 20 pt where the range allows, well past what a tap allows for.
+    ///
+    /// After every drag the frames are read again once the target has settled (`snapshot()`: one
+    /// round trip for the whole screen). The page must move the right way by a quarter of the drag
+    /// (at least 2 pt). A movement the wrong way, a sideways one (the back swipe), a changed screen,
+    /// or two drags in a row that do not move the page end it at once, with the screen, every drag
+    /// and every frame attached: "Scroll PRODUCT" when the page has reached its end (the stage's last
+    /// line is above the bar) or its start with the element still out of range, "Scroll HARNESS" for
+    /// everything else. Every drag prints a `PLACES_SCROLL` line to the log.
+    private func scrollIntoView(_ element: XCUIElement, bar: XCUIElement, _ app: XCUIApplication, clearance: CGFloat = 0,
+                                file: StaticString = #filePath, line: UInt = #line) -> Bool {
+        let top: CGFloat = 62, longest: CGFloat = 115, shortest: CGFloat = 20, confirming: CGFloat = 60
+        let started = Date()
+        var name = "the element"
+        var trace: [String] = []
+        let barID: String
+        var now: ScrollLook
+        do {
+            let id = try element.snapshot().identifier
+            name = id.isEmpty ? name : id
+            barID = try bar.snapshot().identifier
+            now = try settledScrollLook(element, barID: barID, app)
+        } catch {
+            // `name` stays "the element" when the element itself is missing: an unresolved
+            // XCUIElement's description would be a query of its own.
+            return scrollFailed(.harness("\(name) or its bar is not on screen: \(error.localizedDescription)"),
+                                name, nil, trace, app, file: file, line: line)
+        }
+        trace.append("start: \(name) \(Self.rect(now.target)); bar \(barID) \(Self.rect(now.bar)); "
+                     + "clearance \(Self.pt(clearance)); screen \(Self.rect(now.screen))")
+        var loss: CGFloat = 0
+        var stalls = 0, overshoots = 0, drags = 0, budget = 0
+        var previous: [CGPoint] = []
+        var lifted = Date.distantPast
+        while true {
+            guard let barFrame = now.bar else {
+                return scrollFailed(.harness("\(barID) is not on screen: the screen changed"), name, now, trace, app,
+                                    file: file, line: line)
+            }
+            let frame = now.target, barTop = barFrame.minY - 13, bottom = barTop - clearance
+            let fits = (bottom - top) - frame.height > 2
+            let lowestTop = fits ? bottom + 1 - frame.height : bottom - 44, highestTop = top - 1
+            let low = frame.minY > lowestTop, high = frame.minY < highestTop
             if !low && !high {
+                print("PLACES_SCROLL_DONE \(name): \(drags) drags, \(Self.pt(CGFloat(Date().timeIntervalSince(started)))) s")
                 return true
             }
-            let step = max(12, min(115, (lowestTop - (top - 1)) / 2))
-            let upper = origin.withOffset(CGVector(dx: 0, dy: top + 40))
-            let lower = origin.withOffset(CGVector(dx: 0, dy: top + 40 + step))
-            if low {
-                lower.press(forDuration: 0.05, thenDragTo: upper, withVelocity: .slow, thenHoldForDuration: 0.2)
+            guard lowestTop >= highestTop else {
+                return scrollFailed(.harness("no top counts: only \(Self.pt(bottom - top)) pt lie between the status bar "
+                                             + "and the bar (its top \(Self.pt(barTop)), clearance \(Self.pt(clearance)))"),
+                                    name, now, trace, app, file: file, line: line)
+            }
+            // The whole drag stays 10 pt clear of the status bar line and of the bar.
+            let bandTop = top + 10, bandBottom = barTop - 10, room = bandBottom - bandTop - 16
+            let inset = min(16, (lowestTop - highestTop) / 2)
+            let distance = low ? frame.minY - (lowestTop - inset) : (highestTop + inset) - frame.minY
+            // The most the page may move before the element's top passes the far side of the range.
+            let farthest = low ? frame.minY - highestTop - 1 : lowestTop - frame.minY - 1
+            var travel = min(longest, distance + loss, farthest, room)
+            if stalls > 0 {
+                // After a drag that did not move the page, a longer one (still within `farthest`), so
+                // the next verdict does not rest on a drag the scroll view could have absorbed.
+                travel = max(travel, min(confirming, farthest, room))
+            }
+            if travel < shortest {
+                travel = min(shortest, farthest, room)
+            }
+            guard travel >= 2 else {
+                return scrollFailed(.harness("no room for a drag: band \(Self.pt(bandTop))–\(Self.pt(bandBottom)), the far "
+                                             + "side of the range \(Self.pt(farthest)) pt away"),
+                                    name, now, trace, app, file: file, line: line)
+            }
+            if budget == 0 {
+                // A drag that counts moves the page at least a quarter of `longest`; six to spare.
+                budget = Int((distance / (longest / 4)).rounded(.up)) + 6
+            }
+            guard let touch = scrollTouchPoint(now, travel: travel, fingerUp: low, bandTop: bandTop, bandBottom: bandBottom,
+                                               awayFrom: previous) else {
+                return scrollFailed(.harness("no touch-down point in the column between y \(Self.pt(bandTop)) and "
+                                             + "\(Self.pt(bandBottom)) keeps 12 pt from every control"),
+                                    name, now, trace, app, file: file, line: line)
+            }
+            // A second touch soon after and near the first can count as a repeated tap, which the
+            // window's RepeatTapSwallower takes, cancelling the scroll: 0.7 s between them, at least.
+            let quiet = Date().timeIntervalSince(lifted)
+            if quiet < 0.7 {
+                waitQuietly(0.7 - quiet)
+            }
+            let lift = CGPoint(x: touch.point.x, y: touch.point.y + (low ? -travel : travel))
+            let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            origin.withOffset(CGVector(dx: touch.point.x, dy: touch.point.y))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: lift.x, dy: lift.y)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            lifted = Date()
+            drags += 1
+            previous = [touch.point, lift]
+            let after: ScrollLook
+            do {
+                after = try settledScrollLook(element, barID: barID, app)
+            } catch {
+                trace.append("drag \(drags) \(touch.tier) \(Self.point(touch.point)) → \(Self.point(lift)): \(name) is gone")
+                return scrollFailed(.harness("after drag \(drags) \(name) cannot be read: the drag changed the screen"),
+                                    name, now, trace, app, file: file, line: line)
+            }
+            let moved = low ? frame.minY - after.target.minY : after.target.minY - frame.minY
+            let sideways = after.target.minX - frame.minX
+            var page: CGFloat?
+            if let before = now.header, let later = after.header {
+                page = low ? before.minY - later.minY : later.minY - before.minY
+            }
+            let enough = max(2, travel / 4)
+            let entry = "drag \(drags) \(low ? "up" : "down") \(touch.tier) \(Self.point(touch.point)) → "
+                + "\(Self.point(lift)), travel \(Self.pt(travel)): top \(Self.pt(frame.minY)) → "
+                + "\(Self.pt(after.target.minY)), moved \(Self.pt(moved)), header moved \(page.map { Self.pt($0) } ?? "n/a"), "
+                + "sideways \(Self.pt(sideways)); range \(Self.pt(highestTop))–\(Self.pt(lowestTop)); last line "
+                + "\(after.endID) \(Self.rect(after.end)); bar \(Self.rect(after.bar)); look \(Self.pt(CGFloat(after.seconds))) s"
+            trace.append(entry)
+            print("PLACES_SCROLL \(name) \(entry)")
+            func fail(_ verdict: ScrollVerdict) -> Bool {
+                scrollFailed(verdict, name, after, trace, app, file: file, line: line)
+            }
+            if after.bar == nil {
+                return fail(.harness("\(barID) went away with drag \(drags): the drag changed the screen"))
+            }
+            if abs(sideways) > 1 {
+                return fail(.harness("drag \(drags) moved the page sideways by \(Self.pt(sideways)) pt: the back swipe took it"))
+            }
+            if moved <= -2 {
+                return fail(.harness("drag \(drags) moved the page the wrong way, by \(Self.pt(-moved)) pt"))
+            }
+            if let page, page >= enough, moved < enough {
+                return fail(.harness("drag \(drags) moved the page \(Self.pt(page)) pt but \(name) \(Self.pt(moved)) pt: "
+                                     + "it does not scroll with the page"))
+            }
+            if moved > travel + 4 {
+                overshoots += 1
+                if overshoots >= 2 {
+                    return fail(.harness("twice a drag moved the page further than the finger (\(Self.pt(moved)) pt for "
+                                         + "\(Self.pt(travel))): the drags are not momentum-free"))
+                }
+            }
+            if moved >= enough {
+                stalls = 0
+                loss = max(0, min(24, travel - moved))
             } else {
-                upper.press(forDuration: 0.05, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.2)
+                stalls += 1
+                if stalls >= 2 {
+                    let afterTop = (after.bar ?? barFrame).minY - 13
+                    if low, let end = after.end, end.maxY <= afterTop - 9 {
+                        return fail(.product("the content has ended: two drags did not move it, its last line (\(after.endID)) "
+                                             + "ends at \(Self.pt(end.maxY)), above the bar's top \(Self.pt(afterTop)), and "
+                                             + "\(name)'s top is \(Self.pt(after.target.minY)), below \(Self.pt(lowestTop))"))
+                    }
+                    if high, let header = after.header, let scroller = after.scroller, header.minY >= scroller.minY + 1 {
+                        return fail(.product("the page is at its start: two drags did not move it, the header's Back is at "
+                                             + "\(Self.pt(header.minY)), and \(name)'s top is \(Self.pt(after.target.minY)), "
+                                             + "above \(Self.pt(highestTop))"))
+                    }
+                    return fail(.harness("two drags in a row did not move the page (the last moved \(Self.pt(moved)) pt of "
+                                         + "\(Self.pt(travel))) and it has not reached its \(low ? "end" : "start"): last line "
+                                         + "\(after.endID) \(Self.rect(after.end)), bar top \(Self.pt(afterTop))"))
+                }
+            }
+            if drags >= budget {
+                return fail(.harness("\(drags) drags (the limit the starting distance allows) have not brought \(name) "
+                                     + "into range: top \(Self.pt(after.target.minY)), range "
+                                     + "\(Self.pt(highestTop))–\(Self.pt(lowestTop))"))
+            }
+            now = after
+        }
+    }
+
+    /// Where a drag touches down: in the page's column (a half, a quarter or three quarters across
+    /// it: 81 pt or more from either screen edge on a 390-pt iPhone, and never nearer than 44), at a
+    /// height from which the whole drag stays in the band (nearest `preferred` when given, otherwise
+    /// the band's middle first), and 12 pt or more from every control. "clear" also keeps 8 pt off
+    /// browsing's ticket, which opens its detail when tapped; only when no such point exists (the
+    /// largest text, with the ticket filling the page) is the ticket's paper used, as "card". A point
+    /// 60 pt or more from the last drag's touch-down and lift is preferred.
+    private func scrollTouchPoint(_ look: ScrollLook, travel: CGFloat, fingerUp: Bool, bandTop: CGFloat,
+                                  bandBottom: CGFloat, awayFrom previous: [CGPoint],
+                                  around preferred: CGFloat? = nil) -> (point: CGPoint, tier: String)? {
+        let width = look.screen.width
+        let content = min(376, width - 64), margin = (width - content) / 2
+        let fractions: [CGFloat] = [0.5, 0.25, 0.75]
+        let xs = fractions.map { margin + content * $0 }.filter { $0 >= 44 && $0 <= width - 44 }
+        // Touch-down heights from which the drag's lift stays in the band, nearest the start first.
+        let lowest = fingerUp ? bandTop + travel : bandTop
+        let highest = fingerUp ? bandBottom : bandBottom - travel
+        guard lowest <= highest else { return nil }
+        let start = preferred.map { min(max($0, lowest), highest) } ?? (lowest + highest) / 2
+        let reach = max(start - lowest, highest - start)
+        var ys: [CGFloat] = []
+        var offset: CGFloat = 0
+        while offset <= reach + 8 {
+            for y in [start - offset, start + offset] where y >= lowest && y <= highest && !ys.contains(y) {
+                ys.append(y)
+            }
+            offset += 8
+        }
+        let controls = look.controls.map { $0.insetBy(dx: -12, dy: -12) }
+        let cards = look.cards.map { $0.insetBy(dx: -8, dy: -8) }
+        let tiers: [(String, [CGRect])] = [("clear", controls + cards), ("card", controls)]
+        for (tier, avoided) in tiers where tier == "clear" || !cards.isEmpty {
+            for spaced in [true, false] {
+                for y in ys {
+                    for x in xs {
+                        let point = CGPoint(x: x, y: y)
+                        if avoided.contains(where: { $0.contains(point) }) {
+                            continue
+                        }
+                        let near = previous.contains { mark in
+                            let dx = mark.x - x, dy = mark.y - y
+                            return (dx * dx + dy * dy).squareRoot() < 60
+                        }
+                        if spaced && near {
+                            continue
+                        }
+                        return (point, tier)
+                    }
+                }
             }
         }
-        attachNote("scrollIntoView gave up on \(element.identifier): element \(element.frame), bar \(bar.identifier) "
-                   + "\(bar.frame), clearance \(clearance).")
-        capture("scroll-gave-up-\(element.identifier)", app)
+        return nil
+    }
+
+    /// Reads the screen once the target has stopped moving (two reads 0.15 s apart within 0.5 pt;
+    /// at most five more), so a rubber band or a revealing scroll is never measured half-way.
+    private func settledScrollLook(_ element: XCUIElement, barID: String, _ app: XCUIApplication) throws -> ScrollLook {
+        var last = try element.snapshot().frame
+        for _ in 0..<5 {
+            waitQuietly(0.15)
+            let next = try element.snapshot().frame
+            if abs(next.minY - last.minY) <= 0.5 && abs(next.minX - last.minX) <= 0.5 {
+                break
+            }
+            last = next
+        }
+        return try scrollLook(element, barID: barID, app)
+    }
+
+    /// The target from its own snapshot; everything else from one snapshot of the whole app.
+    private func scrollLook(_ element: XCUIElement, barID: String, _ app: XCUIApplication) throws -> ScrollLook {
+        let started = Date()
+        let target = try element.snapshot()
+        let root = try app.snapshot()
+        var look = ScrollLook(target: target.frame, screen: root.frame)
+        var stack: [any XCUIElementSnapshot] = [root]
+        while let node = stack.popLast() {
+            stack.append(contentsOf: node.children.reversed())
+            let id = node.identifier, frame = node.frame, type = node.elementType
+            // A container (the screen, the tabs, a ticket) is never a control, whatever its type.
+            let control = !Self.scrollContainers.contains(id) && Self.scrollControlTypes.contains(type)
+            if id == barID && look.bar == nil {
+                look.bar = frame
+            }
+            if id == "places.back" && look.header == nil {
+                look.header = frame
+            }
+            if Self.scrollLastLines.contains(id) && frame.maxY > (look.end?.maxY ?? -CGFloat.greatestFiniteMagnitude) {
+                look.end = frame
+                look.endID = id
+            }
+            if type == .scrollView && look.scroller == nil {
+                look.scroller = frame
+            }
+            if control {
+                look.controls.append(frame)
+            }
+            if Self.scrollCards.contains(id) {
+                look.cards.append(frame)
+            }
+            if control || !id.isEmpty {
+                look.inventory.append("\(id.isEmpty ? "“\(node.label)”" : id)\(control ? " (control)" : "") \(Self.rect(frame))")
+            }
+        }
+        look.seconds = Date().timeIntervalSince(started)
+        return look
+    }
+
+    /// Attaches the reason, the last frames, every drag and every element, and the screen, then fails
+    /// with "Scroll PRODUCT: …" or "Scroll HARNESS: …" at the caller's line.
+    private func scrollFailed(_ verdict: ScrollVerdict, _ name: String, _ look: ScrollLook?, _ trace: [String],
+                              _ app: XCUIApplication, file: StaticString, line: UInt) -> Bool {
+        let kind: String, reason: String
+        switch verdict {
+        case .product(let text):
+            kind = "PRODUCT"
+            reason = text
+        case .harness(let text):
+            kind = "HARNESS"
+            reason = text
+        }
+        var lines = ["scrollIntoView \(kind) \(name): \(reason)"]
+        if let look {
+            lines.append("last look: target \(Self.rect(look.target)); bar \(Self.rect(look.bar)); header Back "
+                         + "\(Self.rect(look.header)); last line \(look.endID) \(Self.rect(look.end)); scroll view "
+                         + "\(Self.rect(look.scroller)); screen \(Self.rect(look.screen)); snapshot \(Self.pt(CGFloat(look.seconds))) s")
+        }
+        lines += trace
+        if let look {
+            lines.append("elements: " + look.inventory.joined(separator: "; "))
+        }
+        print("PLACES_SCROLL_FAILED " + lines.joined(separator: " | "))
+        attachNote(lines.joined(separator: "\n"))
+        capture("scroll-\(kind.lowercased())-\(name)", app)
+        XCTFail("Scroll \(kind): \(name): \(reason)", file: file, line: line)
         return false
     }
+
+    /// Waits without asserting anything: a waiter with no delegate, on an expectation nobody fulfils.
+    /// Not `hold`, which `PROXIMEET_SHORT_HOLDS` shortens.
+    private func waitQuietly(_ seconds: TimeInterval) {
+        _ = XCTWaiter.wait(for: [XCTestExpectation(description: "quiet")], timeout: seconds)
+    }
+
+    private static func pt(_ value: CGFloat) -> String {
+        String(format: "%.1f", Double(value))
+    }
+
+    private static func rect(_ rect: CGRect?) -> String {
+        rect.map { NSCoder.string(for: $0) } ?? "none"
+    }
+
+    private static func point(_ point: CGPoint) -> String {
+        "(\(pt(point.x)), \(pt(point.y)))"
+    }
+
+    /// One reading for `scrollIntoView`: every `XCUIElement.frame` read is a query of its own, and a
+    /// snapshot brings every frame back in one.
+    private struct ScrollLook {
+        var target: CGRect
+        var screen: CGRect
+        /// The bar's top action (the fixed bar starts 13 pt above it).
+        var bar: CGRect?
+        /// The header's Back: the first thing in the scroll content, moving with it.
+        var header: CGRect?
+        /// The stage's last line; the content ends 11 pt below it (15 or 23 on a detail).
+        var end: CGRect?
+        var endID = ""
+        var scroller: CGRect?
+        /// Buttons (Back, the tabs, View place, the bar's actions) and any other control.
+        var controls: [CGRect] = []
+        /// Tappable content that is not a control: browsing's ticket opens its detail when tapped.
+        var cards: [CGRect] = []
+        var inventory: [String] = []
+        var seconds: TimeInterval = 0
+    }
+
+    private enum ScrollVerdict {
+        /// The page is at its end (or start) with the element still out of range.
+        case product(String)
+        /// The drags did not move the page as asked, the screen changed, nowhere was safe to touch, or
+        /// no top would count (the bar leaves no room).
+        case harness(String)
+    }
+
+    private static let scrollControlTypes: Set<XCUIElement.ElementType> = [
+        .button, .link, .`switch`, .toggle, .slider, .stepper, .textField, .secureTextField, .searchField, .textView,
+        .segmentedControl, .pickerWheel, .datePicker, .cell, .tab, .key,
+    ]
+    /// Containers that hold controls but are not one: the screen (VoiceOver's escape), the tabs and
+    /// the two tickets.
+    private static let scrollContainers: Set<String> = ["places.screen", "places.tabs", "places.ticket", "place.ticket"]
+    /// Each stage's last line: browsing's boundary line, a detail's boundary line, the explanation's demo line.
+    private static let scrollLastLines: Set<String> = ["places.boundary", "place.boundary", "explanation.demo"]
+    /// Tappable, not a control: browsing's ticket (`VenueTicket.onTapGesture`).
+    private static let scrollCards: Set<String> = ["places.ticket"]
+
+    // MARK: - Captures and holds
 
     private func capture(_ name: String, _ app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: app.screenshot())

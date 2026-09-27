@@ -194,6 +194,14 @@ final class DemoSession {
         flow.backToPlace()
     }
 
+    /// One stage back from `scene`, for every way Places asks (the header's Back, the bottom Back
+    /// actions, the edge swipe, VoiceOver's escape). A request from a stage no longer shown does
+    /// nothing.
+    @discardableResult
+    func placesBack(from scene: DemoScene) -> Bool {
+        flow.placesBack(from: scene)
+    }
+
     /// Explore other places on the explanation: browsing at Now.
     @discardableResult
     func exploreOtherPlaces() -> Bool {

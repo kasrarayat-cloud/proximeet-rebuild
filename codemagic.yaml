@@ -436,8 +436,9 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (places | signal | regressions | correction; required) picks the scope; each scope is its
-  # own build, and what it runs comes from docs/verification/places-review-manifest.tsv. No
+  # PLACES_REVIEW_SCOPE (correction | sweep_places | sweep_signal | regressions | places | signal; required)
+  # picks the scope; each scope is its own build, and what it runs comes from
+  # docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
   # ignore_failure so later evidence is still collected; the last step fails the build unless the
   # automated verdict is PASS. See docs/verification/places-mac-review.md.
@@ -502,6 +503,18 @@ workflows:
       - build/artifacts/Places-Correction-Screens.zip.sha256
       - build/artifacts/Places-Correction-walkthrough.zip
       - build/artifacts/Places-Correction-walkthrough.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Review.zip
+      - build/artifacts/Places-Sweep-Places-Review.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Screens.zip
+      - build/artifacts/Places-Sweep-Places-Screens.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip.sha256
+      - build/artifacts/Places-Sweep-Signal-Review.zip
+      - build/artifacts/Places-Sweep-Signal-Review.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
@@ -519,8 +532,9 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (places | signal | regressions | correction; required) picks the scope; each scope is its
-  # own build, and what it runs comes from docs/verification/places-review-manifest.tsv. No
+  # PLACES_REVIEW_SCOPE (correction | sweep_places | sweep_signal | regressions | places | signal; required)
+  # picks the scope; each scope is its own build, and what it runs comes from
+  # docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
   # ignore_failure so later evidence is still collected; the last step fails the build unless the
   # automated verdict is PASS. See docs/verification/places-mac-review.md.
@@ -587,6 +601,18 @@ workflows:
       - build/artifacts/Places-Correction-Screens.zip.sha256
       - build/artifacts/Places-Correction-walkthrough.zip
       - build/artifacts/Places-Correction-walkthrough.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Review.zip
+      - build/artifacts/Places-Sweep-Places-Review.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Screens.zip
+      - build/artifacts/Places-Sweep-Places-Screens.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip.sha256
+      - build/artifacts/Places-Sweep-Signal-Review.zip
+      - build/artifacts/Places-Sweep-Signal-Review.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
@@ -596,3 +622,109 @@ workflows:
       - build/artifacts/places/*.txt
       - build/artifacts/places/*.tsv
       - build/artifacts/places/*.json
+
+  # The same Places review with a 35-minute limit, for the four-build recovery after the Places
+  # correction: build 1 correction, build 2 sweep_places, build 3 sweep_signal, build 4 regressions,
+  # each started by hand with the same PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) and its own
+  # PLACES_REVIEW_SCOPE (required; any manifest scope is accepted). It sets its own UI deadline,
+  # PLACES_UI_DEADLINE_SECONDS=1680 (a plain, non-secret value; at the worst 72 + 1680 + 75 + 100 +
+  # about 45 = 1972 s of its 2100). One step more than proximeet-places-review: straight after the app
+  # zip, scripts/places_review.sh preview-app copies the just-built app to build/preview/Proximeet.app
+  # with build/preview/PREVIEW.txt (the source commit, the zip's SHA-256, and a line saying a runnable
+  # app is not evidence that its checks passed); it never fails the build. Codemagic offers Quick
+  # Launch for a .app artifact only to teams with App Preview; on other accounts the .app is a plain
+  # download. scripts/places_recovery_reconcile.py joins the four builds' results.
+  # Manual start only: no triggering section, no code signing, Apple credentials, provisioning,
+  # archive/IPA, TestFlight, publishing, notifications or environment groups. No automatic test
+  # retries. Compile-path steps stop the build on failure; evidence steps use ignore_failure so later
+  # evidence is still collected; the last step fails the build unless the automated verdict is PASS.
+  # See docs/verification/places-mac-review.md.
+  proximeet-places-review-35:
+    name: Proximeet Places review, 35-minute limit (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 35
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "1680"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Places revision and scope, its approved assets, the Signal, Places and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target, start the first boots (and a smaller iPhone's, when the scope uses one)
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: Runnable preview copy of the app, before the UI review rebuilds it (build/preview; simulator only; not evidence that any check passed)
+        script: bash scripts/places_review.sh preview-app
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's scope, by the manifest (correction, sweep_places, sweep_signal or regressions; places; signal), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Compact walkthrough video (half size, trimmed to the app; original kept; places and sweep_places)
+        script: bash scripts/places_review.sh compact-video
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip (and its screens and walkthrough downloads where it records)
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Places-Review.zip
+      - build/artifacts/Places-Review.zip.sha256
+      - build/artifacts/Places-Screens.zip
+      - build/artifacts/Places-Screens.zip.sha256
+      - build/artifacts/Places-walkthrough-compact.zip
+      - build/artifacts/Places-walkthrough-compact.zip.sha256
+      - build/artifacts/Places-walkthrough-compact.mp4
+      - build/artifacts/Places-walkthrough-compact.mp4.sha256
+      - build/artifacts/Places-walkthrough-original.zip
+      - build/artifacts/Places-walkthrough-original.zip.sha256
+      - build/artifacts/Places-Signal-Review.zip
+      - build/artifacts/Places-Signal-Review.zip.sha256
+      - build/artifacts/Places-Regressions-Review.zip
+      - build/artifacts/Places-Regressions-Review.zip.sha256
+      - build/artifacts/Places-Correction-Review.zip
+      - build/artifacts/Places-Correction-Review.zip.sha256
+      - build/artifacts/Places-Correction-Screens.zip
+      - build/artifacts/Places-Correction-Screens.zip.sha256
+      - build/artifacts/Places-Correction-walkthrough.zip
+      - build/artifacts/Places-Correction-walkthrough.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Review.zip
+      - build/artifacts/Places-Sweep-Places-Review.zip.sha256
+      - build/artifacts/Places-Sweep-Places-Screens.zip
+      - build/artifacts/Places-Sweep-Places-Screens.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.zip.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4
+      - build/artifacts/Places-Sweep-Places-walkthrough-compact.mp4.sha256
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip
+      - build/artifacts/Places-Sweep-Places-walkthrough-original.zip.sha256
+      - build/artifacts/Places-Sweep-Signal-Review.zip
+      - build/artifacts/Places-Sweep-Signal-Review.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+      - build/preview/Proximeet.app
+      - build/preview/PREVIEW.txt

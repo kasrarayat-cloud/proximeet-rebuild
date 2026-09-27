@@ -1,30 +1,44 @@
 #!/usr/bin/env bash
 # Proximeet — runtime review of the approved Places (chapter 07) and of every earlier chapter's
-# checks, in the iOS Simulator. Manual and unsigned. Codemagic workflow: proximeet-places-review
+# checks, in the iOS Simulator. Manual and unsigned. Codemagic workflows: proximeet-places-review,
+# its 24-minute twin proximeet-places-review-short and its 35-minute twin proximeet-places-review-35
 # (codemagic.yaml). See docs/verification/places-mac-review.md.
 #
-#   PLACES_REVIEW_SCOPE=places|signal|regressions bash scripts/places_review.sh <stage>
+#   PLACES_REVIEW_SCOPE=correction|sweep_places|sweep_signal|regressions|places|signal \
+#       bash scripts/places_review.sh <stage>
 #
 # Scopes (the run input PLACES_REVIEW_SCOPE; each runs as its own build, and every result says which
 # build and which commit supplied it). What each scope runs, on which device, in which order and
-# within which bound comes from docs/verification/places-review-manifest.tsv:
-#   places       the Places review: the recorded full journey from Welcome through Signal into
-#                Places, the seven screens (on the iPhone 17 Pro Max and the smaller iPhone), all
-#                twelve intent-venue combinations, Back routes with the retained category and draft,
-#                the band change, missing choices and the guarded explanation, the Birthday gate on
-#                the way back, relaunch, rapid taps and interruptions, the Reduce Motion preview flag
-#                and the largest text size on two widths
+# within which bound comes from docs/verification/places-review-manifest.tsv. After the Places
+# correction the review is four builds on one frozen commit, in this order: correction,
+# sweep_places, sweep_signal, regressions; scripts/places_recovery_reconcile.py joins their results
+# by docs/verification/places-recovery-coverage.tsv.
+#   correction   build 1, the targeted Places correction (after build 6ab8639c, reworked after
+#                6ab88011): the adaptive ticket footer on both widths at the default and the largest
+#                text, one-stage back gestures and controls (with a cancelled swipe), where a detail
+#                and the explanation start, the five Signal and interaction tests whose endpoint
+#                changed, the seven screens on main (C9 = P7) and Back routes on the smaller iPhone
+#                (C15 = P8), a short recording of the corrected scrolling and back swipes, and an
+#                optional scroll diagnostic on each device (kind "extra": run only when it fits; if it
+#                runs it must pass)
+#   sweep_places build 2: the places scope's rows except P7 and P8 (the correction runs them): the
+#                recorded full journey, the Birthday gate on the way back, the largest text, rapid taps
+#                and interruptions, the Reduce Motion preview and relaunch on main; the band change,
+#                all twelve intent-venue combinations, the largest text, missing choices and the seven
+#                screens on the smaller iPhone
+#   sweep_signal build 3: the signal scope's rows except S1, S2, S7, S11 and S14 (the correction
+#                runs them)
+#   regressions  build 4, the 27 required executions of the Signal regression correction (build
+#                6ab81e22): the Wristband, the Guest List, the Pass, Birthday and Welcome, with its
+#                time-gated repeat of the paste test
+#   places       the full Places review, as first run (build 6ab8639c): the recorded full journey
+#                from Welcome through Signal into Places, the seven screens (on the iPhone 17 Pro Max
+#                and the smaller iPhone), all twelve intent-venue combinations, Back routes with the
+#                retained category and draft, the band change, missing choices and the guarded
+#                explanation, the Birthday gate on the way back, relaunch, rapid taps and
+#                interruptions, the Reduce Motion preview flag and the largest text size on two widths
 #   signal       the 16 Signal executions of build 6ab7e942, with Continue preview now opening
 #                Places (the intentional endpoint change)
-#   regressions  the 27 required executions of the Signal regression correction (build 6ab81e22):
-#                the Wristband, the Guest List, the Pass, Birthday and Welcome, with its time-gated
-#                repeat of the paste test
-#   correction   the targeted Places correction (after build 6ab8639c): the adaptive ticket footer
-#                on both widths at the default and the largest text, one-stage back gestures and
-#                controls (with a cancelled swipe), where a detail and the explanation start, the
-#                five Signal and interaction tests whose endpoint changed, a short recording of the
-#                corrected scrolling and back swipes, and time-gated re-runs of earlier Places tests
-#                (kind "extra": run only when they fit; if they run they must pass)
 # Automatic retries are off in every scope: a test that fails, even once, is a failure; a skipped,
 # interrupted or missing required execution is a failure.
 #
@@ -46,18 +60,29 @@
 #                 cloned from it before either boots, or a smaller iPhone) behind the compilation
 #   ui-review     compile the UI test harness; give the other device its own copy of the build
 #                 products; run the scope's main and other-device runs in parallel (device B is
-#                 deleted after the run). The places scope records its full journey first; the
-#                 compact video is made in the background once the recording ends. Every xcodebuild
+#                 deleted after the run). The places and sweep_places scopes record their full
+#                 journey first on main, and the compact video is made in the background once the
+#                 recording ends; the correction records its walkthrough first on the smaller iPhone,
+#                 delivered unedited. Every xcodebuild
 #                 is bounded by time and interrupted (SIGINT) at its bound so it can close its result
 #                 bundle before it is killed (the UI deadline is 1380 s after the checkpoint, or the
 #                 run input). Every execution is judged against the manifest by
 #                 scripts/places_review_results.py
-#   compact-video half-size re-encode of the recording, trimmed to the app (places scope)
+#   preview-app   a runnable copy of the just-built app, taken before ui-review rebuilds the build
+#                 products: build/preview/Proximeet.app (ditto) and build/preview/PREVIEW.txt (the
+#                 source commit, the app zip's name and SHA-256, and a line saying the Places
+#                 verification is pending). Never fails the build; a problem is a note. Run after
+#                 'codemagic_verify.sh package' and before ui-review
+#   compact-video half-size re-encode of the recording, trimmed to the app (places and sweep_places;
+#                 the correction delivers its recording unedited)
 #   verdict       automated results, kept apart from outstanding manual review
-#   package-review  scripts/places_review_package.py: Places-Review.zip, Places-Screens.zip,
-#                 Places-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
-#                 Places-walkthrough-original.zip (places scope), or Places-Signal-Review.zip /
-#                 Places-Regressions-Review.zip; each with an offline index.html and its SHA-256
+#   package-review  scripts/places_review_package.py: <title>.zip, <prefix>-Screens.zip,
+#                 <prefix>-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
+#                 <prefix>-walkthrough-original.zip, with the title Places-Review (prefix Places) for
+#                 places and Places-Sweep-Places-Review (prefix Places-Sweep-Places) for sweep_places;
+#                 Places-Correction-Review.zip with its Screens and walkthrough zips (correction);
+#                 Places-Sweep-Signal-Review.zip, Places-Signal-Review.zip or
+#                 Places-Regressions-Review.zip otherwise; each with an offline index.html and its SHA-256
 #   enforce       fail the build unless the verdict says PASS (run last)
 #
 # Outputs go to build/artifacts/places/, logs to build/artifacts/logs/places-<stage>*.log, and
@@ -97,13 +122,15 @@ SMALLER_IPHONES="iPhone 17e|iPhone 16e|iPhone SE (3rd generation)|iPhone 17|iPho
 # after its UI review. At the worst: 58 + 1380 + 75 + (20 + 20 + 60) + about 30 = 1643 s, about 27:25,
 # inside the workflow's 28 minutes. A normal run ends minutes before the deadline.
 UI_DEADLINE_SECONDS=1380
-# A lower deadline for a build with a shorter limit: the run input PLACES_UI_DEADLINE_SECONDS, 600 to
-# 1380, digits only (the workflow proximeet-places-review-short, 24 minutes, sets 1110: at the worst
-# 72 + 1110 + 75 + 100 + about 40 = 1397 s). The source gate rejects any other value.
+# Another deadline for a build with another limit: the run input PLACES_UI_DEADLINE_SECONDS, 600 to
+# 1680, digits only. The workflow proximeet-places-review-short, 24 minutes, sets 1110 (at the worst
+# 72 + 1110 + 75 + 100 + about 40 = 1397 s); proximeet-places-review-35, 35 minutes, sets 1680 (at
+# the worst 72 + 1680 + 75 + 100 + about 45 = 1972 s, inside its 2100 s). A value above 1380 belongs
+# only to the 35-minute workflow. The source gate rejects any value outside 600 to 1680.
 case "${PLACES_UI_DEADLINE_SECONDS:-}" in
     ''|*[!0-9]*|0*) ;;
     *)
-        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 1380 ]; then
+        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 1680 ]; then
             UI_DEADLINE_SECONDS="$PLACES_UI_DEADLINE_SECONDS"
         fi
         ;;
@@ -115,8 +142,10 @@ EXPORT_SECONDS=60
 RESULTS_SECONDS=20
 # The regressions scope's planned paste repeat runs only while this much time is left before the
 # deadline (build 6ab81e22's measurements: the repeat run about 165 s at worst, the required
-# hardware-key run after it about 105 s, 30 s spare).
-REPEAT_GATE_SECONDS=300
+# hardware-key run after it about 105 s). Raised from 300 s for the four-build recovery: at 300 s
+# the repeat started with 297-312 s left was a coin flip that left the required hardware-key run
+# about 110-125 s for a run measured at 103 s; 420 s keeps a full worst case of both plus 150 s.
+REPEAT_GATE_SECONDS=420
 TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360"
 TEST_BOUND="bounded_test"
 SETTLE_SECONDS=3
@@ -131,9 +160,9 @@ LAST_RUN_STATUS=0
 
 STAGE="${1:-}"
 case "$STAGE" in
-    checkpoint|destinations|ui-review|compact-video|verdict|package-review|enforce) ;;
+    checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce) ;;
     *)
-        echo "usage: PLACES_REVIEW_SCOPE=places|signal|regressions $0 checkpoint|destinations|ui-review|compact-video|verdict|package-review|enforce" >&2
+        echo "usage: PLACES_REVIEW_SCOPE=correction|sweep_places|sweep_signal|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -352,7 +381,7 @@ manifest_tests() {
         '!/^#/ && $1 == scope && $4 == run { printf "-only-testing:ProximeetUITests/%s ", $7 }' "$RUN_MANIFEST"
 }
 
-# The run's kinds, one word each ("required", "repeat").
+# The run's kinds, one word each ("required", "repeat", "extra", "diagnostic").
 manifest_kinds() {
     awk -F '\t' -v scope="$SCOPE" -v run="$1" '!/^#/ && $1 == scope && $4 == run && !seen[$8]++ { printf "%s ", $8 }' \
         "$RUN_MANIFEST"
@@ -362,6 +391,17 @@ manifest_kinds() {
 scope_uses() {
     awk -F '\t' -v scope="$SCOPE" -v device="$1" '!/^#/ && $1 == scope && $3 == device { found = 1 } END { exit found ? 0 : 1 }' \
         "$RUN_MANIFEST"
+}
+
+# Whether the scope's recording gets a compact re-encode on the Mac: only the original places
+# scope. The correction and sweep_places deliver their recordings unedited (a re-encode would compete
+# with two simulators for three CPUs); any viewing trim is made elsewhere and labelled as such. The
+# other scopes record nothing.
+compacts_recording() {
+    case "$SCOPE" in
+        places) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 # ---------------------------------------------------------------------------------------
@@ -563,8 +603,8 @@ if scope not in scopes:
     scope = scope or "places"
 
 deadline = os.environ.get("PLACES_UI_DEADLINE_SECONDS", "")
-if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 1380):
-    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 1380 seconds (got %r)" % deadline)
+if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 1680):
+    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 1680 seconds (got %r)" % deadline)
 
 head = git("rev-parse", "HEAD") or "unavailable"
 pin = os.environ.get("PLACES_EXPECTED_COMMIT", "").strip()
@@ -782,10 +822,11 @@ lane_run() {
     return 0
 }
 
-# journey_run <udid> <derived data> <bundle> <natural seconds>: the places scope's recorded full
-# journey. The recorder is confirmed active before the test starts, and the app is closed first. It
-# keeps its full holds and is never retried (a retry would not be the recorded run). The compact
-# video is made in the background from the journey's own start marker.
+# journey_run <udid> <derived data> <bundle> <natural seconds>: the scope's recorded run "journey"
+# (places and sweep_places: the full journey; correction: its walkthrough). The recorder is confirmed
+# active before the test starts, and the app is closed first. It keeps its full holds and is never
+# retried (a retry would not be the recorded run). For places and sweep_places the compact video is
+# made in the background from the journey's own start marker.
 journey_run() {
     local udid="$1" derived="$2" bundle="$3" seconds="$4" movie="$OUT/places-walkthrough-original.mp4"
     local waited=0 status=0 recording_started mark attempt=1
@@ -841,7 +882,7 @@ journey_run() {
     sed -n 's/.*PLACES_WALKTHROUGH_APP_READY \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/walkthrough-app-ready.txt"
     sed -n "s/.*${method}]' [a-z]* (\([0-9][0-9.]*\) seconds).*/\1/p" "$LOG" | tail -n 1 \
         > "$OUT/walkthrough-duration.txt"
-    if [ -s "$movie" ] && [ "$SCOPE" = "places" ]; then
+    if [ -s "$movie" ] && compacts_recording; then
         PLACES_LOG_SUFFIX=-during-ui-review PLACES_REVIEW_SCOPE="$SCOPE" bash scripts/places_review.sh compact-video > /dev/null 2>&1 &
         COMPACT_PID=$!
     fi
@@ -861,7 +902,7 @@ run_lane() {
         gate=0
         case "$(manifest_kinds "$name")" in
             "repeat ") gate="$REPEAT_GATE_SECONDS" ;;
-            "extra ") gate=$((seconds + 60)) ;;
+            "extra "|"diagnostic ") gate=$((seconds + 60)) ;;
         esac
         if [ "$gate" -gt 0 ]; then
             left="$(remaining)"
@@ -993,7 +1034,7 @@ stage_ui_review() {
         summary_line "places-parallel" "$second $second_udid runs its $SCOPE runs beside the selected simulator's"
     fi
 
-    # 4. The selected simulator's runs (the places scope's recorded journey first).
+    # 4. The selected simulator's runs (places and sweep_places: the recorded journey first).
     run_lane main "$SIM_UDID" "$DERIVED_DATA"
 
     # 5. Without its device, device B's runs happen here, after the selected simulator's; the smaller
@@ -1049,18 +1090,77 @@ stage_ui_review() {
 }
 
 # ---------------------------------------------------------------------------------------
+# preview-app
+# ---------------------------------------------------------------------------------------
+
+# A runnable copy of the app exactly as 'codemagic_verify.sh build' made it, taken before ui-review's
+# build-for-testing rebuilds the same build products. The workflow proximeet-places-review-35
+# publishes it as a .app artifact (Codemagic offers Quick Launch only to teams with App Preview) with
+# PREVIEW.txt beside it. A runnable app is not evidence of anything the review checks, and PREVIEW.txt
+# says so on its first line. Never fails the build: every problem is a note, and the stage returns 0.
+stage_preview_app() {
+    local dest="build/preview" head sums="" zip_sha="" zip_name="" problem="" candidate
+    rm -rf "${dest:?}/Proximeet.app" "$dest/PREVIEW.txt" 2>/dev/null || true
+    if ! mkdir -p "$dest" 2>/dev/null; then
+        note "NOTE: $dest could not be made; no preview app."
+        summary_line "places-preview" "NOT MADE ($dest could not be made)"
+        return 0
+    fi
+    if [ ! -x "$APP_PATH/Proximeet" ]; then
+        problem="no built app at $APP_PATH"
+    elif ! run ditto "$APP_PATH" "$dest/Proximeet.app"; then
+        problem="ditto could not copy $APP_PATH"
+        rm -rf "${dest:?}/Proximeet.app" 2>/dev/null || true
+    elif [ ! -x "$dest/Proximeet.app/Proximeet" ]; then
+        problem="the copy has no executable Proximeet.app/Proximeet"
+    fi
+    head="$(git rev-parse HEAD 2>/dev/null || true)"
+    [ -n "$head" ] || head="unavailable (git rev-parse HEAD failed)"
+    for candidate in "$ARTIFACTS"/app/*.zip.sha256; do
+        if [ -s "$candidate" ]; then
+            sums="$candidate"
+            break
+        fi
+    done
+    if [ -n "$sums" ]; then
+        zip_sha="$(awk 'NR == 1 { print $1 }' "$sums" 2>/dev/null || true)"
+        zip_name="$(awk 'NR == 1 { print $2 }' "$sums" 2>/dev/null || true)"
+    fi
+    if ! {
+        printf 'Prototype — Places verification pending: a runnable app is not evidence that its checks passed.\n'
+        printf 'app=%s\n' "$([ -z "$problem" ] && echo "build/preview/Proximeet.app" || echo "NOT COPIED ($problem)")"
+        printf 'source_sha=%s\n' "$head"
+        printf 'app_zip=%s\n' "${zip_name:-not produced}"
+        printf 'app_zip_sha256=%s\n' "${zip_sha:-not produced}"
+        printf 'scope=%s (this build'"'"'s verdict is in its own review zip, not here)\n' "$SCOPE"
+        printf 'copied_utc=%s\n' "$(utc_now)"
+        printf 'note=Unsigned Debug iOS Simulator app (arm64). It cannot be installed on an iPhone or distributed through TestFlight.\n'
+    } > "$dest/PREVIEW.txt" 2>/dev/null; then
+        note "NOTE: $dest/PREVIEW.txt could not be written."
+    fi
+    run cat "$dest/PREVIEW.txt" || true
+    if [ -n "$problem" ]; then
+        note "NOTE: no preview app: $problem. The review itself is unaffected."
+        summary_line "places-preview" "NOT COPIED ($problem); PREVIEW.txt says so"
+    else
+        summary_line "places-preview" "copied to $dest/Proximeet.app from source ${head}; ${zip_name:-no app zip}"
+    fi
+    return 0
+}
+
+# ---------------------------------------------------------------------------------------
 # compact-video
 # ---------------------------------------------------------------------------------------
 
 stage_compact_video() {
     local movie="$OUT/places-walkthrough-original.mp4" compact="$OUT/places-walkthrough-compact.mp4"
     local start=0 end="" took marker ready started pid waited=0 status=1 cap
-    if [ "$SCOPE" = "correction" ]; then
-        note "Scope correction: its short recording is delivered unedited; no re-encode is made on the Mac."
-        printf 'result=NOT APPLICABLE (the correction delivers its short recording unedited)\n' > "$OUT/compact-video.txt"
+    if [ "$SCOPE" = "correction" ] || [ "$SCOPE" = "sweep_places" ]; then
+        note "Scope $SCOPE: its recording is delivered unedited; no re-encode is made on the Mac."
+        printf 'result=NOT APPLICABLE (scope %s delivers its recording unedited)\n' "$SCOPE" > "$OUT/compact-video.txt"
         return 0
     fi
-    if [ "$SCOPE" != "places" ]; then
+    if ! compacts_recording; then
         note "Scope $SCOPE records nothing; there is no walkthrough to compact."
         printf 'result=NOT APPLICABLE (scope %s records nothing)\n' "$SCOPE" > "$OUT/compact-video.txt"
         return 0
@@ -1190,11 +1290,21 @@ covered = {
               "Continue preview now opening Places)",
     "regressions": "the 27 required executions of docs/verification/places-review-manifest.tsv (build 6ab81e22's): "
                    "the Wristband, the Guest List, the Pass, Birthday, Welcome",
-    "correction": "the required executions of the correction scope in docs/verification/places-review-manifest.tsv: the "
-                  "ticket footer on both widths at the default and the largest text, one-stage back gestures and controls "
-                  "(a cancelled swipe included), where a detail and the explanation start, the five Signal and interaction "
-                  "tests whose endpoint changed, and the recorded correction walkthrough",
-}.get(scope, "unknown scope")
+    "correction": "the 15 required executions of the correction scope in docs/verification/places-review-manifest.tsv: "
+                  "the ticket footer on both widths at the default and the largest text, one-stage back gestures and "
+                  "controls (a cancelled swipe included), where a detail and the explanation start, the five Signal and "
+                  "interaction tests whose endpoint changed (S1, S2, S7, S11, S14), the seven screens on main (P7) and "
+                  "Back routes on the smaller iPhone (P8), and the recorded correction walkthrough",
+    "sweep_places": "the 11 required sweep_places executions of docs/verification/places-review-manifest.tsv (the places "
+                    "scope's P1-P6 and P9-P13; P7 and P8 run in the correction scope): the recorded journey, the Birthday "
+                    "gate on the way back, the largest text on two widths, rapid taps and interruptions, the Reduce Motion "
+                    "preview flag, relaunch, the band change, all twelve intent-venue combinations, missing choices and the "
+                    "guarded explanation, the seven screens on the smaller iPhone",
+    "sweep_signal": "the 11 required sweep_signal executions of docs/verification/places-review-manifest.tsv (the signal "
+                    "scope's S3-S6, S8-S10, S12, S13, S15 and S16; S1, S2, S7, S11 and S14 run in the correction scope)",
+}.get(scope, "unknown scope %r" % scope)
+# The four builds of the recovery after the Places correction, in order, on one frozen commit.
+recovery = ("correction", "sweep_places", "sweep_signal", "regressions")
 required = {
     "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
         source.get("result") == "MATCH",
@@ -1207,7 +1317,7 @@ required = {
     "UI tests executed and passed (%s; no retries; none skipped, interrupted or missing; every run exited 0)" % covered:
         tests.get("result") == "PASS" and tests.get("scope") == scope,
 }
-if scope in ("places", "correction"):
+if scope in ("places", "sweep_places", "correction"):
     required["journey recording confirmed and saved"] = last.get("places-recording", "").startswith("confirmed") \
         and os.path.isfile(movie) and os.path.getsize(movie) > 0
 lines = [
@@ -1243,27 +1353,33 @@ if os.path.isfile(path):
     lines += ["    " + line.strip() for line in open(path)
               if re.match(r"^\w+Tests\.test\w+\[", line) or line.startswith("xcodebuild_exit")]
 lines += ["", "Supplementary (reported, not required):"]
-if scope == "places":
+if scope in ("places", "sweep_places"):
     lines += ["  compact walkthrough video: " + compact.get("result", "NOT RUN")]
 lines += [
     "  unsigned simulator app zip (simulator only; not installable on a device): " + status("package"),
+    "  runnable preview copy of the app (build/preview; not evidence that any check passed): " + status("places-preview"),
     "",
     "OUTSTANDING manual review (automation cannot establish these):",
     "  visual approval against docs/design/places-approved/reference (the founder decides)",
     "  VoiceOver: the ticket's parts and its View place button, the tabs' selection, the disabled action's reason (its "
-    "hint), focus after each stage change and after Back, and the escape gesture (not handled by Places)",
+    "hint), focus after each stage change and after Back, and the escape gesture (each Places stage's container, "
+    "places.screen, goes back one stage; VoiceOver does not run in the Simulator)",
     "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a device",
     "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
     "  composing keyboards (Japanese, Chinese, Korean) and the software keyboard on a device",
     "  motion smoothness on a device (simulator recordings drop frames and have variable frame timing)",
 ]
 ok = all(required.values())
-if scope == "correction":
-    lines += ["", "This is a targeted correction run. It does not re-execute the 13 earlier Places executions or the 43",
-              "earlier-chapter executions (signal and regressions) except those listed above by test and device; the",
-              "full regression sweep is pending."]
-    verdict = "PASS (targeted correction; full regression sweep pending; manual review still outstanding)" if ok \
-        else "FAIL (scope correction)"
+if scope in recovery:
+    number = recovery.index(scope) + 1
+    lines += ["", "This is build %d of 4 of the recovery after the Places correction (correction, sweep_places, sweep_signal," % number,
+              "regressions), each a build of its own on the same frozen commit. The correction executes P7 as C9, P8 as C15",
+              "and S1, S2, S7, S11, S14 as C4, C5, C6, C7, C8 (the same method on the same device class in the same short-hold",
+              "run); the sweeps and regressions execute the other 49 of the 56 earlier required executions. A PASS here covers",
+              "this build only: scripts/places_recovery_reconcile.py passes only when all four builds passed every required",
+              "row on one git_head (docs/verification/places-recovery-coverage.tsv)."]
+    verdict = ("PASS (scope %s, build %d of 4; the four-build reconciliation is separate; manual review still outstanding)"
+               % (scope, number)) if ok else "FAIL (scope %s)" % scope
 else:
     verdict = "PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope
 lines += ["", "AUTOMATED VERDICT: " + verdict]
@@ -1280,11 +1396,18 @@ PY
 stage_package_review() {
     local status=0 title
     run python3 scripts/places_review_package.py "$ROOT" "$OUT" "$ARTIFACTS" "$SCOPE" || status=$?
+    # The same names as scripts/places_review_package.py; an unknown scope has no package.
     case "$SCOPE" in
         places) title="Places-Review" ;;
         signal) title="Places-Signal-Review" ;;
+        regressions) title="Places-Regressions-Review" ;;
         correction) title="Places-Correction-Review" ;;
-        *) title="Places-Regressions-Review" ;;
+        sweep_places) title="Places-Sweep-Places-Review" ;;
+        sweep_signal) title="Places-Sweep-Signal-Review" ;;
+        *)
+            summary_line "places-package" "NOT MADE: unknown scope '$SCOPE' (no archive carries another scope's name)"
+            return "$status"
+            ;;
     esac
     summary_line "places-package" "$(unzip -l "$ARTIFACTS/$title.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in $title.zip; $(tr '\n' ' ' < "$OUT/package-links.txt" 2>/dev/null)"
     return "$status"
@@ -1303,6 +1426,7 @@ stage_enforce() {
 case "$STAGE" in
     checkpoint) stage_checkpoint ;;
     destinations) stage_destinations ;;
+    preview-app) stage_preview_app ;;
     ui-review) stage_ui_review ;;
     compact-video) stage_compact_video ;;
     verdict) stage_verdict ;;

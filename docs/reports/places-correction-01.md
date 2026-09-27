@@ -114,13 +114,21 @@ Mac. Their results from build `6ab88011` are in §6.
   skip this correction removes for touch. An escape action on the whole screen could have changed
   the accessibility tree that every test depends on, and there is only one build, so it was left
   out. Open and unverified.
-- The guardrail audit again flagged the earlier doctrine's brand-string, "PROTOTYPE" banner and
-  `app.projecthalo.lab` rules. They do not match this rebuild, and this correction does not change
-  them. TASK_01 sets the provisional `com.proximeet.demo` and says not to inherit
-  `app.projecthalo.lab`. Every approved chapter from the Pass on shows a DEMO badge. Welcome and
-  Birthday show none; Welcome's route reads "Continue the demo (no account)". The Places chapter
-  report's §7 says every chapter shows the badge, which is wrong in the same way. That report is
-  left unchanged here, and this line corrects it. The report page's title no longer carries the
+- The guardrail audit again flagged the earlier Project Halo doctrine's brand-string
+  (`BrandConfig.swift`), "PROTOTYPE — mock data only." banner (gated on a `PROTOTYPE` build
+  condition) and `app.projecthalo.lab` rules. Lead's ruling: for these rebuilt screens the literal
+  banner requirement is obsolete, and no banner is added, because no approved design has one
+  (Welcome's approved handoff says not to add one). The disclosure the banner served is not
+  weakened and still binds: the app must say it is a demo with fictional data that uses no
+  location or camera. It says so with the approved DEMO badge (DEMO PROFILE on the Guest List)
+  on the Pass, Guest List, Wristband, Signal and every Places stage, and with the contextual lines
+  "No age or identity verification is performed.", "Fictional venues · demo Thursday, 8 pm",
+  "Fictional venue · …" and "Demo · no location or camera used." Welcome and Birthday show no
+  badge, as approved; the only way on from Welcome, into Birthday, reads "Continue the demo (no
+  account)". TASK_01 sets the provisional `com.proximeet.demo` and says not to inherit
+  `app.projecthalo.lab`; there is no `BrandConfig.swift`. The Places chapter report's §7 says
+  every approved chapter shows the DEMO badge, which is wrong for Welcome and Birthday. That report
+  is left unchanged here, and this line corrects it. The report page's title no longer carries the
   product name.
 - No permission, scanner, verification, presence, visibility or Room was added. The snapshot,
   eligibility (only Social or Business at Common Ground), missing-choice and age-gate protections

@@ -79,7 +79,9 @@ struct PlacesEdgeBack: UIViewRepresentable {
 
         /// Holds the stack's swipe-from-anywhere pop (`interactiveContentPopGestureRecognizer`,
         /// iOS 26) off while a detail or the explanation shows, and gives it back otherwise. Looked
-        /// up by name, so systems without it are unaffected.
+        /// up by name, so systems without it are unaffected. The DEBUG diagnosis switch
+        /// `-ProximeetPlacesKeepContentPop YES` (the scroll probe's; see `DebugLaunch`) never holds
+        /// it off.
         func holdContentPop(from anchor: UIView) {
             if anchor.window != nil, let found = Self.navigationController(of: anchor) {
                 navigation = found
@@ -89,7 +91,16 @@ struct PlacesEdgeBack: UIViewRepresentable {
             guard navigation.responds(to: NSSelectorFromString(key)),
                   let contentPop = navigation.value(forKey: key) as? UIGestureRecognizer
             else { return }
-            contentPop.isEnabled = !innerStage
+            contentPop.isEnabled = !innerStage || Self.keepsContentPop
+        }
+
+        /// The diagnosis switch, in DEBUG builds only; always off in Release.
+        private static var keepsContentPop: Bool {
+            #if DEBUG
+            return DebugLaunch.launchKeepsPlacesContentPop
+            #else
+            return false
+            #endif
         }
 
         private static func navigationController(of view: UIView) -> UINavigationController? {

@@ -14,13 +14,15 @@ import ProximeetDomain
 /// Reduce Motion (the system setting or the app's preview flag) replaces the expansion with the
 /// dissolve; VoiceOver gets no animation. The model always changes at once; the motion follows.
 ///
-/// Back is one stage for touch, whether it is the header's arrow, the bottom action or a swipe in
-/// from the leading edge (`PlacesEdgeBack`): browsing to the actual Signal, a detail to its
-/// category, the explanation to Common Ground's detail. VoiceOver's escape gesture is not handled
-/// here: the stack's own pop leaves the whole destination, so from a detail or the explanation it
-/// most likely goes to Signal. That is recorded as open, not verified. A detail and the explanation open at their
-/// beginning, never at the offset browsing was scrolled to; going back to browsing shows the
-/// originating ticket's end, where View place is.
+/// Back is one stage, whether it is the header's arrow, the bottom action, a swipe in from the
+/// leading edge (`PlacesEdgeBack`) or VoiceOver's escape (the two-finger scrub): browsing to the
+/// actual Signal, a detail to its category, the explanation to Common Ground's detail. Every one of
+/// them goes through `back(from:)` and the domain's `placesBack(from:)`. Escape is handled on the
+/// screen's container, above every element of every stage, so the stack's own pop (which would
+/// leave the whole destination) is not what answers it. With VoiceOver itself this is unverified:
+/// VoiceOver does not run in the Simulator. A detail and the explanation open at their beginning,
+/// never at the offset browsing was scrolled to; going back to browsing shows the originating
+/// ticket's end, where View place is.
 ///
 /// Everything is derived from the actual draft: the carried intent decides every helper line and
 /// whether Preview check-in is available (only Social or Business at Common Ground, the one open
@@ -125,6 +127,14 @@ struct PlacesView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        // One unlabelled container above every element of every stage, so VoiceOver's escape has a
+        // single owner whatever is focused. The elements themselves (identifiers, labels, traits,
+        // order) are unchanged; the identifier stays on the container, as places.tabs does.
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(.escape) {
+            escape(from: stage)
+        }
+        .accessibilityIdentifier("places.screen")
     }
 
     // MARK: - Header
@@ -171,7 +181,7 @@ struct PlacesView: View {
                 switch stage {
                 case .browse:
                     Button("Back") {
-                        session.leavePlaces()
+                        back(from: .browse)
                     }
                     .buttonStyle(WristbandSecondaryStyle())
                     .accessibilityIdentifier("places.secondary")
@@ -256,15 +266,43 @@ struct PlacesView: View {
         }
     }
 
-    private func back(from stage: PlacesStage) {
-        switch stage {
-        case .browse:
-            session.leavePlaces()
-        case .detail:
-            dissolve { session.leavePlaceDetail() }
-        case .explanation:
-            dissolve { session.backToPlace() }
+    /// One stage back: the header's Back, the bottom Back actions, a completed swipe and VoiceOver's
+    /// escape all come here. The domain decides where (`placesBack(from:)`: nothing if `stage` is no
+    /// longer the one shown); this decides only how it moves. From browsing, the navigation stack's
+    /// native pop carries the screen to Signal. An inner stage dissolves (240 ms, none for
+    /// VoiceOver), or, after a swipe has already carried the screen away, changes at once. Returns
+    /// whether it went back.
+    @discardableResult
+    private func back(from stage: PlacesStage, afterSwipe: Bool = false) -> Bool {
+        if stage == .browse {
+            return session.placesBack(from: stage.scene)
         }
+        var moved = false
+        if afterSwipe {
+            // The screen has left; the previous stage takes its place at once, without replaying
+            // a dissolve over a screen that is already gone.
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) {
+                moved = session.placesBack(from: stage.scene)
+                dissolveToken += 1
+                backDrag = 0
+            }
+        } else {
+            dissolve {
+                moved = session.placesBack(from: stage.scene)
+                return moved
+            }
+        }
+        return moved
+    }
+
+    /// VoiceOver's escape: exactly the one stage the Back controls go. Ignored while a completed
+    /// swipe is still finishing, as a second swipe is; any swipe offset is dropped first.
+    private func escape(from stage: PlacesStage) {
+        guard !backCompleting else { return }
+        backDrag = 0
+        back(from: stage)
     }
 
     // MARK: - Where a stage starts
@@ -310,7 +348,7 @@ struct PlacesView: View {
         }
         let stage = self.stage
         if stage == .browse {
-            if !session.leavePlaces() {
+            if !back(from: .browse) {
                 swipeCancelled()
             }
             return
@@ -324,22 +362,8 @@ struct PlacesView: View {
         withAnimation(.easeOut(duration: 0.2)) {
             backDrag = width
         } completion: {
-            // The screen has left; the previous stage takes its place at once, without replaying
-            // a dissolve over a screen that is already gone.
-            var instant = Transaction()
-            instant.disablesAnimations = true
-            withTransaction(instant) {
-                switch stage {
-                case .detail:
-                    _ = session.leavePlaceDetail()
-                case .explanation:
-                    _ = session.backToPlace()
-                case .browse:
-                    break
-                }
-                dissolveToken += 1
-                backDrag = 0
-            }
+            // Nothing moves in the model if another Back already did while the screen slid away.
+            back(from: stage, afterSwipe: true)
             backCompleting = false
         }
     }
@@ -365,6 +389,15 @@ private enum PlacesStage: Hashable {
     case browse
     case detail
     case explanation
+
+    /// The domain scene this stage shows.
+    var scene: DemoScene {
+        switch self {
+        case .browse: return .places
+        case .detail: return .placeDetail
+        case .explanation: return .placeExplanation
+        }
+    }
 }
 
 // MARK: - Browsing and detail

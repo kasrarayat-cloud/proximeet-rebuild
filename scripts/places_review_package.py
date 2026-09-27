@@ -8,12 +8,16 @@ Places-Review.zip (an offline index.html with the approved references beside thi
 the source and scope of every result, the manifest rows, the per-execution results, the logs, the
 verdict and the recorded deviations), Places-Screens.zip (every screen, each file name saying whether it
 is a real journey or a direct-launch fixture), Places-walkthrough-compact.zip (and the loose .mp4 when
-re-encoded) and Places-walkthrough-original.zip. The signal and regressions scopes make
-Places-Signal-Review.zip or Places-Regressions-Review.zip. The correction scope makes
-Places-Correction-Review.zip (before and after, the source and its changed files, every execution by
-test and device, the earlier coverage this run did not execute, logs, the verdict, a checksum of every
-file inside), Places-Correction-Screens.zip and Places-Correction-walkthrough.zip (the recording,
-unedited). Every archive gets a .sha256 beside it.
+re-encoded) and Places-walkthrough-original.zip. The sweep_places scope makes the same under the prefix
+Places-Sweep-Places (Places-Sweep-Places-Review.zip, -Screens.zip, -walkthrough-original.zip; no
+compact: its recording is delivered unedited), naming the captures of P7 and P8 as the correction build's. The
+signal, sweep_signal and regressions scopes make Places-Signal-Review.zip, Places-Sweep-Signal-Review.zip
+or Places-Regressions-Review.zip. The correction scope makes Places-Correction-Review.zip (before and
+after, the source and its changed files, every execution by test and device, the earlier coverage it
+executes and where the rest is due, logs, the verdict, a checksum of every file inside),
+Places-Correction-Screens.zip and Places-Correction-walkthrough.zip (the recording, unedited). An
+unknown scope makes nothing (exit 2), so no archive can carry another scope's name. Every archive gets
+a .sha256 beside it.
 Every relative link in an index must name a file in its archive; a broken link fails the stage.
 Standard library only; Python 3.8+.
 """
@@ -69,6 +73,25 @@ OTHERS = (
     ("places-back-after-view-place-fixture", "Back straight after View place"),
     ("places-after-background-resume-fixture", "Background straight after View place, then resume"),
     ("places-reduce-motion-preview-detail-fixture", "Reduce Motion preview flag: the detail, dissolved in"),
+)
+# Every scope's review archive, and the prefix of its screens and walkthrough archives (places-like
+# scopes only). Nothing falls back to another scope's name.
+PACKAGES = {
+    "places": ("Places-Review", "Places"),
+    "sweep_places": ("Places-Sweep-Places-Review", "Places-Sweep-Places"),
+    "signal": ("Places-Signal-Review", None),
+    "sweep_signal": ("Places-Sweep-Signal-Review", None),
+    "regressions": ("Places-Regressions-Review", None),
+    "correction": ("Places-Correction-Review", "Places-Correction"),
+}
+# The recovery after the Places correction: four builds, in this order, on one frozen commit.
+RECOVERY = ("correction", "sweep_places", "sweep_signal", "regressions")
+# Captures the sweep_places build does not make, because its P7 and P8 run in the correction build:
+# (capture name prefix, suffix, where it is made).
+SWEEP_ELSEWHERE = (
+    ("places-screen-", "-440pt-fixture", "P7 (the seven screens on the iPhone 17 Pro Max) runs in the correction build as C9"),
+    ("places-back-to-places-later-fixture", "", "P8 (Back routes, smaller iPhone) runs in the correction build as C15"),
+    ("places-reentry-after-card-later-fixture", "", "P8 (Back routes, smaller iPhone) runs in the correction build as C15"),
 )
 DEVIATIONS = (
     ("Signal to Places and back", "Figma dissolves (240 ms) between Signal and Places browsing. The app pushes and pops "
@@ -135,9 +158,12 @@ def main(argv):
         sys.stderr.write(__doc__)
         return 2
     root, out, artifacts, scope = argv[1:5]
-    places = scope == "places"
-    title = {"places": "Places-Review", "signal": "Places-Signal-Review",
-             "correction": "Places-Correction-Review"}.get(scope, "Places-Regressions-Review")
+    if scope not in PACKAGES:
+        print("unknown scope %r: no package is made (scopes: %s)" % (scope, ", ".join(sorted(PACKAGES))))
+        return 2
+    title, archive_prefix = PACKAGES[scope]
+    places = scope in ("places", "sweep_places")
+    sweep = scope == "sweep_places"
     out_zip = os.path.join(artifacts, title + ".zip")
     ref = os.path.join(root, "docs/design/places-approved/reference")
     entries, missing = [], []
@@ -154,8 +180,9 @@ def main(argv):
                 required=places or scope == "correction")
     deliveries = {key: add("approved/%s-delivery.png" % key, os.path.join(ref, "%s-delivery.png" % key), required=places)
                   for key, _, _ in VENUES}
+    # Only the original places scope re-encodes its recording on the Mac; sweep_places delivers it unedited.
     compact = add("captures/places-walkthrough-compact.mp4", os.path.join(out, "places-walkthrough-compact.mp4"),
-                  required=places)
+                  required=scope == "places")
     original = add("captures/places-walkthrough-original.mp4", os.path.join(out, "places-walkthrough-original.mp4"),
                    required=places or scope == "correction")
     for key in sorted(os.listdir(out)) if os.path.isdir(out) else []:
@@ -257,7 +284,16 @@ def main(argv):
         return '<figure><img class="delivery" src="%s" alt="%s"><figcaption>%s</figcaption></figure>' % (
             name, html.escape(caption), html.escape(caption))
 
+    def elsewhere(key):
+        # In sweep_places, what makes a capture that this build does not (P7 and P8), or None.
+        if not sweep:
+            return None
+        return next((where for start, end, where in SWEEP_ELSEWHERE if key.startswith(start) and key.endswith(end)), None)
+
     def shot(key, caption):
+        if key not in shots and elsewhere(key):
+            return '<p class="note">%s: %s; see Places-Correction-Screens.zip.</p>' % (html.escape(caption),
+                                                                                      html.escape(elsewhere(key)))
         return img(shots.get(key), caption)
 
     def video(name, caption):
@@ -287,9 +323,20 @@ def main(argv):
                 scope_rows += ("<tr><td>%s</td><td>Codemagic build %s (reported at dispatch; not read by this build)"
                                "</td><td><code>%s</code></td><td>see that build's own verdict</td></tr>"
                                % tuple(html.escape(p) for p in parts))
-    others = [s for s in ("places", "signal", "regressions") if s != scope]
-    scope_note = ("The other scopes (%s) run as their own builds, each on a pinned commit named in its own verdict; "
-                  "the final report lists every build, scope and commit." % ", ".join(others))
+    if scope in RECOVERY:
+        others = [s for s in RECOVERY if s != scope]
+        scope_note = ("This is build %d of 4 of the recovery after the Places correction. The other builds (%s) run on "
+                      "the same frozen commit, each with its own verdict; scripts/places_recovery_reconcile.py joins the "
+                      "four by docs/verification/places-recovery-coverage.tsv, and passes only when every required row "
+                      "passed on one commit." % (RECOVERY.index(scope) + 1, ", ".join(others)))
+        if sweep:
+            scope_note += (" P7 and P8 of the places scope run in the correction build, as C9 and C15 (the same test on "
+                           "the same device, in the same short-hold run); their captures are in "
+                           "Places-Correction-Screens.zip.")
+    else:
+        others = [s for s in ("places", "signal", "regressions") if s != scope]
+        scope_note = ("The other scopes (%s) run as their own builds, each on a pinned commit named in its own verdict; "
+                      "the final report lists every build, scope and commit." % ", ".join(others))
 
     if places:
         sections = [
@@ -310,9 +357,11 @@ def main(argv):
              row(cards()) +
              row(*[delivery(key, "Approved scene delivery: %s" % name) for key, name, _ in VENUES])),
             ("The seven screens (XCTest, direct launches, Social; frames and drawing checked on the 440-pt iPhone)",
-             "".join(row(*[shot("places-screen-%s-social-%spt-fixture" % (key, width), "%s, %s pt (FIXTURE)" % (label, width))
-                           for key, label in SCREENS]) for width in widths("places-screen-"))
-             or '<p class="missing">The seven screens: not produced in this run.</p>'),
+             ("".join(row(*[shot("places-screen-%s-social-%spt-fixture" % (key, width), "%s, %s pt (FIXTURE)" % (label, width))
+                            for key, label in SCREENS]) for width in widths("places-screen-"))
+              or '<p class="missing">The seven screens: not produced in this run.</p>') +
+             ('<p class="note">The 440-pt seven screens: %s; see Places-Correction-Screens.zip.</p>'
+              % html.escape(SWEEP_ELSEWHERE[0][2]) if sweep else "")),
             ("Eligibility: every intent at every venue (XCTest, direct launches)",
              "".join(row(*[shot("places-eligibility-%s-%s-fixture" % (key, intent), "%s at %s" % (intent.title(), name))
                            for key, name, _ in VENUES]) for intent in INTENTS)),
@@ -413,9 +462,12 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
                   "is the real route (real taps from Welcome); XCTest-FIXTURE-direct-launch opens a prepared state "
                   "directly, through the same gates. Every venue, host and schedule is fictional; nothing is checked in, "
                   "reserved or made visible, and no permission is requested. The approved references, the deviations and "
-                  "the full verdict (results/verdict.txt) are in Places-Review.zip. Automated checks are not visual "
+                  "the full verdict (results/verdict.txt) are in %s.zip. Automated checks are not visual "
                   "approval.\n" % (headline, head, build_label, simulator.get("device_name", "an unrecorded simulator"),
-                                   simulator.get("runtime_name", "an unrecorded runtime")))
+                                   simulator.get("runtime_name", "an unrecorded runtime"), title))
+        if sweep:
+            readme += ("P7 (the seven screens at 440 pt) and P8 (Back routes) run in the correction build as C9 and C15 "
+                       "on the same commit; their screens are in Places-Correction-Screens.zip.\n")
         screens = []
         for width in widths("places-screen-"):
             for key, label in SCREENS:
@@ -433,41 +485,46 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
         for key in sorted(k for k in shots if k.startswith("places-largest-text-")):
             screens.append((key, "Largest-text-%s-XCTest-FIXTURE-direct-launch.png"
                             % key[len("places-largest-text-"):].replace("-fixture", "")))
-        with zipfile.ZipFile(os.path.join(artifacts, "Places-Screens.zip"), "w", zipfile.ZIP_STORED) as bundle:
+        with zipfile.ZipFile(os.path.join(artifacts, archive_prefix + "-Screens.zip"), "w", zipfile.ZIP_STORED) as bundle:
             bundle.writestr("README.txt", readme)
             for key, target in screens:
                 name = shots.get(key)
                 if name and name in sources:
                     bundle.write(sources[name], target)
+                elif elsewhere(key):
+                    bundle.writestr(target + ".IN-CORRECTION-BUILD.txt", "Not made by this build: %s (see "
+                                    "Places-Correction-Screens.zip).\n" % elsewhere(key))
                 else:
                     bundle.writestr(target + ".MISSING.txt", "Not produced in this run.\n")
             if notes:
                 bundle.writestr("Notes-attached-by-the-tests.txt", "\n\n".join(notes) + "\n")
-        made.append("Places-Screens.zip")
+        made.append(archive_prefix + "-Screens.zip")
         if compact:
             reencoded = compact_note == "RE-ENCODED"
             if reencoded:
-                inner = "Places-walkthrough-compact-RE-ENCODED-TRIMMED.mp4"
+                inner = archive_prefix + "-walkthrough-compact-RE-ENCODED-TRIMMED.mp4"
                 label = ("Compact walkthrough: RE-ENCODED and TRIMMED to the app (%s; %s). A half-size AVFoundation "
                          "re-encode, not the original encoding. The unedited recording is in "
-                         "Places-walkthrough-original.zip.\n" % (compact_info.get("method", "AVFoundation export"),
-                                                                 compact_info.get("trim", "trim not recorded")))
+                         "%s-walkthrough-original.zip.\n" % (compact_info.get("method", "AVFoundation export"),
+                                                             compact_info.get("trim", "trim not recorded"), archive_prefix))
             else:
-                inner = "Places-walkthrough-FALLBACK-COPY-not-re-encoded-not-trimmed.mp4"
+                inner = archive_prefix + "-walkthrough-FALLBACK-COPY-not-re-encoded-not-trimmed.mp4"
                 label = ("Compact walkthrough: %s. The re-encode did not complete, so this is a plain copy of the "
                          "unedited recording: not re-encoded and not trimmed.\n" % compact_note)
-            with zipfile.ZipFile(os.path.join(artifacts, "Places-walkthrough-compact.zip"), "w", zipfile.ZIP_STORED) as bundle:
+            with zipfile.ZipFile(os.path.join(artifacts, archive_prefix + "-walkthrough-compact.zip"), "w",
+                                 zipfile.ZIP_STORED) as bundle:
                 bundle.writestr("README.txt", readme + label)
                 bundle.write(sources[compact], inner)
-            made.append("Places-walkthrough-compact.zip")
+            made.append(archive_prefix + "-walkthrough-compact.zip")
             if reencoded:
-                shutil.copyfile(sources[compact], os.path.join(artifacts, "Places-walkthrough-compact.mp4"))
-                made.append("Places-walkthrough-compact.mp4")
+                shutil.copyfile(sources[compact], os.path.join(artifacts, archive_prefix + "-walkthrough-compact.mp4"))
+                made.append(archive_prefix + "-walkthrough-compact.mp4")
         if original:
-            with zipfile.ZipFile(os.path.join(artifacts, "Places-walkthrough-original.zip"), "w", zipfile.ZIP_STORED) as bundle:
+            with zipfile.ZipFile(os.path.join(artifacts, archive_prefix + "-walkthrough-original.zip"), "w",
+                                 zipfile.ZIP_STORED) as bundle:
                 bundle.writestr("README.txt", readme + "The unedited simulator recording of the real journey.\n")
-                bundle.write(sources[original], "Places-walkthrough-original.mp4")
-            made.append("Places-walkthrough-original.zip")
+                bundle.write(sources[original], archive_prefix + "-walkthrough-original.mp4")
+            made.append(archive_prefix + "-walkthrough-original.zip")
     for name in made:
         path = os.path.join(artifacts, name)
         open(path + ".sha256", "w").write("%s  %s\n" % (sha256(path), name))
@@ -490,8 +547,9 @@ CORRECTION_DEVIATIONS = (
     ("The browse ticket's accessibility", "The ticket's parts (name, kind, intents, schedule) read on their own, and "
      "View place is a real button (VoiceOver: “View place”). Before the correction the whole ticket was one element. "
      "The card itself still opens the detail when tapped. VoiceOver itself was not run."),
-    ("VoiceOver's escape gesture", "Not handled by Places. An escape action on the whole screen could have changed the "
-     "accessibility tree every test depends on, so it was left out. Unverified."),
+    ("VoiceOver's escape gesture", "Each Places stage is one accessibility container (places.screen) that owns the escape "
+     "action, and escape goes back one stage, as the screen's Back controls do. VoiceOver does not run in the Simulator, "
+     "so the escape itself is unverified here: it is a manual check on a device."),
 )
 
 
@@ -535,18 +593,47 @@ def package_correction(root, out, artifacts, title, entries, missing, shots, not
         lines = read(tsv).splitlines()
         header = lines[0].split("\t") if lines else []
         executions = [dict(zip(header, line.split("\t"))) for line in lines[1:] if line.strip()]
-    # Only rows that really ran: an optional row left unrun for time has a "not run" outcome.
-    ran = {(e.get("test", ""), e.get("device", "")): e.get("outcome", "") for e in executions
-           if e.get("outcome") and not e["outcome"].startswith("not run") and e["outcome"] != "skipped"}
+    # Only rows that really ran: an optional row left unrun for time has a "not run" outcome. The
+    # correction's required rows that are earlier tests (C9 = P7, C15 = P8, C4-C8 = S1, S2, S7, S11,
+    # S14) execute those earlier rows too: the same test on the same device, in the same kind of run
+    # (a recorded "journey" run keeps full holds, every other run short holds). The probe_* rows are
+    # the optional scroll diagnostic and never stand for an earlier row.
+    kinds = {}
+    for scope_name, order, device, run, bundle, seconds, test, kind in manifest:
+        if scope_name == "correction":
+            kinds[order] = (run, kind)
+    ran = {}
+    for e in executions:
+        run, kind = kinds.get(e.get("order", ""), (e.get("run", ""), e.get("kind", "")))
+        if kind == "required" and e.get("outcome") and not e["outcome"].startswith("not run") \
+                and e["outcome"] != "skipped":
+            ran[(e.get("test", ""), e.get("device", ""), run == "journey")] = (e.get("order", "?"), e["outcome"])
+    # Where each earlier row is due otherwise: docs/verification/places-recovery-coverage.tsv.
+    due = {}
+    coverage_path = os.path.join(root, "docs/verification/places-recovery-coverage.tsv")
+    for line in read(coverage_path).splitlines():
+        cells = line.split("\t")
+        if line.startswith("#") or len(cells) < 8 or cells[0] == "row":
+            continue
+        for target in cells[7].split(","):
+            if ":" in target:
+                due[target.strip()] = "build %s (%s) as %s on %s" % (cells[1], cells[2], cells[0], cells[3])
     earlier_rows, correction_rows = [], []
     for scope_name, order, device, run, bundle, seconds, test, kind in manifest:
         if scope_name == "correction":
             correction_rows.append((order, device, run, test.replace("/", "."), kind))
             continue
-        here = ran.get((test.replace("/", "."), device))
-        status = ("executed in this correction on the same device: %s" % here) if here else "not executed in this correction"
+        if scope_name not in ("places", "signal", "regressions"):
+            continue
+        here = ran.get((test.replace("/", "."), device, run == "journey"))
+        if here:
+            status = "executed in this correction as %s (the same test on the same device): %s" % here
+        else:
+            status = "not executed in this correction; due in %s" % due.get("%s:%s" % (scope_name, order),
+                                                                            "no build of the recovery (see the coverage file)")
         earlier_rows.append((scope_name, order, device, test.replace("/", "."), kind, status))
-    unrun = [r for r in earlier_rows if r[5] == "not executed in this correction" and r[4] == "required"]
+    unrun = [r for r in earlier_rows if r[5].startswith("not executed") and r[4] == "required"]
+    covered_here = [r for r in earlier_rows if r[5].startswith("executed") and r[4] == "required"]
 
     def img(name, caption):
         if not name:
@@ -616,14 +703,26 @@ def package_correction(root, out, artifacts, title, entries, missing, shots, not
         ("The five Signal and interaction tests whose endpoint changed",
          row(*[shot(k, k) for k in ("signal-journey-continue-places", "signal-continue-places-fixture", "06-places",
                                     "08-reduced-motion-places")])),
+        ("P7 and P8 of the places scope, run here as C9 (the seven screens, 440 pt) and C15 (Back routes, smaller iPhone)",
+         row(*[shot("places-screen-%s-social-440pt-fixture" % key, "C9: %s, 440 pt (FIXTURE)" % label)
+               for key, label in SCREENS]) +
+         row(shot("places-back-to-places-later-fixture", "C15: Back to places, Later kept (FIXTURE)"),
+             shot("places-reentry-after-card-later-fixture", "C15: back to the Guest List card and forward again, Later kept "
+                                                             "(FIXTURE)"))),
     ]
     if original:
         sections.insert(0, ("The recorded correction walkthrough (smaller iPhone, unedited)",
                             '<figure><video src="%s" controls muted playsinline preload="metadata"></video><figcaption>'
                             'Original simulator recording, unedited. It starts before the app opens.</figcaption></figure>' % original))
     body = "".join("<h2>%s</h2>%s" % (html.escape(t), c) for t, c in sections)
-    run_rows = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(e.get(k, "")) for k in
-                                                ("order", "device", "udid", "run", "test", "kind", "outcome", "seconds", "failure"))
+    def kind_label(e):
+        if e.get("kind") == "diagnostic" or (e.get("kind") == "extra" and e.get("run", "").startswith("probe_")):
+            return "diagnostic (optional; never part of the verdict)"
+        return e.get("kind", "")
+
+    run_rows = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(kind_label(e) if k == "kind" else e.get(k, ""))
+                                                for k in ("order", "device", "udid", "run", "test", "kind", "outcome",
+                                                          "seconds", "failure"))
                        for e in executions)
     earlier_table = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(c) for c in r) for r in earlier_rows)
     deviation_rows = "".join("<tr><td>%s</td><td>%s</td></tr>" % (html.escape(a), html.escape(b)) for a, b in CORRECTION_DEVIATIONS)
@@ -641,9 +740,12 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 <h1>Places: targeted correction</h1>
 <p><b>%s</b></p>
 <p class="note">%s. Source <code>%s</code>, based on <code>%s</code>. Before this correction, <code>%s</code> passed the places
-scope only (build 6ab8639c, 13 executions); the earlier chapters' 43 executions last passed at 1085af3d and b06707ec. This run is
-targeted. It does not re-execute those executions except the ones listed below by test and device, so the full regression sweep
-is pending. The correction's captures come from direct launches (FIXTURE) through the same gates. Captures named signal-journey-*
+scope only (build 6ab8639c, 13 executions); the earlier chapters' 43 executions last passed at 1085af3d and b06707ec. This is build 1
+of 4 of the recovery on one frozen commit (correction, sweep_places, sweep_signal, regressions). It executes P7 as C9, P8 as C15 and
+S1, S2, S7, S11, S14 as C4-C8, listed below by test and device; the other earlier executions are due in the three later builds, and
+scripts/places_recovery_reconcile.py passes only when all four builds passed every required row on one commit. C16 and C17 are an
+optional scroll diagnostic and never required. The correction's captures come from direct launches (FIXTURE) through the same
+gates. Captures named signal-journey-*
 come from Signal's real-route test, <code>SignalReviewTests.testWalkthroughRealJourney</code> (onboarding → Signal → Places,
 on the iPhone 17 Pro Max, unrecorded). BEFORE images are 1× copies of build 6ab8639c's captures (before/provenance.json names
 each original and its SHA-256).</p>
@@ -652,7 +754,7 @@ each original and its SHA-256).</p>
 %s
 <h2>Every execution in this build (retries off)</h2><table><tr><th>Order</th><th>Device</th><th>UDID</th><th>Run</th><th>Test</th>
 <th>Kind</th><th>Outcome</th><th>Seconds</th><th>Failure</th></tr>%s</table>
-<h2>Earlier coverage: executed here or not (%d required earlier executions not executed in this correction)</h2>
+<h2>Earlier coverage: %d required earlier executions executed here; %d due in the later builds of the recovery</h2>
 <table><tr><th>Scope</th><th>Order</th><th>Device</th><th>Test</th><th>Kind</th><th>In this correction</th></tr>%s</table>
 <h2>Deviations and decisions, recorded</h2><table><tr><th>What</th><th>How</th></tr>%s</table>
 <h2>Notes attached by the tests</h2><pre>%s</pre>
@@ -663,7 +765,7 @@ each original and its SHA-256).</p>
 </body></html>""" % (
         html.escape(headline), html.escape(build_label), html.escape(head), CORRECTION_BASE, CORRECTION_TESTED,
         CORRECTION_BASE[:12], html.escape(changed), CORRECTION_TESTED[:12], html.escape(changed_product), body, run_rows,
-        len(unrun), earlier_table, deviation_rows, html.escape("\n\n".join(notes) or "none"), html.escape(verdict),
+        len(covered_here), len(unrun), earlier_table, deviation_rows, html.escape("\n\n".join(notes) or "none"), html.escape(verdict),
         " ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries if n.startswith("app/") and n.endswith(".zip"))
         or "not produced",
         " | ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries
@@ -684,8 +786,9 @@ each original and its SHA-256).</p>
             bundle.write(source, title + "/" + name)
     print("%s.zip: %d files, %d relative links checked, %d broken%s" % (
         title, len(entries) + 2, len(targets), len(broken), ("; missing: " + ", ".join(missing)) if missing else ""))
-    open(os.path.join(out, "package-links.txt"), "w").write("links=%d\nbroken=%s\nmissing=%s\nunrun_required_earlier=%d\n" % (
-        len(targets), ",".join(broken) or "none", ",".join(missing) or "none", len(unrun)))
+    open(os.path.join(out, "package-links.txt"), "w").write(
+        "links=%d\nbroken=%s\nmissing=%s\nearlier_required_executed_here=%d\nunrun_required_earlier=%d\n" % (
+            len(targets), ",".join(broken) or "none", ",".join(missing) or "none", len(covered_here), len(unrun)))
 
     sources = dict(entries)
     readme = ("%s\nPlaces correction, source %s, %s. Every correction screen is a direct launch (FIXTURE) through the "

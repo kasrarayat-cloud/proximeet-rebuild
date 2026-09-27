@@ -344,6 +344,25 @@ public struct DemoFlow: Equatable, Sendable {
         return returnTo(.places)
     }
 
+    /// One stage back on Places, whatever asked for it: the header's Back, the bottom Back actions,
+    /// a completed swipe from the leading edge and VoiceOver's escape. Browsing returns to the
+    /// actual Signal (`leavePlaces()`), a detail to its originating category (`leavePlaceDetail()`),
+    /// the explanation to Common Ground's detail (`backToPlace()`); the intent, the approach, the
+    /// introduction and the category are kept. `scene` is the stage the request was made on: a
+    /// request from a stage that is no longer current (a repeated tap, a swipe finishing after
+    /// another Back) does nothing, so one request never goes back two stages. Off Places, or for
+    /// any other scene, it does nothing.
+    @discardableResult
+    public mutating func placesBack(from scene: DemoScene) -> Bool {
+        guard currentScene == scene else { return false }
+        switch scene {
+        case .places: return leavePlaces()
+        case .placeDetail: return leavePlaceDetail()
+        case .placeExplanation: return backToPlace()
+        default: return false
+        }
+    }
+
     /// Whether `scene` may be shown now: its requirements in the draft and, for the explanation,
     /// Common Ground as the retained venue.
     public func allows(_ scene: DemoScene) -> Bool {

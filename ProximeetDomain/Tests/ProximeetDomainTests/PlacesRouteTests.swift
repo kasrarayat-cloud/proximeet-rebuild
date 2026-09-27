@@ -304,7 +304,9 @@ final class PlacesRouteTests: XCTestCase {
         XCTAssertFalse(flow.adoptNavigationPath(flow.path + [.placeExplanation]), "the explanation only through its guard")
         XCTAssertFalse(flow.reconcileRoute(), "a valid route is left alone")
         XCTAssertTrue(flow.path.allSatisfy { flow.allows($0) })
-        // A system back gesture from a detail is a pop: browsing, category kept.
+        // A pop of one scene from the domain path on a detail is accepted: browsing, category kept.
+        // (Not what the navigation stack proposes: its path omits the inner stages, so its own pop
+        // from a detail lands on Signal; see PlacesBackTests.)
         flow.leavePlaceDetail()
         flow.choosePlaceCategory(.upcoming)
         flow.openPlaceDetail()

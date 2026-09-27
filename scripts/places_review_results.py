@@ -3,19 +3,21 @@
 
     python3 scripts/places_review_results.py MANIFEST SCOPE RUNS OUT_TXT OUT_TSV MAIN_UDID B_UDID SMALL_UDID LOG [LOG ...]
 
-MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (places, signal or
-regressions) are judged. RUNS is the stage's runs.txt ("<run> <bundle> <exit> <kind>", kind no |
-infra | time | device). The LOGs are the lanes' xcodebuild logs, in which every run starts with a
-"$ ..." line naming its destination and result bundle. B_UDID or SMALL_UDID may be "" when that
-device was not used (device B's rows then run on the selected simulator). Writes the key=value
-results that scripts/places_review.sh's verdict reads (OUT_TXT) and one row per manifest row and
-per unexpected execution (OUT_TSV). Exits 0 whether the result is PASS or FAIL; the verdict decides.
+MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (correction,
+sweep_places, sweep_signal, regressions, places or signal) are judged. RUNS is the stage's runs.txt
+("<run> <bundle> <exit> <kind>", kind no | infra | time | device). The LOGs are the lanes' xcodebuild
+logs, in which every run starts with a "$ ..." line naming its destination and result bundle. B_UDID
+or SMALL_UDID may be "" when that device was not used (device B's rows then run on the selected
+simulator). Writes the key=value results that scripts/places_review.sh's verdict reads (OUT_TXT) and
+one row per manifest row and per unexpected execution (OUT_TSV). Exits 0 whether the result is PASS
+or FAIL; the verdict decides.
 
 Automatic retries are off in every scope, so every execution counts: a required test passes only if
 its run executed it exactly once, on its device, and it passed. A planned repeat is its own row; it
-may be left unrun for time (runs.txt says so), but if it runs it must pass. A skipped test, an
-interrupted one (started, no outcome) and a run that did not exit 0 are failures. Standard library
-only; Python 3.8+.
+may be left unrun for time (runs.txt says so), but if it runs it must pass; so may an extra. A
+diagnostic row (the correction's scroll probe, runs probe_*) starts like an extra, but its outcome and
+its run's exit are only reported: they never count toward the verdict. A skipped test, an interrupted one (started, no outcome) and a run that did
+not exit 0 are failures. Standard library only; Python 3.8+.
 """
 import os
 import re
@@ -28,6 +30,13 @@ COMMAND = re.compile(r"^\$ .*-destination platform=iOS Simulator,id=([0-9A-Fa-f-
 BUNDLE = re.compile(r"-resultBundlePath \S*?(\w+)\.xcresult")
 FLAGS = ("PLACES", "SIGNAL", "WRISTBAND", "GUEST_LIST", "PASS", "BIRTHDAY", "WELCOME")
 LANE_LABEL = {"main": "main", "b": "deviceB", "small": "smaller"}
+
+
+def kind_label(row):
+    """The row's kind as reported: the scroll probe is a diagnostic that never counts toward a verdict."""
+    if row["kind"] == "diagnostic" or (row["kind"] == "extra" and row["run"].startswith("probe_")):
+        return "diagnostic (optional; never part of the verdict)"
+    return row["kind"]
 
 
 def load_manifest(path, scope):
@@ -126,7 +135,7 @@ def main(argv):
         messages = errors.get((row["bundle"], row["test"]), [])
         seconds = None
         if not found:
-            if row["kind"] in ("repeat", "extra") and run and run["kind"] == "time":
+            if row["kind"] in ("repeat", "extra", "diagnostic") and run and run["kind"] == "time":
                 outcome = "not run (time budget: optional, left for the required runs)"
             elif run is None:
                 outcome = "not run (its run was not started)"
@@ -143,20 +152,23 @@ def main(argv):
                 outcome = " then ".join(e["outcome"] for e in found) + " (%d executions in one run)" % len(found)
                 problems.append("%s %s: executed %d times in %s; retries are off" % (
                     row["order"], row["test"], len(found), row["bundle"]))
-            elif outcome != "passed":
+            elif outcome != "passed" and row["kind"] != "diagnostic":
                 problems.append("%s %s: %s%s" % (row["order"], row["test"], outcome + (
                     " (started, no outcome recorded: a time bound, a runner crash or restart)"
                     if outcome == "interrupted" else ""), (": " + messages[0]) if messages else ""))
-            if not expected_device:
+            if row["kind"] == "diagnostic":
+                pass
+            elif not expected_device:
                 problems.append("%s %s: ran, but no %s device was recorded" % (row["order"], row["test"],
                                                                           LANE_LABEL[row["device"]]))
             elif execution["device"] and execution["device"] != expected_device:
                 problems.append("%s %s: ran on %s, not on %s" % (row["order"], row["test"], execution["device"],
                                                                 expected_device))
-            label = LANE_LABEL[row["device"]] + ((", " + row["kind"]) if row["kind"] != "required" else "")
+            label = LANE_LABEL[row["device"]] + ((", " + kind_label(row)) if row["kind"] != "required" else "")
             result_lines.append("%s[%s]=%s%s" % (row["test"], label, outcome, (" (%s s)" % seconds) if seconds else ""))
         if row["kind"] != "required":
-            repeats.append("%s %s (%s, %s): %s" % (row["order"], row["test"], row["kind"], LANE_LABEL[row["device"]], outcome))
+            repeats.append("%s %s (%s, %s): %s" % (row["order"], row["test"], kind_label(row), LANE_LABEL[row["device"]],
+                                                   outcome))
         table.append([row["order"], row["device"], expected_device, row["run"], row["bundle"], row["test"], row["kind"],
                       outcome, seconds or "", " | ".join(messages)])
 
@@ -170,7 +182,8 @@ def main(argv):
     for name in sorted({r["run"] for r in rows}):
         run = run_exit.get(name)
         kinds = {r["kind"] for r in rows if r["run"] == name}
-        optional = kinds <= {"repeat", "extra"}
+        optional = kinds <= {"repeat", "extra", "diagnostic"}
+        diagnostic = kinds == {"diagnostic"}
         if run is None:
             if not optional:
                 problems.append("run %s has no recorded exit (it did not run)" % name)
@@ -179,7 +192,7 @@ def main(argv):
                 problems.append("run %s was left unrun for time" % name)
         elif run["kind"] == "device":
             problems.append("run %s had no device to run on" % name)
-        elif run["exit"] != "0":
+        elif run["exit"] != "0" and not diagnostic:
             problems.append("run %s (bundle %s) exited %s" % (name, run["bundle"], run["exit"]))
     infra = [r for r in runs if r["kind"] == "infra"]
 
@@ -211,7 +224,8 @@ def main(argv):
                                               "the same tests ran again" % (r["run"], r["bundle"], r["exit"])
                                               for r in infra) if infra else "none"),
         "flag_markers_in_log=" + " ".join(sorted(markers)),
-        "walkthrough_started_epoch=%s" % (walk_start or ("unknown" if scope == "places" else "not recorded in this scope")),
+        "walkthrough_started_epoch=%s" % (walk_start or ("unknown" if any(r["run"] == "journey" for r in rows)
+                                                         else "not recorded in this scope")),
         "devices=main %s; device B %s; smaller %s" % (main_udid, b_udid.upper() if b_used else "not used",
                                                      small_udid.upper() or "not used"),
     ]
