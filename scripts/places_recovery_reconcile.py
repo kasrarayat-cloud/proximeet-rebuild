@@ -346,7 +346,7 @@ def main(argv):
             "smaller": smaller,
         }
         record["counts"], record["command"], record["check"] = product_check(record["head"], assumed)
-        record["main_ok"] = record["model"] == MAIN_MODEL
+        record["main_ok"] = record["model"] == MAIN_MODEL and bool(record["runtime"])
         # As for main: only with a recorded runtime, so the one-runtime rule covers these rows too.
         record["small_ok"] = (smaller == SMALL_MODEL or smaller.startswith(SMALL_MODEL + " (")) and bool(record["runtime"])
         if not record["has_executions"]:
