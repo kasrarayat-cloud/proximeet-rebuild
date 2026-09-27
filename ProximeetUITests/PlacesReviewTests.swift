@@ -78,10 +78,6 @@ final class PlacesReviewTests: XCTestCase {
         venue.permitted.map { titles[$0] ?? $0 }.joined(separator: " and ")
     }
 
-    private static func ticketLabel(_ venue: VenueFacts) -> String {
-        "\(venue.name). \(venue.kind). For \(intentsLine(venue)) bands. \(venue.schedule). View place"
-    }
-
     override func setUpWithError() throws {
         continueAfterFailure = false
         try XCTSkipUnless(
@@ -104,6 +100,8 @@ final class PlacesReviewTests: XCTestCase {
     func testWalkthroughRealJourney() throws {
         print("PLACES_WALKTHROUGH_START \(Date().timeIntervalSince1970)")
         let app = launchWelcome()
+        // The app's first screen: where a compact recording's trim starts.
+        print("PLACES_WALKTHROUGH_APP_READY \(Date().timeIntervalSince1970)")
         hold(1.0)
         let pass = openCompletedPass(app)
         pass.primary.tap()
@@ -682,7 +680,7 @@ final class PlacesReviewTests: XCTestCase {
 
         // View place straight after the tab.
         places.tab("upcoming").tap()
-        places.ticket.tap()
+        places.viewPlace.tap()
         waitForLabel(places.name, "Fieldwork")
         hold(0.8)
         assertDetail(places, category: "upcoming", intent: "social")
@@ -694,7 +692,7 @@ final class PlacesReviewTests: XCTestCase {
         places.tab("now").tap()
         XCTAssertTrue(waitFor(places.tab("now"), selected: true))
         hold(0.5)
-        places.ticket.tap()
+        places.viewPlace.tap()
         places.back.tap()
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.8)
@@ -703,7 +701,7 @@ final class PlacesReviewTests: XCTestCase {
         capture("places-back-after-view-place-fixture", app)
 
         // Preview check-in straight after View place.
-        places.ticket.tap()
+        places.viewPlace.tap()
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
         hold(0.8)
@@ -714,7 +712,7 @@ final class PlacesReviewTests: XCTestCase {
         hold(0.5)
 
         // The app sent to the background straight after View place, then resumed.
-        places.ticket.tap()
+        places.viewPlace.tap()
         XCUIDevice.shared.press(.home)
         hold(2.0)
         app.activate()
@@ -737,7 +735,7 @@ final class PlacesReviewTests: XCTestCase {
         let places = PlacesScreen(app: app)
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.6)
-        places.ticket.tap()
+        places.viewPlace.tap()
         let early = RenderedScreen(app).map(Self.ticketEdges)
         XCTAssertTrue(places.primary.waitForExistence(timeout: 5), "The detail is in the model at once.")
         hold(1.0)
@@ -786,15 +784,15 @@ final class PlacesReviewTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
         }
         XCTAssertGreaterThan(Set(tabs.map { Int($0.frame.minY.rounded()) }).count, 1, "The tabs stack at this size.")
-        for element in [places.ticket, places.browseLine] {
+        for element in [places.viewPlace, places.browseLine] {
             XCTAssertTrue(scrollIntoView(element, bar: places.secondary, app), "\(element.identifier) is reachable.")
         }
         XCTAssertEqual(places.browseLine.label, Self.expected("upcoming", "social").browse)
         XCTAssertTrue(places.secondary.isHittable, "Back stays on screen.")
         capture("places-largest-text-browse-bottom-\(width)pt-fixture", app)
-        // View place on the ticket's visible part.
-        XCTAssertTrue(scrollIntoView(places.ticket, bar: places.secondary, app))
-        places.ticket.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05)).tap()
+        // View place, the button itself, scrolled fully into view.
+        XCTAssertTrue(scrollIntoView(places.viewPlace, bar: places.secondary, app))
+        places.viewPlace.tap()
         waitForLabel(places.name, "Fieldwork")
         hold(0.8)
         XCTAssertTrue(places.primary.isHittable && places.detailSecondary.isHittable, "Both actions stay on screen.")
@@ -873,12 +871,13 @@ final class PlacesReviewTests: XCTestCase {
     private func choose(_ category: String, _ places: PlacesScreen) {
         places.tab(category).tap()
         XCTAssertTrue(waitFor(places.tab(category), selected: true), "\(category) is selected.")
-        waitForLabel(places.ticket, Self.ticketLabel(Self.venue(category)))
+        waitForLabel(places.ticketName, Self.venue(category).name)
     }
 
-    /// View place on the browse ticket: the category's detail.
+    /// View place, the button itself, brought fully into view: the category's detail.
     private func openDetail(_ places: PlacesScreen, category: String) {
-        places.ticket.tap()
+        XCTAssertTrue(scrollIntoView(places.viewPlace, bar: places.secondary, places.app), "View place is reachable.")
+        places.viewPlace.tap()
         waitForLabel(places.name, Self.venue(category).name)
     }
 
@@ -897,7 +896,12 @@ final class PlacesReviewTests: XCTestCase {
             XCTAssertEqual(tab.isSelected, other == category, "\(other) selected: \(tab.isSelected)")
             XCTAssertGreaterThanOrEqual(tab.frame.height, 44)
         }
-        XCTAssertEqual(places.ticket.label, Self.ticketLabel(venue), "The ticket reads as one action.")
+        XCTAssertEqual(places.ticketName.label, venue.name)
+        XCTAssertEqual(places.ticketKind.label, venue.kind)
+        XCTAssertEqual(places.ticketIntents.label, "For \(Self.intentsLine(venue)) bands")
+        XCTAssertEqual(places.ticketSchedule.label, venue.schedule, "The whole schedule.")
+        XCTAssertEqual(places.viewPlace.label, "View place", "View place is the ticket's action.")
+        XCTAssertGreaterThanOrEqual(places.viewPlace.frame.height, 44)
         XCTAssertEqual(places.browseLine.label, Self.expected(category, intent).browse)
         XCTAssertFalse(places.detailTicket.exists, "Browsing shows no detail.")
         XCTAssertFalse(places.explanationHeadline.exists)
@@ -1002,8 +1006,8 @@ final class PlacesReviewTests: XCTestCase {
             case .browse:
                 XCTAssertEqual(places.tabs.frame.minX, margin, accuracy: 1, "\(state): the tabs start at the column.")
                 XCTAssertEqual(places.tabs.frame.width, content, accuracy: 1, "\(state): the tabs span the column.")
-                XCTAssertEqual(places.ticket.frame.minX, margin, accuracy: 1, "\(state): the ticket starts at the column.")
-                XCTAssertEqual(places.ticket.frame.width, content, accuracy: 1, "\(state): the ticket spans the column.")
+                XCTAssertEqual(places.ticketName.frame.minX, margin + 20, accuracy: 1, "\(state): the ticket's text starts at its column.")
+                XCTAssertLessThanOrEqual(places.viewPlace.frame.maxX, margin + content - 19, "\(state): View place stays inside the ticket.")
                 XCTAssertEqual(places.secondary.frame.width, content, accuracy: 1)
             case .detail:
                 XCTAssertEqual(places.detailTicket.frame.minX, margin, accuracy: 1, "\(state): the ticket starts at the column.")
@@ -1032,7 +1036,12 @@ final class PlacesReviewTests: XCTestCase {
                 for (index, key) in Self.categories.enumerated() {
                     box(places.tab(key), "Tab \(key)", CGRect(x: 36 + CGFloat(index) * 124, y: 318, width: 120, height: 44))
                 }
-                box(places.ticket, "Ticket", CGRect(x: 32, y: 374, width: 376, height: 438))
+                let facts = Self.venue(category)
+                top(places.ticketName, "Name", x: 52, y: 626)
+                top(places.ticketKind, "Kind", x: 52, y: 670)
+                box(places.ticketIntents, "Intent chips", CGRect(x: 52, y: 702, width: facts.chipsWidth, height: 26))
+                top(places.ticketSchedule, "Schedule", x: 52, y: 754)
+                box(places.viewPlace, "View place", CGRect(x: 248, y: 754, width: 140, height: 44))
                 top(places.browseLine, "Browse line", x: nil, y: 837)
                 box(places.secondary, "Back (bottom)", CGRect(x: 32, y: 883, width: 376, height: 44))
             case .detail:
@@ -1074,7 +1083,7 @@ final class PlacesReviewTests: XCTestCase {
         softly {
             switch stage {
             case .browse:
-                for element in [places.ticket, places.browseLine] {
+                for element in [places.viewPlace, places.browseLine] {
                     XCTAssertTrue(scrollIntoView(element, bar: places.secondary, app), "\(element.identifier) is reachable.")
                 }
                 XCTAssertTrue(places.secondary.isHittable)
@@ -1143,13 +1152,14 @@ final class PlacesReviewTests: XCTestCase {
         }
     }
 
-    /// Short, momentum-free drags in the page margin until `element` lies between the status bar
+    /// Short, momentum-free drags in the right-hand page margin (clear of the leading edge, where
+    /// Places' back swipe starts) until `element` lies between the status bar
     /// and the top of the action bar (`bar` is its top action, 13 pt below the bar's top). Both
     /// edges allow 1 pt. An element taller than that space counts once its top is in view. Each
     /// drag is at most half the range of tops that count (and at most 115 pt), so it cannot step
     /// over that range and back.
     private func scrollIntoView(_ element: XCUIElement, bar: XCUIElement, _ app: XCUIApplication) -> Bool {
-        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.04, dy: 0))
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0))
         for _ in 0..<40 {
             let frame = element.frame, top: CGFloat = 62, bottom = bar.frame.minY - 13
             let slack = (bottom - top) - frame.height
@@ -1353,6 +1363,11 @@ private struct PlacesScreen {
     var context: XCUIElement { element("places.context") }
     var tabs: XCUIElement { element("places.tabs") }
     var ticket: XCUIElement { element("places.ticket") }
+    var ticketName: XCUIElement { element("places.ticket.name") }
+    var ticketKind: XCUIElement { element("places.ticket.kind") }
+    var ticketIntents: XCUIElement { element("places.ticket.intents") }
+    var ticketSchedule: XCUIElement { element("places.ticket.schedule") }
+    var viewPlace: XCUIElement { app.buttons["places.viewPlace"] }
     var browseLine: XCUIElement { element("places.boundary") }
     var secondary: XCUIElement { app.buttons["places.secondary"] }
 

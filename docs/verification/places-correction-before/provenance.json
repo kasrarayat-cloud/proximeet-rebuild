@@ -1,0 +1,36 @@
+{
+  "source": {
+    "build": "6ab8639c20c043a028c94e89",
+    "commit": "ea14c0011fa87b28c956640fa95d4eebc2674e7b",
+    "archive": "Places-Screens.zip",
+    "archive_sha256": "0912248ac04c09457f3902a6481fef2c68630903ec4504642849dbf639b6e38a"
+  },
+  "note": "Downscaled to 1x (Lanczos) for the correction's offline before/after viewer. The originals are unchanged in the archive above.",
+  "files": {
+    "before-footer-largest-440pt.png": {
+      "from": "Largest-text-browse-bottom-440pt-XCTest-FIXTURE-direct-launch.png",
+      "from_sha256": "420104f8196aa5b2d5f4497c7fbed65360beceb64e854046edb90e7d53b29a23",
+      "caption": "Largest text, 440 pt, Fieldwork browsing: View place is drawn over the schedule's second line; only “Saturday · 10 am–” shows."
+    },
+    "before-footer-largest-390pt.png": {
+      "from": "Largest-text-browse-bottom-390pt-XCTest-FIXTURE-direct-launch.png",
+      "from_sha256": "30990bcbef13a2c52166437d4c35ddd58bfb29f07a7a98d2401f422f562839ed",
+      "caption": "Largest text, 390 pt, Fieldwork browsing: View place is drawn over the rest of the schedule; only “Saturday · 10” shows."
+    },
+    "before-detail-entry-largest-440pt.png": {
+      "from": "Largest-text-detail-top-440pt-XCTest-FIXTURE-direct-launch.png",
+      "from_sha256": "a890bf435a9b77497936f00abf01aa1290025f56c2d1de95377a710a95d4e178",
+      "caption": "Largest text, 440 pt: the capture named detail-top shows Fieldwork's detail scrolled to its host and description. The detail kept the offset browsing had been scrolled to; it did not start at its beginning."
+    },
+    "before-detail-entry-largest-390pt.png": {
+      "from": "Largest-text-detail-top-390pt-XCTest-FIXTURE-direct-launch.png",
+      "from_sha256": "f35d66ecb598d04a18fa432962142dbf1b2ec0b82939a8ce1b15c544c836697d",
+      "caption": "Largest text, 390 pt: the same: the detail opened at browsing's scroll offset, not at its beginning."
+    },
+    "before-footer-upcoming-normal-390pt.png": {
+      "from": "Places-390-03-upcoming-social-390pt-XCTest-FIXTURE-direct-launch.png",
+      "from_sha256": "d1a192d3e05ece12473a18c9e8ddddbaad4a8818991fae7fd733f53557216387",
+      "caption": "Default text, 390 pt, Upcoming: the footer stacks and View place lies below the fold (acceptable when the page scrolls to it, which the earlier run did not capture)."
+    }
+  }
+}

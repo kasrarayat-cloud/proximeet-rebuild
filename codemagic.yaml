@@ -436,7 +436,7 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (places | signal | regressions; required) picks the scope; each scope is its
+  # PLACES_REVIEW_SCOPE (places | signal | regressions | correction; required) picks the scope; each scope is its
   # own build, and what it runs comes from docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
   # ignore_failure so later evidence is still collected; the last step fails the build unless the
@@ -496,6 +496,12 @@ workflows:
       - build/artifacts/Places-Signal-Review.zip.sha256
       - build/artifacts/Places-Regressions-Review.zip
       - build/artifacts/Places-Regressions-Review.zip.sha256
+      - build/artifacts/Places-Correction-Review.zip
+      - build/artifacts/Places-Correction-Review.zip.sha256
+      - build/artifacts/Places-Correction-Screens.zip
+      - build/artifacts/Places-Correction-Screens.zip.sha256
+      - build/artifacts/Places-Correction-walkthrough.zip
+      - build/artifacts/Places-Correction-walkthrough.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*
@@ -513,7 +519,7 @@ workflows:
   # start only: no triggering section, no code signing, Apple credentials, provisioning,
   # archive/IPA, TestFlight, publishing, notifications or environment groups. Run inputs:
   # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) pins the exact revision and
-  # PLACES_REVIEW_SCOPE (places | signal | regressions; required) picks the scope; each scope is its
+  # PLACES_REVIEW_SCOPE (places | signal | regressions | correction; required) picks the scope; each scope is its
   # own build, and what it runs comes from docs/verification/places-review-manifest.tsv. No
   # automatic test retries. Compile-path steps stop the build on failure; evidence steps use
   # ignore_failure so later evidence is still collected; the last step fails the build unless the
@@ -575,6 +581,12 @@ workflows:
       - build/artifacts/Places-Signal-Review.zip.sha256
       - build/artifacts/Places-Regressions-Review.zip
       - build/artifacts/Places-Regressions-Review.zip.sha256
+      - build/artifacts/Places-Correction-Review.zip
+      - build/artifacts/Places-Correction-Review.zip.sha256
+      - build/artifacts/Places-Correction-Screens.zip
+      - build/artifacts/Places-Correction-Screens.zip.sha256
+      - build/artifacts/Places-Correction-walkthrough.zip
+      - build/artifacts/Places-Correction-walkthrough.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*

@@ -9,7 +9,11 @@ the source and scope of every result, the manifest rows, the per-execution resul
 verdict and the recorded deviations), Places-Screens.zip (every screen, each file name saying whether it
 is a real journey or a direct-launch fixture), Places-walkthrough-compact.zip (and the loose .mp4 when
 re-encoded) and Places-walkthrough-original.zip. The signal and regressions scopes make
-Places-Signal-Review.zip or Places-Regressions-Review.zip. Every archive gets a .sha256 beside it.
+Places-Signal-Review.zip or Places-Regressions-Review.zip. The correction scope makes
+Places-Correction-Review.zip (before and after, the source and its changed files, every execution by
+test and device, the earlier coverage this run did not execute, logs, the verdict, a checksum of every
+file inside), Places-Correction-Screens.zip and Places-Correction-walkthrough.zip (the recording,
+unedited). Every archive gets a .sha256 beside it.
 Every relative link in an index must name a file in its archive; a broken link fails the stage.
 Standard library only; Python 3.8+.
 """
@@ -19,6 +23,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import zipfile
 
@@ -131,7 +136,8 @@ def main(argv):
         return 2
     root, out, artifacts, scope = argv[1:5]
     places = scope == "places"
-    title = {"places": "Places-Review", "signal": "Places-Signal-Review"}.get(scope, "Places-Regressions-Review")
+    title = {"places": "Places-Review", "signal": "Places-Signal-Review",
+             "correction": "Places-Correction-Review"}.get(scope, "Places-Regressions-Review")
     out_zip = os.path.join(artifacts, title + ".zip")
     ref = os.path.join(root, "docs/design/places-approved/reference")
     entries, missing = [], []
@@ -144,13 +150,14 @@ def main(argv):
             missing.append(name)
         return None
 
-    board = add("approved/places-review.png", os.path.join(ref, "places-review.png"), required=places)
+    board = add("approved/places-review.png", os.path.join(ref, "places-review.png"),
+                required=places or scope == "correction")
     deliveries = {key: add("approved/%s-delivery.png" % key, os.path.join(ref, "%s-delivery.png" % key), required=places)
                   for key, _, _ in VENUES}
     compact = add("captures/places-walkthrough-compact.mp4", os.path.join(out, "places-walkthrough-compact.mp4"),
                   required=places)
     original = add("captures/places-walkthrough-original.mp4", os.path.join(out, "places-walkthrough-original.mp4"),
-                   required=places)
+                   required=places or scope == "correction")
     for key in sorted(os.listdir(out)) if os.path.isdir(out) else []:
         if key.endswith(("-summary.json", "-tests.json", ".sha256")) or key in (
                 "verdict.txt", "ui-review-tests.txt", "ui-review-counts.txt", "runs.txt", "destination.txt",
@@ -201,6 +208,9 @@ def main(argv):
             elif extension == ".txt":
                 notes.append("%s (%s): %s" % (test.split("/")[-1].replace("()", ""), folder.replace("attachments-", ""),
                                               read(source).strip()))
+
+    if scope == "correction":
+        return package_correction(root, out, artifacts, title, entries, missing, shots, notes, board, original, add)
 
     verdict = read(os.path.join(out, "verdict.txt")) or "No verdict was produced in this run."
     headline = next((l for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), "AUTOMATED VERDICT: not produced")
@@ -458,6 +468,251 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
                 bundle.writestr("README.txt", readme + "The unedited simulator recording of the real journey.\n")
                 bundle.write(sources[original], "Places-walkthrough-original.mp4")
             made.append("Places-walkthrough-original.zip")
+    for name in made:
+        path = os.path.join(artifacts, name)
+        open(path + ".sha256", "w").write("%s  %s\n" % (sha256(path), name))
+        print("%s sha256 %s" % (name, sha256(path)))
+    return 1 if broken else 0
+
+
+CORRECTION_BASE = "0fb4e467d70ca00a5cf5b1e8e48a671ec3c87517"
+CORRECTION_TESTED = "ea14c0011fa87b28c956640fa95d4eebc2674e7b"
+CORRECTION_DEVIATIONS = (
+    ("Signal to Places and back", "Accepted for the prototype: native push and pop at the Signal–Places boundary, not "
+     "Figma's 240 ms dissolve. Recorded as a deviation, not a match."),
+    ("The ticket's expansion", "Accepted for the prototype: the scene, the name and the kind move; the lower parts of the "
+     "card cross-fade. Recorded as a deviation, not a match."),
+    ("One-stage back gestures", "Places shows its stages inside one navigation destination, so the expansion can play. "
+     "While Places is on screen, a swipe from the leading edge is handled by Places itself and goes back exactly one stage, "
+     "as the screen's Back controls do. The navigation stack's own pans and scroll views wait for it to fail. On a detail or "
+     "the explanation, iOS 26's swipe-from-anywhere pop is held off, so no swipe skips to Signal. From browsing, the swipe "
+     "ends in the stack's native pop to Signal. Outside Places nothing changes."),
+    ("The browse ticket's accessibility", "The ticket's parts (name, kind, intents, schedule) read on their own, and "
+     "View place is a real button (VoiceOver: “View place”). Before the correction the whole ticket was one element. "
+     "The card itself still opens the detail when tapped. VoiceOver itself was not run."),
+    ("VoiceOver's escape gesture", "Not handled by Places. An escape action on the whole screen could have changed the "
+     "accessibility tree every test depends on, so it was left out. Unverified."),
+)
+
+
+def package_correction(root, out, artifacts, title, entries, missing, shots, notes, board, original, add):
+    """The correction scope's downloads (see the module's documentation)."""
+    out_zip = os.path.join(artifacts, title + ".zip")
+    before_dir = os.path.join(root, "docs/verification/places-correction-before")
+    try:
+        provenance = json.load(open(os.path.join(before_dir, "provenance.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        provenance = {"files": {}}
+    before = {}
+    for name, info in sorted(provenance.get("files", {}).items()):
+        before[name] = (add("before/" + name, os.path.join(before_dir, name)), info.get("caption", name),
+                        info.get("from", ""), info.get("from_sha256", ""))
+    add("before/provenance.json", os.path.join(before_dir, "provenance.json"))
+
+    verdict = read(os.path.join(out, "verdict.txt")) or "No verdict was produced in this run."
+    headline = next((l for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), "AUTOMATED VERDICT: not produced")
+    head = kv(os.path.join(out, "source-checkpoint.txt")).get("git_head", "unknown")
+    build_id = os.environ.get("CM_BUILD_ID", "")
+    build_label = ("Codemagic build %s" % build_id) if build_id else "a simulator run outside Codemagic"
+
+    def git(*args):
+        result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    changed = git("diff", "--name-status", CORRECTION_BASE, "HEAD") or "unavailable (git)"
+    if git("rev-parse", "HEAD"):
+        changed_product = git("diff", "--name-status", CORRECTION_TESTED, "HEAD", "--", "Proximeet", "ProximeetDomain",
+                              "ProximeetUITests", "Proximeet.xcodeproj") or "none"
+    else:
+        changed_product = "unavailable (git)"
+
+    # Every row of the manifest, and what this build executed of it, by test and device.
+    manifest = [line.rstrip("\n").split("\t") for line in open(os.path.join(root, "docs/verification/places-review-manifest.tsv"),
+                                                              encoding="utf-8") if line.strip() and not line.startswith("#")]
+    executions = []
+    tsv = os.path.join(out, "executions.tsv")
+    if os.path.isfile(tsv):
+        lines = read(tsv).splitlines()
+        header = lines[0].split("\t") if lines else []
+        executions = [dict(zip(header, line.split("\t"))) for line in lines[1:] if line.strip()]
+    # Only rows that really ran: an optional row left unrun for time has a "not run" outcome.
+    ran = {(e.get("test", ""), e.get("device", "")): e.get("outcome", "") for e in executions
+           if e.get("outcome") and not e["outcome"].startswith("not run") and e["outcome"] != "skipped"}
+    earlier_rows, correction_rows = [], []
+    for scope_name, order, device, run, bundle, seconds, test, kind in manifest:
+        if scope_name == "correction":
+            correction_rows.append((order, device, run, test.replace("/", "."), kind))
+            continue
+        here = ran.get((test.replace("/", "."), device))
+        status = ("executed in this correction on the same device: %s" % here) if here else "not executed in this correction"
+        earlier_rows.append((scope_name, order, device, test.replace("/", "."), kind, status))
+    unrun = [r for r in earlier_rows if r[5] == "not executed in this correction" and r[4] == "required"]
+
+    def img(name, caption):
+        if not name:
+            return '<p class="missing">%s: not produced in this run.</p>' % html.escape(caption)
+        return '<figure><img src="%s" alt="%s"><figcaption>%s</figcaption></figure>' % (
+            name, html.escape(caption), html.escape(caption))
+
+    def shot(key, caption):
+        return img(shots.get(key), caption)
+
+    def row(*cells):
+        return '<div class="row">%s</div>' % "".join(cells)
+
+    def before_img(key):
+        name, caption, source, digest = before.get(key, (None, key, "", ""))
+        return img(name, "BEFORE (build 6ab8639c, %s): %s" % (source or "missing", caption))
+
+    def approved(index, caption):
+        if not board:
+            return '<p class="missing">Approved reference missing.</p>'
+        return ('<figure><div class="crop" style="background-image:url(%s);background-position:-%dpx -129px"></div>'
+                '<figcaption>%s</figcaption></figure>') % (board, [30, 390, 750][index], html.escape(caption))
+
+    widths = sorted({m.group(1) for k in shots for m in [re.search(r"-(\d+)pt-", k)] if m}, key=int, reverse=True)
+    venues = (("common-ground", "Common Ground"), ("afterglow", "Afterglow"), ("fieldwork", "Fieldwork"))
+    footer_rows = "".join(
+        row(*[shot("correction-footer-%s-%s-%spt-fixture" % (key, size, width), "%s, %s text, %s pt (FIXTURE)" % (name, size, width))
+              for key, name in venues])
+        for size in ("normal", "largest") for width in widths)
+    sections = [
+        ("Before and after: the footer at the largest text (Fieldwork)",
+         row(before_img("before-footer-largest-440pt.png"),
+             shot("correction-footer-fieldwork-largest-440pt-fixture", "AFTER, 440 pt: the whole schedule above View place")) +
+         row(before_img("before-footer-largest-390pt.png"),
+             shot("correction-footer-fieldwork-largest-390pt-fixture", "AFTER, 390 pt: the whole schedule above View place"))),
+        ("Before and after: a detail opens at its beginning (largest text)",
+         row(before_img("before-detail-entry-largest-440pt.png"),
+             shot("correction-footer-fieldwork-opened-largest-440pt-fixture",
+                  "AFTER, 440 pt: Fieldwork opened by View place from scrolled browsing, at its beginning"),
+             shot("correction-entry-browse-scrolled-440pt-largest-fixture", "AFTER, 440 pt: Now's browsing scrolled to View place"),
+             shot("correction-entry-detail-start-440pt-largest-fixture", "AFTER, 440 pt: Common Ground's detail at its beginning")) +
+         row(before_img("before-detail-entry-largest-390pt.png"),
+             shot("correction-footer-fieldwork-opened-largest-390pt-fixture",
+                  "AFTER, 390 pt: Fieldwork opened by View place from scrolled browsing, at its beginning"),
+             shot("correction-entry-browse-scrolled-390pt-largest-fixture", "AFTER, 390 pt: Now's browsing scrolled to View place"),
+             shot("correction-entry-detail-start-390pt-largest-fixture", "AFTER, 390 pt: Common Ground's detail at its beginning"))),
+        ("Before and after: Upcoming on the 390-pt phone (default text)",
+         row(before_img("before-footer-upcoming-normal-390pt.png"),
+             shot("correction-walkthrough-upcoming-initial", "AFTER (recorded run): View place below the fold at first"),
+             shot("correction-walkthrough-upcoming-footer-scrolled", "AFTER: scrolled, the whole button above the Back area"),
+             shot("correction-walkthrough-fieldwork-detail-start", "AFTER: a real tap on it opened Fieldwork at its beginning"))),
+        ("Every footer (the approved board's Now for reference)",
+         row(approved(0, "Approved: Now (58:480), 440 pt")) + (footer_rows or '<p class="missing">No footer captures.</p>') +
+         row(*[shot("correction-footer-fieldwork-opened-%s-%spt-fixture" % (size, width),
+                    "View place tapped: Fieldwork, %s text, %s pt" % (size, width))
+               for size in ("normal", "largest") for width in widths])),
+        ("Where a stage starts, and the way back (largest text)",
+         row(*[shot("correction-entry-%s-%spt-largest-fixture" % (state, width), "%s, %s pt" % (state.replace("-", " "), width))
+               for width in widths for state in ("detail-end", "explanation-start", "explanation-end", "back-to-now")]) +
+         row(*[shot("correction-footer-back-to-upcoming-largest-%spt-fixture" % width, "Back to places: Upcoming, %s pt" % width)
+               for width in widths])),
+        ("Back by gesture and by control",
+         row(*[shot(k, k.replace("correction-", "").replace("-fixture", "").replace("-", " ")) for k in sorted(shots)
+               if k.startswith("correction-gesture-")]) +
+         row(*[shot(k, k.replace("correction-", "").replace("-", " ")) for k in sorted(shots)
+               if k.startswith("correction-walkthrough-")])),
+        ("The five Signal and interaction tests whose endpoint changed",
+         row(*[shot(k, k) for k in ("signal-journey-continue-places", "signal-continue-places-fixture", "06-places",
+                                    "08-reduced-motion-places")])),
+    ]
+    if original:
+        sections.insert(0, ("The recorded correction walkthrough (smaller iPhone, unedited)",
+                            '<figure><video src="%s" controls muted playsinline preload="metadata"></video><figcaption>'
+                            'Original simulator recording, unedited. It starts before the app opens.</figcaption></figure>' % original))
+    body = "".join("<h2>%s</h2>%s" % (html.escape(t), c) for t, c in sections)
+    run_rows = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(e.get(k, "")) for k in
+                                                ("order", "device", "udid", "run", "test", "kind", "outcome", "seconds", "failure"))
+                       for e in executions)
+    earlier_table = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(c) for c in r) for r in earlier_rows)
+    deviation_rows = "".join("<tr><td>%s</td><td>%s</td></tr>" % (html.escape(a), html.escape(b)) for a, b in CORRECTION_DEVIATIONS)
+    page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Places correction</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;background:#111;color:#eee}
+h1{font-size:22px}h2{font-size:17px;margin-top:32px;border-top:1px solid #333;padding-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:16px}figure{margin:0}
+figcaption{color:#aaa;font-size:13px;max-width:330px}
+img,video{width:330px;max-width:100%%;border:1px solid #333;border-radius:8px;background:#000}
+.crop{width:330px;height:717px;border:1px solid #333;border-radius:8px;background-repeat:no-repeat;background-size:1110px 1252.5px}
+table{border-collapse:collapse;max-width:1200px}td,th{border:1px solid #333;padding:5px 7px;vertical-align:top;font-size:12px;text-align:left}
+pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-size:12px}.missing{color:#f99}
+.note{color:#ccc;max-width:820px}</style></head><body>
+<h1>Places: targeted correction</h1>
+<p><b>%s</b></p>
+<p class="note">%s. Source <code>%s</code>, based on <code>%s</code>. Before this correction, <code>%s</code> passed the places
+scope only (build 6ab8639c, 13 executions); the earlier chapters' 43 executions last passed at 1085af3d and b06707ec. This run is
+targeted. It does not re-execute those executions except the ones listed below by test and device, so the full regression sweep
+is pending. The correction's captures come from direct launches (FIXTURE) through the same gates. Captures named signal-journey-*
+come from Signal's real-route test, <code>SignalReviewTests.testWalkthroughRealJourney</code> (onboarding → Signal → Places,
+on the iPhone 17 Pro Max, unrecorded). BEFORE images are 1× copies of build 6ab8639c's captures (before/provenance.json names
+each original and its SHA-256).</p>
+<h2>Files changed since %s</h2><pre>%s</pre>
+<h2>Product and test files changed since the tested %s</h2><pre>%s</pre>
+%s
+<h2>Every execution in this build (retries off)</h2><table><tr><th>Order</th><th>Device</th><th>UDID</th><th>Run</th><th>Test</th>
+<th>Kind</th><th>Outcome</th><th>Seconds</th><th>Failure</th></tr>%s</table>
+<h2>Earlier coverage: executed here or not (%d required earlier executions not executed in this correction)</h2>
+<table><tr><th>Scope</th><th>Order</th><th>Device</th><th>Test</th><th>Kind</th><th>In this correction</th></tr>%s</table>
+<h2>Deviations and decisions, recorded</h2><table><tr><th>What</th><th>How</th></tr>%s</table>
+<h2>Notes attached by the tests</h2><pre>%s</pre>
+<h2>Result</h2><pre>%s</pre>
+<p>Unsigned simulator app (simulator only): %s</p>
+<p>Details: %s | <a href="SHA256SUMS.txt">SHA256SUMS.txt</a></p>
+<p class="missing">%s</p>
+</body></html>""" % (
+        html.escape(headline), html.escape(build_label), html.escape(head), CORRECTION_BASE, CORRECTION_TESTED,
+        CORRECTION_BASE[:12], html.escape(changed), CORRECTION_TESTED[:12], html.escape(changed_product), body, run_rows,
+        len(unrun), earlier_table, deviation_rows, html.escape("\n\n".join(notes) or "none"), html.escape(verdict),
+        " ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries if n.startswith("app/") and n.endswith(".zip"))
+        or "not produced",
+        " | ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries
+                   if n.startswith(("results/", "logs/")) or (n.startswith("xctest/") and n.endswith((".txt", ".json")))),
+        ("Not produced in this run: " + ", ".join(missing)) if missing else "")
+
+    targets = set(re.findall(r'(?:src|href)="([^"#:]+)"', page)) | set(re.findall(r"url\(([^)]+)\)", page))
+    packed = {n for n, _ in entries} | {"SHA256SUMS.txt"}
+    broken = sorted(t for t in targets if t not in packed)
+    if broken:
+        print("BROKEN relative links in index.html: " + ", ".join(broken))
+    sums = "".join("%s  %s\n" % (sha256(source), name) for name, source in entries)
+    os.makedirs(artifacts, exist_ok=True)
+    with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr(title + "/index.html", page)
+        bundle.writestr(title + "/SHA256SUMS.txt", sums)
+        for name, source in entries:
+            bundle.write(source, title + "/" + name)
+    print("%s.zip: %d files, %d relative links checked, %d broken%s" % (
+        title, len(entries) + 2, len(targets), len(broken), ("; missing: " + ", ".join(missing)) if missing else ""))
+    open(os.path.join(out, "package-links.txt"), "w").write("links=%d\nbroken=%s\nmissing=%s\nunrun_required_earlier=%d\n" % (
+        len(targets), ",".join(broken) or "none", ",".join(missing) or "none", len(unrun)))
+
+    sources = dict(entries)
+    readme = ("%s\nPlaces correction, source %s, %s. Every correction screen is a direct launch (FIXTURE) through the "
+              "same gates; files named XCTest-journey come from Signal's real onboarding route. BEFORE-* files are 1x copies of "
+              "build 6ab8639c's captures, named in before/provenance.json of Places-Correction-Review.zip. Automated checks are "
+              "not visual approval.\n" % (headline, head, build_label))
+    made = [title + ".zip"]
+    with zipfile.ZipFile(os.path.join(artifacts, "Places-Correction-Screens.zip"), "w", zipfile.ZIP_STORED) as bundle:
+        bundle.writestr("README.txt", readme)
+        for key in sorted(shots):
+            label = "XCTest-journey" if key.startswith("signal-journey-") else "XCTest-FIXTURE-direct-launch"
+            bundle.write(sources[shots[key]], "%s-%s.png" % (key, label))
+        for name, (packed_name, caption, source, digest) in sorted(before.items()):
+            if packed_name:
+                bundle.write(sources[packed_name], "BEFORE-build-6ab8639c-" + name)
+        if notes:
+            bundle.writestr("Notes-attached-by-the-tests.txt", "\n\n".join(notes) + "\n")
+    made.append("Places-Correction-Screens.zip")
+    if original:
+        with zipfile.ZipFile(os.path.join(artifacts, "Places-Correction-walkthrough.zip"), "w", zipfile.ZIP_STORED) as bundle:
+            bundle.writestr("README.txt", readme + "The unedited simulator recording of the correction walkthrough on the "
+                            "smaller iPhone: Upcoming scrolled to View place, a real tap on it, back swipes (one not completed, "
+                            "then completed ones, one stage each) from Fieldwork's detail, the explanation, Common Ground's "
+                            "detail and browsing to Signal. No compact re-encode was made on the Mac. It starts before the "
+                            "app opens; a simulator recording is not evidence of on-device smoothness.\n")
+            bundle.write(sources[original], "Places-Correction-walkthrough-original.mp4")
+        made.append("Places-Correction-walkthrough.zip")
     for name in made:
         path = os.path.join(artifacts, name)
         open(path + ".sha256", "w").write("%s  %s\n" % (sha256(path), name))

@@ -19,6 +19,12 @@
 #   regressions  the 27 required executions of the Signal regression correction (build 6ab81e22):
 #                the Wristband, the Guest List, the Pass, Birthday and Welcome, with its time-gated
 #                repeat of the paste test
+#   correction   the targeted Places correction (after build 6ab8639c): the adaptive ticket footer
+#                on both widths at the default and the largest text, one-stage back gestures and
+#                controls (with a cancelled swipe), where a detail and the explanation start, the
+#                five Signal and interaction tests whose endpoint changed, a short recording of the
+#                corrected scrolling and back swipes, and time-gated re-runs of earlier Places tests
+#                (kind "extra": run only when they fit; if they run they must pass)
 # Automatic retries are off in every scope: a test that fails, even once, is a failure; a skipped,
 # interrupted or missing required execution is a failure.
 #
@@ -501,7 +507,8 @@ for path in guarded_sources:
 # would ask and what is not done here ("Demo · no location or camera used."); no source may read a
 # clock, a calendar or a locale's time, ask for location, the camera or a scanner, reach the
 # network, persist, log, schedule, or mark anyone checked in, present, visible or verified.
-places_sources = ["Proximeet/Scenes/PlacesView.swift", "ProximeetDomain/Sources/ProximeetDomain/Places.swift"]
+places_sources = ["Proximeet/Scenes/PlacesView.swift", "ProximeetDomain/Sources/ProximeetDomain/Places.swift",
+                  "Proximeet/Components/PlacesEdgeBack.swift"]
 places_forbidden = ["Date(", "Date.now", "Calendar", "TimeZone", "Locale", "DateFormatter", "Clock", "Timer",
                     "asyncAfter", "Task.sleep", "CADisplayLink", "TimelineView", "repeatForever",
                     "CLLocation", "CoreLocation", "CLMonitor", "MapKit", "AVCapture", "AVFoundation", "VisionKit",
@@ -827,10 +834,14 @@ journey_run() {
         shasum -a 256 "$movie" > "$movie.sha256"
     fi
     export_results "$OUT/$bundle.xcresult" "$OUT/attachments-$bundle"
+    local method
+    method="$(manifest_field journey 7)"
+    method="${method##*/}"
     sed -n 's/.*PLACES_WALKTHROUGH_START \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/walkthrough-started.txt"
-    sed -n "s/.*testWalkthroughRealJourney]' [a-z]* (\([0-9][0-9.]*\) seconds).*/\1/p" "$LOG" | tail -n 1 \
+    sed -n 's/.*PLACES_WALKTHROUGH_APP_READY \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/walkthrough-app-ready.txt"
+    sed -n "s/.*${method}]' [a-z]* (\([0-9][0-9.]*\) seconds).*/\1/p" "$LOG" | tail -n 1 \
         > "$OUT/walkthrough-duration.txt"
-    if [ -s "$movie" ]; then
+    if [ -s "$movie" ] && [ "$SCOPE" = "places" ]; then
         PLACES_LOG_SUFFIX=-during-ui-review PLACES_REVIEW_SCOPE="$SCOPE" bash scripts/places_review.sh compact-video > /dev/null 2>&1 &
         COMPACT_PID=$!
     fi
@@ -839,7 +850,7 @@ journey_run() {
 # run_lane <device> <udid> <derived data>: the scope's runs for that device, in manifest order. A
 # run made only of planned repeats starts only while REPEAT_GATE_SECONDS are left.
 run_lane() {
-    local device="$1" udid="$2" derived="$3" name bundle seconds left
+    local device="$1" udid="$2" derived="$3" name bundle seconds left gate
     for name in $(manifest_runs "$device"); do
         bundle="$(manifest_field "$name" 5)"
         seconds="$(manifest_field "$name" 6)"
@@ -847,10 +858,15 @@ run_lane() {
             journey_run "$udid" "$derived" "$bundle" "$seconds"
             continue
         fi
-        if [ "$(manifest_kinds "$name")" = "repeat " ]; then
+        gate=0
+        case "$(manifest_kinds "$name")" in
+            "repeat ") gate="$REPEAT_GATE_SECONDS" ;;
+            "extra ") gate=$((seconds + 60)) ;;
+        esac
+        if [ "$gate" -gt 0 ]; then
             left="$(remaining)"
-            if [ "$left" -lt "$REPEAT_GATE_SECONDS" ]; then
-                note "The planned repeat $name is left unrun: ${left}s left, under ${REPEAT_GATE_SECONDS}s."
+            if [ "$left" -lt "$gate" ]; then
+                note "The optional run $name is left unrun: ${left}s left, under ${gate}s."
                 printf '%s %s %s %s\n' "$name" "$bundle" none time >> "$OUT/runs.txt"
                 continue
             fi
@@ -1038,7 +1054,12 @@ stage_ui_review() {
 
 stage_compact_video() {
     local movie="$OUT/places-walkthrough-original.mp4" compact="$OUT/places-walkthrough-compact.mp4"
-    local start=0 end="" took marker started pid waited=0 status=1 cap
+    local start=0 end="" took marker ready started pid waited=0 status=1 cap
+    if [ "$SCOPE" = "correction" ]; then
+        note "Scope correction: its short recording is delivered unedited; no re-encode is made on the Mac."
+        printf 'result=NOT APPLICABLE (the correction delivers its short recording unedited)\n' > "$OUT/compact-video.txt"
+        return 0
+    fi
     if [ "$SCOPE" != "places" ]; then
         note "Scope $SCOPE records nothing; there is no walkthrough to compact."
         printf 'result=NOT APPLICABLE (scope %s records nothing)\n' "$SCOPE" > "$OUT/compact-video.txt"
@@ -1055,6 +1076,9 @@ stage_compact_video() {
         printf 'result=NOT PRODUCED (no recording)\n' > "$OUT/compact-video.txt"
         return 2
     fi
+    # The trim starts at the app's first screen when the test marked it; it ends at the test's own
+    # start plus its duration.
+    ready="$(cat "$OUT/walkthrough-app-ready.txt" 2>/dev/null || true)"
     marker="$(cat "$OUT/walkthrough-started.txt" 2>/dev/null || true)"
     if [ -z "$marker" ]; then
         marker="$(sed -n 's/^walkthrough_started_epoch=//p' "$OUT/ui-review-tests.txt" 2>/dev/null || true)"
@@ -1068,7 +1092,10 @@ stage_compact_video() {
         # The test's own start marker is printed before it launches the app; the trim starts 0.5 s
         # before it and ends 1.5 s after the test's recorded duration: the app from launch to the
         # journey's last hold, without the simulator's home screen before or after.
-        start="$(python3 -c "import sys; print('%.2f' % max(0.0, float(sys.argv[1]) - float(sys.argv[2]) - 0.5))" "$marker" "$started")"
+        case "$ready" in
+            ''|*[!0-9.]*) ready="$marker" ;;
+        esac
+        start="$(python3 -c "import sys; print('%.2f' % max(0.0, float(sys.argv[1]) - float(sys.argv[2]) - 0.5))" "$ready" "$started")"
         if [ -n "$took" ]; then
             end="$(python3 -c "import sys; print('%.2f' % (float(sys.argv[1]) - float(sys.argv[2]) + float(sys.argv[3]) + 1.5))" "$marker" "$started" "$took")"
         fi
@@ -1163,6 +1190,10 @@ covered = {
               "Continue preview now opening Places)",
     "regressions": "the 27 required executions of docs/verification/places-review-manifest.tsv (build 6ab81e22's): "
                    "the Wristband, the Guest List, the Pass, Birthday, Welcome",
+    "correction": "the required executions of the correction scope in docs/verification/places-review-manifest.tsv: the "
+                  "ticket footer on both widths at the default and the largest text, one-stage back gestures and controls "
+                  "(a cancelled swipe included), where a detail and the explanation start, the five Signal and interaction "
+                  "tests whose endpoint changed, and the recorded correction walkthrough",
 }.get(scope, "unknown scope")
 required = {
     "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
@@ -1176,7 +1207,7 @@ required = {
     "UI tests executed and passed (%s; no retries; none skipped, interrupted or missing; every run exited 0)" % covered:
         tests.get("result") == "PASS" and tests.get("scope") == scope,
 }
-if scope == "places":
+if scope in ("places", "correction"):
     required["journey recording confirmed and saved"] = last.get("places-recording", "").startswith("confirmed") \
         and os.path.isfile(movie) and os.path.getsize(movie) > 0
 lines = [
@@ -1204,7 +1235,8 @@ lines += ["    XCTest detail: %s unique test cases, %s executions (passed %s, fa
           "    required: " + tests.get("required_passed", "?"),
           "    first attempts: " + tests.get("first_attempt_required", "?"),
           "    retries: " + tests.get("retries", "?") + "; tests executed more than once in one run: " + tests.get("retried", "?"),
-          "    planned repeat (not a unique test, not a retry): " + tests.get("repeats", "?"),
+          "    optional runs (repeats and extras: not unique tests, not retries; if they run they must pass): "
+          + tests.get("repeats", "?"),
           "    infrastructure reruns (simulator not found, no test ran): " + tests.get("infrastructure_reruns", "?")]
 path = os.path.join(out, "ui-review-tests.txt")
 if os.path.isfile(path):
@@ -1218,15 +1250,23 @@ lines += [
     "",
     "OUTSTANDING manual review (automation cannot establish these):",
     "  visual approval against docs/design/places-approved/reference (the founder decides)",
-    "  VoiceOver: the ticket read as one action, the tabs' selection, the disabled action's reason (its hint), focus "
-    "after each stage change and after Back",
+    "  VoiceOver: the ticket's parts and its View place button, the tabs' selection, the disabled action's reason (its "
+    "hint), focus after each stage change and after Back, and the escape gesture (not handled by Places)",
     "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a device",
     "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
     "  composing keyboards (Japanese, Chinese, Korean) and the software keyboard on a device",
     "  motion smoothness on a device (simulator recordings drop frames and have variable frame timing)",
 ]
 ok = all(required.values())
-lines += ["", "AUTOMATED VERDICT: " + ("PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope)]
+if scope == "correction":
+    lines += ["", "This is a targeted correction run. It does not re-execute the 13 earlier Places executions or the 43",
+              "earlier-chapter executions (signal and regressions) except those listed above by test and device; the",
+              "full regression sweep is pending."]
+    verdict = "PASS (targeted correction; full regression sweep pending; manual review still outstanding)" if ok \
+        else "FAIL (scope correction)"
+else:
+    verdict = "PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope
+lines += ["", "AUTOMATED VERDICT: " + verdict]
 open(os.path.join(out, "verdict.txt"), "w").write("\n".join(lines) + "\n")
 print("\n".join(lines))
 sys.exit(0 if ok else 1)
@@ -1243,6 +1283,7 @@ stage_package_review() {
     case "$SCOPE" in
         places) title="Places-Review" ;;
         signal) title="Places-Signal-Review" ;;
+        correction) title="Places-Correction-Review" ;;
         *) title="Places-Regressions-Review" ;;
     esac
     summary_line "places-package" "$(unzip -l "$ARTIFACTS/$title.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in $title.zip; $(tr '\n' ' ' < "$OUT/package-links.txt" 2>/dev/null)"

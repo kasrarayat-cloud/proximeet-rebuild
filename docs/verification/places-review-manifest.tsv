@@ -7,7 +7,11 @@
 #            Continue preview now opens Places instead of "End of this preview."; regressions = the
 #            27 required executions of docs/verification/signal-regressions-recovery-manifest.tsv
 #            (build 6ab81e22), unchanged, with its time-gated repeat. Together: 41 unique test methods and
-#            43 required executions carried over, and 11 unique Places methods in 13 executions.
+#            43 required executions carried over, and 11 unique Places methods in 13 executions;
+#            correction = the targeted Places correction after build 6ab8639c (the adaptive footer,
+#            one-stage back gestures, where a stage starts), with the five Signal and interaction
+#            tests whose endpoint expectation changed, on main as before; it runs no other row of
+#            the places, signal or regressions scopes except as an "extra".
 #   device   main = the selected iPhone 17 Pro Max; b = device B, its clone (same model and runtime);
 #            small = a smaller installed iPhone. A scope uses main and one other device, and the two
 #            run in parallel: places and signal use main and small, regressions main and b. Every test
@@ -19,7 +23,9 @@
 #   seconds  the run's natural time bound; the build's deadline can shorten it.
 #   kind     required = must execute once and pass; repeat = a planned second execution of a
 #            required test from a fresh app and test runner, run only if the time budget allows both
-#            it and the run after it; it is not a unique test and not a retry, and if it runs it must pass.
+#            it and the run after it; it is not a unique test and not a retry, and if it runs it must pass;
+#            extra = an earlier test re-run only when its run fits before the deadline; if it runs it
+#            must pass, and it is listed as not run otherwise.
 # Automatic retries are off in every scope. A failed, skipped, interrupted or missing required
 # execution fails the verdict.
 places	P1	main	journey	PlacesJourney	480	PlacesReviewTests/testWalkthroughRealJourney	required
@@ -79,3 +85,18 @@ regressions	B12	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testLargest
 regressions	B13	b	regressions_b	RegressionsB	1000	WelcomeReviewTests/testReduceMotionPreviewLaunch	required
 regressions	B14	b	paste_repeat_b	GuestListPasteRepeatB	300	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	repeat
 regressions	B15	b	hardware_keys_b	GuestListHardwareKeysB	240	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required
+correction	C1	main	correction_main	CorrectionMain	600	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+correction	C2	main	correction_main	CorrectionMain	600	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+correction	C3	main	correction_main	CorrectionMain	600	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+correction	C4	main	correction_signal	CorrectionSignal	600	BandSignalInteractionTests/testBandSignalInteraction	required
+correction	C5	main	correction_signal	CorrectionSignal	600	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+correction	C6	main	correction_signal	CorrectionSignal	600	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+correction	C7	main	correction_signal	CorrectionSignal	600	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+correction	C8	main	correction_signal	CorrectionSignal	600	SignalReviewTests/testWalkthroughRealJourney	required
+correction	C9	main	correction_extra_main	CorrectionExtraMain	240	PlacesReviewTests/testSevenScreensOnThisPhone	extra
+correction	C10	small	journey	CorrectionJourney	420	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required
+correction	C11	small	correction_small	CorrectionSmall	720	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required
+correction	C12	small	correction_small	CorrectionSmall	720	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+correction	C13	small	correction_small	CorrectionSmall	720	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+correction	C14	small	correction_small	CorrectionSmall	720	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+correction	C15	small	correction_extra_small	CorrectionExtraSmall	240	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	extra

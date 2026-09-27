@@ -66,6 +66,34 @@ A regressions repeat that is left unrun for time is recorded as such. If it runs
 **Provenance.** Each build's verdict names its build, its scope and the pinned commit it ran on.
 The final report lists every build, scope, commit and duration.
 
+## 0a. The targeted correction scope (after build `6ab8639c`)
+
+`PLACES_REVIEW_SCOPE=correction` runs one build that checks the Places correction. It is
+targeted: it re-executes earlier rows only where the manifest names them.
+
+| Device | Required | Extra (only if it fits) |
+| --- | --- | --- |
+| Main (iPhone 17 Pro Max) | where a detail and the explanation start; the footers at the largest and the default text; the five Signal and interaction tests whose endpoint changed (`BandSignalInteractionTests` `testBandSignalInteraction` and `testReducedMotionStillUpdatesImmediately`; `SignalReviewTests` `testEndpointDuplicateTapsAndBack`, `testRapidChangesAndInterruptionsStayConsistent` and `testWalkthroughRealJourney`, the real onboarding route into Places) | `PlacesReviewTests.testSevenScreensOnThisPhone` |
+| Smaller iPhone | the recorded correction walkthrough; back gestures and controls; where a stage starts; the footers at both text sizes | `PlacesReviewTests.testBackRoutesKeepTheCategoryAndTheDraft` |
+
+- **Footer checks.** They use frames and pixels:
+  - the schedule and View place never meet and stay in the column;
+  - a stacked gap is clear of ink;
+  - the button's face and the paper below it are drawn;
+  - on 440 pt, the approved footer is checked to the point.
+- **Gestures.** They are real swipes from the leading edge:
+  - completed and not completed;
+  - a mid-screen swipe that must change nothing;
+  - each tested separately from the header Back and the bottom Back.
+- **Stage start.** A stage that has just opened must show its header where it rests.
+- **Recording.** The correction's recording is delivered unedited; no re-encode is made on the Mac.
+- **Downloads.**
+  - `Places-Correction-Review.zip`: before and after, the changed files, every execution by test
+    and device, the earlier coverage not executed, logs, the verdict and `SHA256SUMS.txt`;
+  - `Places-Correction-Screens.zip`;
+  - `Places-Correction-walkthrough.zip`.
+- **Verdict.** A clean run says "PASS (targeted correction; full regression sweep pending)".
+
 ## 1. The source gate
 
 `PLACES_REVIEW_SCOPE=<scope> bash scripts/places_review.sh checkpoint` fails the build unless the
@@ -101,6 +129,8 @@ checkout is exactly the reviewed revision:
   - permission requests;
   - notification, network, persistence or logging APIs;
   - checked-in, present, visible, verified, member, reservation or booking identifiers.
+
+  Since the correction, the guard also covers `Proximeet/Components/PlacesEdgeBack.swift`.
 
   The visible sentences say what a later, real check-in would ask and what is not done here.
 - **One intent mapping.** Signal, the Wristband and Places never use the legacy intent tint.

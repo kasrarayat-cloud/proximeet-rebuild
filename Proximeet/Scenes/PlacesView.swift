@@ -14,6 +14,14 @@ import ProximeetDomain
 /// Reduce Motion (the system setting or the app's preview flag) replaces the expansion with the
 /// dissolve; VoiceOver gets no animation. The model always changes at once; the motion follows.
 ///
+/// Back is one stage for touch, whether it is the header's arrow, the bottom action or a swipe in
+/// from the leading edge (`PlacesEdgeBack`): browsing to the actual Signal, a detail to its
+/// category, the explanation to Common Ground's detail. VoiceOver's escape gesture is not handled
+/// here: the stack's own pop leaves the whole destination, so from a detail or the explanation it
+/// most likely goes to Signal. That is recorded as open, not verified. A detail and the explanation open at their
+/// beginning, never at the offset browsing was scrolled to; going back to browsing shows the
+/// originating ticket's end, where View place is.
+///
 /// Everything is derived from the actual draft: the carried intent decides every helper line and
 /// whether Preview check-in is available (only Social or Business at Common Ground, the one open
 /// session of the fixed Thursday 8 pm snapshot); the approach is kept untouched. Nothing here
@@ -26,11 +34,20 @@ struct PlacesView: View {
     /// Bumped inside the animation to dissolve the browse/detail content into its next stage
     /// instead of moving it: a detail's Back, and the expansion under Reduce Motion.
     @State private var dissolveToken = 0
+    /// How far a back swipe from the leading edge has moved the screen (0 at rest).
+    @State private var backDrag: CGFloat = 0
+    /// A completed swipe is finishing its movement; further swipes are ignored until it has.
+    @State private var backCompleting = false
 
     var body: some View {
         if let intent = session.intent, session.approach != nil {
             screen(intent)
-                .onAppear { session.reconcileRoute() }
+                .onAppear {
+                    // Places always appears at rest, whatever a swipe that left it last time did.
+                    backDrag = 0
+                    backCompleting = false
+                    session.reconcileRoute()
+                }
                 .onChange(of: session.flow.currentScene) { _, _ in
                     // The destination is guarded as well as its buttons: a stage whose
                     // requirements no longer hold is never shown.
@@ -58,38 +75,55 @@ struct PlacesView: View {
         let eligibility = PlaceEligibility(venue: venue, intent: intent)
         return GeometryReader { proxy in
             let width = min(376, max(0, proxy.size.width - 64))
-            ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 0) {
-                    header(stage)
-                    ZStack(alignment: .top) {
-                        if stage == .explanation {
-                            PlacesExplanation(width: width)
-                                .transition(.opacity)
-                        } else {
-                            PlacesTicketStage(stage: stage, category: session.placesCategory, venue: venue,
-                                              eligibility: eligibility, width: width,
-                                              choose: chooseCategory, open: openDetail)
-                                .id(dissolveToken)
-                                .transition(.opacity)
+            ScrollViewReader { reader in
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header(stage)
+                            .id(PlacesScrollTarget.top)
+                        ZStack(alignment: .top) {
+                            if stage == .explanation {
+                                PlacesExplanation(width: width)
+                                    .transition(.opacity)
+                            } else {
+                                PlacesTicketStage(stage: stage, category: session.placesCategory, venue: venue,
+                                                  eligibility: eligibility, width: width,
+                                                  choose: chooseCategory, open: openDetail)
+                                    .id(dissolveToken)
+                                    .transition(.opacity)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 11)
                 }
-                .padding(.bottom, 11)
+                .scrollBounceBehavior(.basedOnSize)
+                // The ground behind the status bar, so scrolled text never runs under the clock.
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Color.clear
+                        .frame(height: 0)
+                        .background(WristbandStyle.ground.ignoresSafeArea(edges: .top))
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    actions(stage, eligibility, width: width, bottomInset: proxy.safeAreaInsets.bottom)
+                }
+                .onChange(of: session.flow.currentScene) { previous, scene in
+                    revealStart(from: previous, to: scene, with: reader)
+                }
             }
-            .scrollBounceBehavior(.basedOnSize)
-            // The ground behind the status bar, so scrolled text never runs under the clock.
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear
-                    .frame(height: 0)
-                    .background(WristbandStyle.ground.ignoresSafeArea(edges: .top))
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                actions(stage, eligibility, width: width, bottomInset: proxy.safeAreaInsets.bottom)
-            }
+            // A back swipe in progress moves the whole screen with the finger; the ground stays.
+            .offset(x: backDrag)
         }
         .background(WristbandStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
+        .background(PlacesEdgeBack(innerStage: stage != .browse, changed: swipeChanged, ended: swipeEnded,
+                                   cancelled: swipeCancelled))
+        .onChange(of: session.flow.currentScene) { _, scene in
+            // Whatever changed the stage, no swipe offset outlives it. Leaving Places (a completed
+            // swipe from browsing), the native pop carries the screen on from where the finger left it.
+            if !backCompleting, scene == .places || DemoSession.placesStages.contains(scene) {
+                backDrag = 0
+            }
+        }
         .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -232,6 +266,99 @@ struct PlacesView: View {
             dissolve { session.backToPlace() }
         }
     }
+
+    // MARK: - Where a stage starts
+
+    /// A new detail or explanation starts at its beginning (the header, then the venue or the
+    /// headline), never at the offset browsing was scrolled to: moving with the expansion, at once
+    /// for a dissolve. Back to browsing shows the originating ticket's end, where View place is;
+    /// Explore other places starts browsing (at Now) from the top.
+    private func revealStart(from previous: DemoScene, to scene: DemoScene, with reader: ScrollViewProxy) {
+        let expanding = previous == .places && scene == .placeDetail
+            && !adaptive.reduceMotion && !adaptive.voiceOverRunning
+        withAnimation(expanding ? .easeOut(duration: 0.5) : nil) {
+            switch scene {
+            case .placeDetail, .placeExplanation:
+                reader.scrollTo(PlacesScrollTarget.top, anchor: .top)
+            case .places where previous == .placeDetail:
+                reader.scrollTo(PlacesScrollTarget.ticketEnd, anchor: .bottom)
+            case .places where previous == .placeExplanation:
+                reader.scrollTo(PlacesScrollTarget.top, anchor: .top)
+            default:
+                break
+            }
+        }
+    }
+
+    // MARK: - The back swipe
+
+    /// The screen follows the finger. Nothing changes in the model until the swipe is completed.
+    private func swipeChanged(_ translation: CGFloat) {
+        guard !backCompleting else { return }
+        backDrag = translation
+    }
+
+    /// Completed (past 40 % of the width, or a quick flick) the swipe goes back one stage, as the
+    /// Back controls do; otherwise the screen returns and nothing changes. From browsing, the
+    /// navigation stack pops to Signal, carrying the screen on from where the finger left it.
+    private func swipeEnded(_ translation: CGFloat, _ velocity: CGFloat, _ width: CGFloat) {
+        guard !backCompleting else { return }
+        let completes = translation > width * 0.4 || (velocity > 700 && translation > 24)
+        guard completes else {
+            swipeCancelled()
+            return
+        }
+        let stage = self.stage
+        if stage == .browse {
+            if !session.leavePlaces() {
+                swipeCancelled()
+            }
+            return
+        }
+        if adaptive.reduceMotion || adaptive.voiceOverRunning {
+            backDrag = 0
+            back(from: stage)
+            return
+        }
+        backCompleting = true
+        withAnimation(.easeOut(duration: 0.2)) {
+            backDrag = width
+        } completion: {
+            // The screen has left; the previous stage takes its place at once, without replaying
+            // a dissolve over a screen that is already gone.
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) {
+                switch stage {
+                case .detail:
+                    _ = session.leavePlaceDetail()
+                case .explanation:
+                    _ = session.backToPlace()
+                case .browse:
+                    break
+                }
+                dissolveToken += 1
+                backDrag = 0
+            }
+            backCompleting = false
+        }
+    }
+
+    /// Not completed: the screen returns and nothing changes.
+    private func swipeCancelled() {
+        guard !backCompleting else { return }
+        withAnimation(adaptive.reduceMotion || adaptive.voiceOverRunning ? nil : .easeOut(duration: 0.2)) {
+            backDrag = 0
+        }
+    }
+}
+
+/// Scroll positions a stage can be shown from.
+private enum PlacesScrollTarget: Hashable {
+    /// The header: a stage's beginning.
+    case top
+    /// The end of the browse ticket, where View place is.
+    case ticketEnd
 }
 
 private enum PlacesStage: Hashable {
@@ -276,6 +403,9 @@ private struct PlacesTicketStage: View {
             }
             .padding(.top, stage == .browse ? 10 : 38)
             if stage == .browse {
+                Color.clear
+                    .frame(height: 0)
+                    .id(PlacesScrollTarget.ticketEnd)
                 ZStack(alignment: .top) {
                     WristbandBodyText(text: eligibility.browseBoundary, size: 14, lineHeight: 22,
                                       color: WristbandStyle.secondaryText, alignment: .center)
@@ -417,7 +547,7 @@ private struct VenueTicket: View {
                 name
                 PlacesTicketText(text: venue.kind, face: .regular, size: 14, lineHeight: 22)
                     .padding(.top, 4)
-                    .accessibilityIdentifier("place.kind")
+                    .accessibilityIdentifier(mode == .browse ? "places.ticket.kind" : "place.kind")
                 if mode == .browse {
                     browseLower
                         .transition(.opacity)
@@ -442,21 +572,10 @@ private struct VenueTicket: View {
                 open()
             }
         }
-        .accessibilityElement(children: mode == .browse ? .ignore : .contain)
-        .accessibilityLabel(mode == .browse ? Text(browseLabel) : Text(""))
-        .accessibilityHint(mode == .browse ? Text("Opens this fictional venue's details.") : Text(""))
-        .accessibilityAddTraits(mode == .browse ? .isButton : [])
+        // Browsing: the name, kind, intents and schedule read in order, and View place is the one
+        // action. The card itself also opens the detail when tapped.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(mode == .browse ? "places.ticket" : "place.ticket")
-    }
-
-    /// One accessible action for the whole browse ticket: the venue, its kind, its intents and its
-    /// schedule, then View place.
-    private var browseLabel: String {
-        "\(venue.name). \(venue.kind). For \(Self.intents(venue)) bands. \(venue.schedule). View place"
-    }
-
-    static func intents(_ venue: Venue) -> String {
-        venue.permittedIntents.map(\.title).joined(separator: " and ")
     }
 
     private var bottomPadding: CGFloat {
@@ -475,34 +594,24 @@ private struct VenueTicket: View {
             .fixedSize(horizontal: false, vertical: true)
             .contentTransition(.interpolate)
             .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier("place.name")
+            .accessibilityIdentifier(mode == .browse ? "places.ticket.name" : "place.name")
     }
 
-    /// Browsing: the intents (y 328), the perforation (y 365) and the footer (y 380, 44 tall).
+    /// Browsing: the intents (y 328), the perforation (y 365) and the footer (y 380, 44 tall on
+    /// the approved layout; taller when it has to stack, and the ticket grows with it).
     private var browseLower: some View {
         VStack(alignment: .leading, spacing: 0) {
-            IntentChips(intents: venue.permittedIntents)
+            IntentChips(intents: venue.permittedIntents, identifier: "places.ticket.intents")
                 .padding(.top, 10)
             TicketPerforation(width: width)
                 .padding(.top, 11)
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 8) {
-                    footerSchedule
-                    ViewPlaceLabel()
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    footerSchedule
-                    ViewPlaceLabel()
-                }
+            TicketFooterLayout {
+                PlacesWrappingText(text: venue.schedule, face: .semiBold, size: 14, lineHeight: 22)
+                    .accessibilityIdentifier("places.ticket.schedule")
+                ViewPlaceButton(open: open)
             }
             .padding(.top, 14)
         }
-    }
-
-    private var footerSchedule: some View {
-        PlacesTicketText(text: venue.schedule, face: .semiBold, size: 14, lineHeight: 22)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
-            .accessibilityIdentifier("place.schedule")
     }
 
     /// A detail: the perforation (y 334), the schedule (y 352), the intents (y 390), the host
@@ -515,7 +624,7 @@ private struct VenueTicket: View {
             PlacesTicketText(text: venue.schedule, face: .bold, size: 19, lineHeight: 28)
                 .padding(.top, 17)
                 .accessibilityIdentifier("place.schedule")
-            IntentChips(intents: venue.permittedIntents)
+            IntentChips(intents: venue.permittedIntents, identifier: "place.intents")
                 .padding(.top, 10)
             PlacesTicketText(text: venue.hostLine, face: .medium, size: 14, lineHeight: 22)
                 .padding(.top, 14)
@@ -558,6 +667,7 @@ private struct PlacesTicketText: View {
 /// 84, Dating 72), 8 apart. Words, never colour alone. At larger text they stack.
 private struct IntentChips: View {
     let intents: [BandIntent]
+    let identifier: String
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -574,7 +684,7 @@ private struct IntentChips: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("For \(intents.map(\.title).joined(separator: " and ")) bands")
-        .accessibilityIdentifier("place.intents")
+        .accessibilityIdentifier(identifier)
     }
 }
 
@@ -602,21 +712,114 @@ private struct IntentChip: View {
     }
 }
 
-/// "View place  →": 140 × 44, #050606 (radius 13), #F6F7F2 SemiBold 14/44. Part of the ticket's
-/// one action, so not a separate button.
-private struct ViewPlaceLabel: View {
+/// The browse ticket's footer: the schedule and View place side by side when both fit at their
+/// natural sizes (the approved layout: the schedule top-aligned beside the 140 × 44 action, 8 apart,
+/// in a 44-pt row), otherwise the complete schedule, wrapped to the column, above the action, 12
+/// apart. Measured from the actual content at the current text size, so the action never covers
+/// the schedule and nothing is cut; the ticket grows with the footer.
+private struct TicketFooterLayout: Layout {
+    private let spacing: CGFloat = 8
+    private let stackedSpacing: CGFloat = 12
+    private let rowHeight: CGFloat = 44
+
+    /// Both at their natural (unwrapped) widths, with the spacing, fit the column.
+    private func fitsSideBySide(_ subviews: Subviews, width: CGFloat) -> Bool {
+        guard subviews.count == 2 else { return false }
+        let schedule = subviews[0].sizeThatFits(.unspecified).width
+        let action = subviews[1].sizeThatFits(.unspecified).width
+        return schedule + spacing + action <= width
+    }
+
+    /// The action at its natural size, wrapped to the column only if it is wider than that.
+    private func actionSize(_ subviews: Subviews, width: CGFloat) -> CGSize {
+        let natural = subviews[1].sizeThatFits(.unspecified)
+        return natural.width <= width ? natural : subviews[1].sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let width = proposal.width
+            ?? subviews[0].sizeThatFits(.unspecified).width + spacing + subviews[1].sizeThatFits(.unspecified).width
+        let action = actionSize(subviews, width: width)
+        if fitsSideBySide(subviews, width: width) {
+            let schedule = subviews[0].sizeThatFits(ProposedViewSize(width: width - spacing - action.width, height: nil))
+            return CGSize(width: width, height: max(rowHeight, schedule.height, action.height))
+        }
+        let schedule = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+        return CGSize(width: width, height: schedule.height + stackedSpacing + action.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let width = bounds.width
+        let action = actionSize(subviews, width: width)
+        if fitsSideBySide(subviews, width: width) {
+            subviews[0].place(at: bounds.origin, anchor: .topLeading,
+                              proposal: ProposedViewSize(width: width - spacing - action.width, height: nil))
+            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.minY), anchor: .topTrailing,
+                              proposal: ProposedViewSize(action))
+        } else {
+            let schedule = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+            subviews[0].place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(width: width, height: nil))
+            subviews[1].place(at: CGPoint(x: bounds.minX, y: bounds.minY + schedule.height + stackedSpacing),
+                              anchor: .topLeading, proposal: ProposedViewSize(action))
+        }
+    }
+}
+
+/// Ticket text that wraps at any width: Manrope at its Figma size and line pitch (both following
+/// Dynamic Type), #050606. Its first line box is the Figma line height, like `PlacesTicketText`'s,
+/// but its size is always the wrapped text's, so a layout measuring it never sees one line where
+/// two are drawn.
+private struct PlacesWrappingText: View {
+    let text: String
+    let face: Manrope
+    let size: CGFloat
+    let lineHeight: CGFloat
+    @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
+
+    var body: some View {
+        let scaled = size * scale
+        let extra = max(0, lineHeight * scale - face.naturalLineHeight(size: scaled))
+        Text(text)
+            .font(face.font(size: scaled))
+            .lineSpacing(extra)
+            .padding(.vertical, extra / 2)
+            .foregroundStyle(WristbandStyle.ground)
+            .multilineTextAlignment(.leading)
+    }
+}
+
+/// "View place  →": 140 × 44 at least, #050606 (radius 13), #F6F7F2 SemiBold 14, centred. A real
+/// button (VoiceOver: "View place"); at the largest text sizes its words wrap inside it rather
+/// than run past the ticket.
+private struct ViewPlaceButton: View {
+    let open: () -> Void
     @ScaledMetric(relativeTo: .body) private var size: CGFloat = 14
 
     var body: some View {
-        Text("View place  →")
-            .lineLimit(1)
-            .manrope(.semiBold, size: size, designSize: 14, lineHeight: 44)
-            .foregroundStyle(WristbandStyle.primary)
-            .padding(.horizontal, 12)
-            .frame(minWidth: 140, minHeight: 44)
-            .background(WristbandStyle.ground, in: RoundedRectangle(cornerRadius: 13, style: .circular))
-            .fixedSize()
-            .accessibilityHidden(true)
+        Button(action: open) {
+            Text("View place  →")
+                .font(Manrope.semiBold.font(size: size))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(WristbandStyle.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(minWidth: 140, minHeight: 44)
+                .background(WristbandStyle.ground, in: RoundedRectangle(cornerRadius: 13, style: .circular))
+                .contentShape(RoundedRectangle(cornerRadius: 13, style: .circular))
+        }
+        .buttonStyle(ViewPlaceButtonStyle())
+        .accessibilityLabel("View place")
+        .accessibilityHint("Opens this fictional venue's details.")
+        .accessibilityIdentifier("places.viewPlace")
+    }
+}
+
+private struct ViewPlaceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
 

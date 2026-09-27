@@ -30,6 +30,7 @@
 		5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */; };
 		641107C75798A0F0B3E8C92F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE467721E15337452098FA6 /* RootView.swift */; };
 		685E5AB8F1E4026AF72B64DE /* GuestListReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */; };
+		6D5B1CB3B9755A0643103CDA /* PlacesEdgeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF619E10369A2C250F60F6C1 /* PlacesEdgeBack.swift */; };
 		7C9B5FF0EA427F538EC3B700 /* BandSignalInteractionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */; };
 		7E294903C0C1CE50B44A2249 /* WristbandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0F93D4AD9E51DA2E0553E8 /* WristbandView.swift */; };
 		8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBF4AD5F388E4A893AA059C /* GuestListView.swift */; };
@@ -46,6 +47,7 @@
 		C83708C29AB8F57779D1FF5D /* DebugFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */; };
 		D4A4409D3A5DBBBDC8822D3B /* RepeatTapGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */; };
 		DBDE63CD1A82675CE1423C90 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */; };
+		F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */; };
 		F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */; };
 		F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B9055BE62D6166F7331A15 /* Fabric.swift */; };
 		FAD66E8A0A87BB1C4BE92EFB /* BirthdayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */; };
@@ -78,6 +80,7 @@
 		586B8C2BE5175B1718607857 /* ProximeetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximeetApp.swift; sourceTree = "<group>"; };
 		5B9C741008D10D13E76F07D0 /* Clasp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clasp.swift; sourceTree = "<group>"; };
 		5D85149319764B353B538992 /* ProximeetUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ProximeetUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesCorrectionTests.swift; sourceTree = "<group>"; };
 		6283C637464B9080BEE4DE11 /* PlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesView.swift; sourceTree = "<group>"; };
 		68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatTapGuard.swift; sourceTree = "<group>"; };
 		746B8699332625989FCA280E /* BandOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandOption.swift; sourceTree = "<group>"; };
@@ -105,6 +108,7 @@
 		DF0CD69B687C2A33D9C4C25A /* WristbandReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WristbandReviewTests.swift; sourceTree = "<group>"; };
 		E2B9055BE62D6166F7331A15 /* Fabric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fabric.swift; sourceTree = "<group>"; };
 		F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListReviewTests.swift; sourceTree = "<group>"; };
+		FF619E10369A2C250F60F6C1 /* PlacesEdgeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesEdgeBack.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +150,7 @@
 				5B9C741008D10D13E76F07D0 /* Clasp.swift */,
 				E2B9055BE62D6166F7331A15 /* Fabric.swift */,
 				29FA62256BD7E4755C13781C /* IntentStyle.swift */,
+				FF619E10369A2C250F60F6C1 /* PlacesEdgeBack.swift */,
 				68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */,
 				4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */,
 				C15580091C077DBBC980EAFE /* SignatureBandHero.swift */,
@@ -177,6 +182,7 @@
 				DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */,
 				F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */,
 				5136C5A73391A81A9EB42327 /* PassReviewTests.swift */,
+				5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */,
 				C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */,
 				50A5C3A70DB9F979B11AA344 /* SignalReviewTests.swift */,
 				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
@@ -359,6 +365,7 @@
 				5F59C7D712C707F81867B9C5 /* BirthdayReviewTests.swift in UISources */,
 				685E5AB8F1E4026AF72B64DE /* GuestListReviewTests.swift in UISources */,
 				5AA025BE0C984EA8EE55EAB0 /* PassReviewTests.swift in UISources */,
+				F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */,
 				F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */,
 				2C4569A07025A8AA82A26E01 /* SignalReviewTests.swift in UISources */,
 				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,
@@ -380,6 +387,7 @@
 				BAB64C1831539CBA82403DE2 /* Clasp.swift in Sources */,
 				F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */,
 				3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */,
+				6D5B1CB3B9755A0643103CDA /* PlacesEdgeBack.swift in Sources */,
 				D4A4409D3A5DBBBDC8822D3B /* RepeatTapGuard.swift in Sources */,
 				0529859D1916D2390BBAF93F /* SignalTag.swift in Sources */,
 				123C654DBC4670BC5DDD2240 /* SignatureBandHero.swift in Sources */,

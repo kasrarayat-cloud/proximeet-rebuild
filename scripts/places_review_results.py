@@ -126,8 +126,8 @@ def main(argv):
         messages = errors.get((row["bundle"], row["test"]), [])
         seconds = None
         if not found:
-            if row["kind"] == "repeat" and run and run["kind"] == "time":
-                outcome = "not run (time budget: left for the required run after it)"
+            if row["kind"] in ("repeat", "extra") and run and run["kind"] == "time":
+                outcome = "not run (time budget: optional, left for the required runs)"
             elif run is None:
                 outcome = "not run (its run was not started)"
             elif run["kind"] == "device":
@@ -153,10 +153,10 @@ def main(argv):
             elif execution["device"] and execution["device"] != expected_device:
                 problems.append("%s %s: ran on %s, not on %s" % (row["order"], row["test"], execution["device"],
                                                                 expected_device))
-            label = LANE_LABEL[row["device"]] + (", repeat" if row["kind"] == "repeat" else "")
+            label = LANE_LABEL[row["device"]] + ((", " + row["kind"]) if row["kind"] != "required" else "")
             result_lines.append("%s[%s]=%s%s" % (row["test"], label, outcome, (" (%s s)" % seconds) if seconds else ""))
-        if row["kind"] == "repeat":
-            repeats.append("%s %s: %s" % (row["order"], row["test"], outcome))
+        if row["kind"] != "required":
+            repeats.append("%s %s (%s, %s): %s" % (row["order"], row["test"], row["kind"], LANE_LABEL[row["device"]], outcome))
         table.append([row["order"], row["device"], expected_device, row["run"], row["bundle"], row["test"], row["kind"],
                       outcome, seconds or "", " | ".join(messages)])
 
@@ -170,11 +170,12 @@ def main(argv):
     for name in sorted({r["run"] for r in rows}):
         run = run_exit.get(name)
         kinds = {r["kind"] for r in rows if r["run"] == name}
+        optional = kinds <= {"repeat", "extra"}
         if run is None:
-            if kinds != {"repeat"}:
+            if not optional:
                 problems.append("run %s has no recorded exit (it did not run)" % name)
         elif run["kind"] == "time":
-            if kinds != {"repeat"}:
+            if not optional:
                 problems.append("run %s was left unrun for time" % name)
         elif run["kind"] == "device":
             problems.append("run %s had no device to run on" % name)
@@ -193,7 +194,7 @@ def main(argv):
 
     lines = sorted(result_lines) + [
         "scope=" + scope,
-        "manifest=%s (%d rows for this scope: %d required, %d repeat)" % (
+        "manifest=%s (%d rows for this scope: %d required, %d optional)" % (
             os.path.basename(manifest_path), len(rows), len(required), len(rows) - len(required)),
         "unique_test_cases=%d" % len(unique),
         "executions=%d" % executed,
