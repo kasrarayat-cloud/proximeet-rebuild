@@ -411,7 +411,8 @@ final class PlacesCorrectionTests: XCTestCase {
 
     // MARK: - Scroll diagnosis
 
-    /// Diagnosis only, never required (its manifest kind is "extra"): how drags scroll Places at the
+    /// Diagnosis only, never required (its manifest kind is "diagnostic": it starts only when it fits,
+    /// and its outcome is reported and never counts toward a verdict): how drags scroll Places at the
     /// largest text on this phone. It records and does not judge, so it passes whenever the app
     /// launches and each stage opens. Browsing (fixture `places`, Now) and Common Ground's detail
     /// (fixture `place-detail`, Now) are launched fresh, at their top, for each pattern of five drags

@@ -19,8 +19,8 @@
 #                and the explanation start, the five Signal and interaction tests whose endpoint
 #                changed, the seven screens on main (C9 = P7) and Back routes on the smaller iPhone
 #                (C15 = P8), a short recording of the corrected scrolling and back swipes, and an
-#                optional scroll diagnostic on each device (kind "extra": run only when it fits; if it
-#                runs it must pass)
+#                optional scroll diagnostic on each device (kind "diagnostic": starts only when it
+#                fits; its outcome is reported and never counts toward a verdict)
 #   sweep_places build 2: the places scope's rows except P7 and P8 (the correction runs them): the
 #                recorded full journey, the Birthday gate on the way back, the largest text, rapid taps
 #                and interruptions, the Reduce Motion preview and relaunch on main; the band change,

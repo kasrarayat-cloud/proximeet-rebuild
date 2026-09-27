@@ -113,7 +113,8 @@ Mac. Their results from build `6ab88011` are in §6.
   destination, so from a detail or the explanation it most likely goes straight to Signal, the
   skip this correction removes for touch. An escape action on the whole screen could have changed
   the accessibility tree that every test depends on, and there is only one build, so it was left
-  out. Open and unverified.
+  out. Open and unverified. (Superseded by the Places recovery: `places-recovery-01.md` §3 routes
+  escape through the same one-stage Back; hands-on VoiceOver is still unverified.)
 - The guardrail audit again flagged the earlier Project Halo doctrine's brand-string
   (`BrandConfig.swift`), "PROTOTYPE — mock data only." banner (gated on a `PROTOTYPE` build
   condition) and `app.projecthalo.lab` rules. Lead's ruling: for these rebuilt screens the literal
