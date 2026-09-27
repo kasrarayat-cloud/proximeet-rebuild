@@ -34,10 +34,11 @@ parallel. Every test with 440-point pixel anchors runs on main, or on device B, 
 | `regressions` | The Wristband (7), Pass (4) and Birthday (2) tests, the two walkthroughs first | Device B (a clone of main): the Guest List's paste test, its on-screen-keyboard tests with the names test, Welcome (all 4), a time-gated repeat of the paste test, and last its hardware Tab test | 27 required (+1 optional repeat) |
 
 **Devices and time (after build `6ab84ede`).**
-- Two measurements from that build set the device plan:
+- Measurements from builds `6ab84ede` and `6ab85be6` set the device plan:
   - A simulator restarted after its first boot was not ready for 3.5 to 5.7 minutes.
+  - A device first booted while the other ran tests needed about 15 minutes to reach its first test.
   - A second first boot during the compilation slowed it by about 2 minutes.
-- So the main simulator boots alone during the compilation and is never restarted. For regressions, device B is cloned from it before either boots. The other device boots when `ui-review` starts.
+- So both devices boot during the compilation and neither is ever restarted. For regressions, device B is cloned from main before either boots.
 - The UI deadline is 1380 s after the gate. The run input `PLACES_UI_DEADLINE_SECONDS` (600 to 1380) lowers it.
 - `proximeet-places-review-short` runs the same steps with a 24-minute limit. Its own `PLACES_UI_DEADLINE_SECONDS` is 1110 (at the worst 72 + 1110 + 75 + 100 + about 40 = 1397 s). It is for a final build that must fit what is left of the chapter's 90 free minutes.
 
@@ -118,7 +119,7 @@ checkout is exactly the reviewed revision:
    12-combination matrix, precedence, state preservation, clock independence) and every earlier
    chapter's rules.
 8. `places_review.sh ui-review` runs the manifest's runs in four steps:
-   - it boots the other device and compiles the test harness;
+   - it compiles the test harness (both devices have been booting since destinations);
    - it copies the build products for the other device, so the two xcodebuild processes never
      share a DerivedData folder;
    - it runs main's runs and the other device's in parallel;

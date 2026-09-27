@@ -193,6 +193,7 @@ chapter's code.
 | # | Build | Scope | Commit | Minutes | Result |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `6ab84ede6ba94782f897685a` | places | `71487baf` | 25.75 (26 rounded) | **FAIL**, see below |
+| 2 | `6ab85be69602ff96bb8f8aaf` | places | `44af4491` | 25.75 (26 rounded) | **FAIL**: 9 passed, the smaller iPhone's run cut off by the deadline |
 
 **Build 1 compiled the app, the domain tests passed on the Mac, and 9 of the 11 Places methods
 executed and passed.** They are:
@@ -233,6 +234,33 @@ judges them the same way, with no retries.
   XCTNSPredicateExpectation makes its first check about a second after it starts, and those
   seconds cost minutes.
 - The reason is the budget: three scopes at build 1's pace would not fit the 64 minutes left.
+
+**Build 2: every execution on the iPhone 17 Pro Max passed.** That is the recorded journey
+(including the headline now checked by its pixels), the Birthday gate, the largest text, rapid taps
+and interruptions, the Reduce Motion preview, relaunch and the seven screens. On the smaller iPhone,
+Back routes and the band change passed. The run was cut off by the UI deadline during the twelve
+combinations, so four executions there did not complete.
+
+The smaller iPhone was first booted only when the UI review began, at about 00:00:56, while main
+was about to run its tests.
+- Its boot finished at 00:07:55.
+- Its xcodebuild then printed nothing for 9.5 minutes before "Testing started" (00:17:28). The
+  first test began at 00:17:52.
+- During that boot, the journey's xcodebuild took about 2.4 minutes to close (00:07:27 to
+  00:09:48). Main's next xcodebuild, with no boot in progress, closed in 28 s.
+
+**Deviation alert: what the rest of the budget can verify.**
+- After two builds, 38 of the chapter's 90 free minutes remain (26 + 26 rounded).
+- That is one more build at the 28-minute limit and none after it, so the signal and regressions
+  scopes cannot run in this chapter.
+- The last build runs the places scope: the chapter's own evidence, which has not yet passed
+  whole.
+- For the last build both devices boot during the compilation and are never restarted. In build 2
+  the main simulator, booted that way, reached its first test 84 s after its xcodebuild started.
+  Whether early boots also remove the smaller iPhone's 9.5-minute wait is unverified until that
+  build runs.
+- The earlier chapters' 43 executions last passed at `1085af3d` (signal) and `b06707ec`
+  (regressions), not on the Places revision.
 
 Later builds are reported in the delivery message and in each build's own `verdict.txt`.
 

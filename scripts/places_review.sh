@@ -36,16 +36,16 @@
 #                 PLACES_REVIEW_SCOPE names the scope; both required on Codemagic (CM_BUILD_ID set).
 #                 Also records the time budget's start. Runs anywhere.
 #   destinations  list installed simulators; report whether iPhone 17 Pro Max was selected; start
-#                 the first boots of the selected simulator and (when the scope uses one) a smaller
-#                 iPhone behind the compilation
-#   ui-review     compile the UI test harness; clone the booted iPhone 17 Pro Max ("device B",
-#                 deleted after the run, so it starts warm); run the scope's main and device B runs
-#                 in parallel, then the smaller iPhone's. The places scope records its full journey
-#                 first; the compact video is made in the background once the recording ends. Every
-#                 xcodebuild is bounded by time and interrupted (SIGINT) at its bound so it can close
-#                 its result bundle before it is killed (the UI deadline is 1380 s after the
-#                 checkpoint). Every execution is judged against the
-#                 manifest by scripts/places_review_results.py
+#                 the first boots of the selected simulator and the scope's other device (device B,
+#                 cloned from it before either boots, or a smaller iPhone) behind the compilation
+#   ui-review     compile the UI test harness; give the other device its own copy of the build
+#                 products; run the scope's main and other-device runs in parallel (device B is
+#                 deleted after the run). The places scope records its full journey first; the
+#                 compact video is made in the background once the recording ends. Every xcodebuild
+#                 is bounded by time and interrupted (SIGINT) at its bound so it can close its result
+#                 bundle before it is killed (the UI deadline is 1380 s after the checkpoint, or the
+#                 run input). Every execution is judged against the manifest by
+#                 scripts/places_review_results.py
 #   compact-video half-size re-encode of the recording, trimmed to the app (places scope)
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  scripts/places_review_package.py: Places-Review.zip, Places-Screens.zip,
@@ -641,11 +641,12 @@ sys.exit(0 if selected and selected[0] == primary else 1)
 PY
 
     # Devices. Build 6ab84ede showed that a simulator restarted after its first boot is not ready for
-    # 3.5 to 5.7 minutes, and that a second first boot during the compilation slows it by about two
-    # minutes. So the selected simulator boots now, alone, behind the compilation and the domain
-    # tests, and is never restarted. The second device (device B, cloned from it now before either
-    # boots, or the smaller iPhone) boots when ui-review starts. Nothing is deleted here; ui-review
-    # deletes device B when it ends.
+    # 3.5 to 5.7 minutes; build 6ab85be6 that a device first booted while the other runs tests needs
+    # about 15 minutes to reach its first test (and slows the other). A second first boot during the
+    # compilation costs it about two minutes instead. So both devices boot now, behind the
+    # compilation and the domain tests, and neither is ever restarted: the selected simulator and the
+    # scope's other device (device B, cloned from it now before either boots, or the smaller
+    # iPhone). Nothing is deleted here; ui-review deletes device B when it ends.
     printf 'memory_bytes=%s\ncpus=%s\n' "$(sysctl -n hw.memsize 2>/dev/null || echo unknown)" \
         "$(sysctl -n hw.ncpu 2>/dev/null || echo unknown)" > "$META/places-host.txt"
     run cat "$META/places-host.txt" || true
@@ -671,6 +672,11 @@ PY
         fi
     fi
     run xcrun simctl boot "$SIM_UDID" || true
+    if [ -f "$DEVICE_B_ENV" ]; then
+        run xcrun simctl boot "$b_udid" || true
+    elif [ -f "$SMALL_ENV" ]; then
+        run xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" || true
+    fi
     return "$status"
 }
 
@@ -905,8 +911,8 @@ stage_ui_review() {
     note "Scope: $SCOPE. UI deadline: $(remaining)s left of the ${UI_DEADLINE_SECONDS}s budget."
     awk -F '\t' -v scope="$SCOPE" '!/^#/ && $1 == scope' "$RUN_MANIFEST" > "$OUT/manifest-rows.tsv"
 
-    # 1. The second device (device B, cloned in destinations, or the smaller iPhone) boots now, behind
-    #    the test-harness compilation; the selected simulator has been booting since destinations.
+    # 1. The second device (device B, cloned in destinations, or the smaller iPhone) has been booting
+    #    since destinations, like the selected simulator.
     if [ -f "$DEVICE_B_ENV" ]; then
         # shellcheck source=/dev/null
         . "$DEVICE_B_ENV"
@@ -926,7 +932,6 @@ stage_ui_review() {
         fi
     fi
     if [ -n "$second_udid" ]; then
-        run xcrun simctl boot "$second_udid" || true
         BOOTED_BY_US="$BOOTED_BY_US $second_udid"
     fi
 
