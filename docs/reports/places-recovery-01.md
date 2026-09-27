@@ -13,7 +13,7 @@ Date: 2026-09-27. Not production-ready.
 - **Recovery build 4** (`6ab8f638d1a64821265b5f4d`, same commit) ran out of time on the iPhone 17 Pro
   Max: 21 passed, none failed, 3 interrupted, 5 not run.
 - **TARGETED CORRECTION: PASS**, 15 of 15.
-- **FULL REGRESSION: FAIL (incomplete).** 40 of 56 earlier executions passed. Three were interrupted
+- **FULL REGRESSION: FAIL.** 40 of 56 earlier executions passed. Three were interrupted
   by time bounds without a failed assertion (P3, P6, M2). Thirteen never ran (P1, S9, S10, S12, S13,
   and the Guest List's B2–B9). All four authorised builds are used (§7).
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
@@ -198,8 +198,8 @@ All four scrolling failures used the same helper, `scrollIntoView`
   - C stalling on the detail with and without it points to the app.
 
   It cannot by itself tell the scroll indicator from the repeat-tap guard, since both need a quick
-  second touch. Which of the two it is remains not established, and no remaining build runs the
-  probe. What build 1's C17 measured is in §7; C16 did not fit before that build's deadline and was
+  second touch. Which of the two it is remains not established; builds 2–4 did not run the probe,
+  and all four builds are used. What build 1's C17 measured is in §7; C16 did not fit before that build's deadline and was
   listed as not run. Nothing required depended on either.
 
 ## 3. The corrections in this recovery
@@ -335,7 +335,8 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
   app into it, which is permanent ("Once an application has been transferred to a team, it cannot
   be transferred back to the personal account or to other teams"). The assignment forbids both.
 - Also, Quick Launch is offered next to a `.app` artifact of a successful build. Before this
-  recovery no build published one. Recovery builds 1–4 each published `Proximeet.app` (§7); build 3
+  recovery no build published one. Recovery builds 1–4 each published `Proximeet.app` (each build's
+  artifact list; build 1 in §7); build 3
   is the only one whose own verdict passed, and the account has no App Preview anyway.
 
 **Appetize.**
@@ -350,7 +351,7 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
 its copy in `Places-Gate-Review.zip`'s `app/` folder). Its app bundle is byte-identical to build 2's, built at `808950f`. Off the repository it
 is copied, under the same hash, to
 `/home/proximeet/proximeet-preview/Proximeet-Prototype-verified-candidate-product-808950f-build-6ab8efca.zip`,
-with `README-PREVIEW.md` beside it. The steps below apply unchanged with that file; its status is
+with `README-PREVIEW.md` beside it. The steps below apply with that file (step 3 names it); its status is
 "Places correction verified; full regression sweep incomplete" (§7). The table below records the
 earlier, superseded candidate.
 
@@ -465,7 +466,7 @@ build 2's passed rows count toward the same verdicts.
   whose product and test files are identical, and prints two verdicts:
   - the targeted correction, C1–C15;
   - the full regression, the 56 earlier executions. It reads INCOMPLETE while any row is
-    uncovered.
+    uncovered and none failed; an interrupted row counts as failed, so it reads FAIL.
 - **Device classes.** The Pass and Wristband rows M4–M13 run on device B, the same model and runtime
   as main, and that is stated as an identity exception. So is P1's short-hold run.
 
@@ -545,10 +546,12 @@ heads were checked: `git diff` of the product and test paths against `808950f` p
   (35.5 s in build 6ab8639c), P4 115.2 s (34.7 s) and P5 36.2 s (11.7 s). The cause is not
   established; the two Pro Max simulators ran heavy tests side by side on the three-CPU host.
   - **Passed:** P2, P4, P5, M1 (118.7 s) and M3 (83.4 s).
-  - **P3 was interrupted.** XCTest stopped it at its five-minute execution allowance ("exceeded
-    execution time allowance of 5 minutes"). Its scroll helper had finished every call it began, 40
-    drags with no stall and no failure, at 4.2–11.3 s a drag against about 2 s (1.9–2.2 s) in
-    build 3.
+  - **P3 was interrupted.** XCTest flagged it at its five-minute execution allowance ("exceeded
+    execution time allowance of 5 minutes"), at about 300 s, and ended it at about 368 s, when the
+    runner restarted. By then its scroll helper had finished 18 calls, 13 with drags: 40 drags with
+    no stall and no failure, 7 of them after the allowance message. That is 4.2–11.3 s a drag per
+    call, against 1.4–3.9 s per call (about 2 s overall) in build 3. One more call, towards
+    `explanation.presence`, had made one drag and had not finished when the test was ended.
   - **P6 was interrupted** by its run's 1020-s bound.
   - **M2 was interrupted** by its run's bound (376 s, cut short by the deadline).
   - **Not started:** P1, S9, S10, S12 and S13; their run ended at its bound first.
