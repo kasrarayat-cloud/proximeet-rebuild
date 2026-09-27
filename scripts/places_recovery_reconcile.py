@@ -36,8 +36,9 @@ must print nothing (run in this repository; every head and its result are printe
 (Codemagic 6ab8adb4, on 907d7401) never counts. Device classes: main and b are one class, the iPhone
 17 Pro Max model and runtime (device B is the selected simulator's clone); small is the iPhone 17e. A
 build whose recorded selected simulator is not an iPhone 17 Pro Max counts for no main-class row, one
-whose recorded smaller iPhone is not an iPhone 17e for no small-class row, and the counted builds must
-share one runtime. Run types: a run named "journey" is recorded with full holds; every other run uses
+whose recorded smaller iPhone is not an iPhone 17e for no small-class row, a build whose runtime is not
+recorded (simulator.json with its runtime name and build) for no row of either class, and the counted
+builds must share one runtime. Run types: a run named "journey" is recorded with full holds; every other run uses
 short holds. The stated identity exceptions, accepted and printed where they apply: P1 runs with short
 holds, unrecorded (the places scope's P1 was the recorded journey); the M rows run on device B instead
 of main (the same model and runtime).
@@ -339,8 +340,9 @@ def main(argv):
             "headline": next((l.strip() for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), ""),
             "executions": executions, "has_executions": "executions.tsv" in files,
             "model": simulator.get("device_name", ""),
-            "runtime": ("%s (%s)" % (simulator.get("runtime_name", "?"), simulator.get("runtime_build", "?"))
-                        if simulator else ""),
+            # Recorded only when both fields are present; otherwise empty, so no row of either class counts.
+            "runtime": ("%s (%s)" % (simulator["runtime_name"], simulator["runtime_build"])
+                        if simulator.get("runtime_name") and simulator.get("runtime_build") else ""),
             "smaller": smaller,
         }
         record["counts"], record["command"], record["check"] = product_check(record["head"], assumed)

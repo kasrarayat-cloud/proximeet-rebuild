@@ -185,7 +185,7 @@ documentation files from `808950f`:
 
   | Device | Run (bundle, bound) | Rows |
   | --- | --- | --- |
-  | Main (iPhone 17 Pro Max) | `places_signal_main` (`FinishPlacesSignalMain`, 1020 s: its tests, about 620 s, plus a first xcodebuild start measured up to about 337 s and a close of about 65 s; the UI deadline still caps it) | P1 (`PlacesReviewTests.testWalkthroughRealJourney`, short holds, not recorded), P2–P6, S9, S10, S12, S13 |
+  | Main (iPhone 17 Pro Max) | `places_signal_main` (`FinishPlacesSignalMain`, 1020 s: its tests, about 620 s, plus a first xcodebuild start measured up to about 337 s (build 6ab88011, the main device's first run, from its xcodebuild start to its first test) and a close of about 65 s; the UI deadline still caps it) | P1 (`PlacesReviewTests.testWalkthroughRealJourney`, short holds, not recorded), P2–P6, S9, S10, S12, S13 |
   | | `birthday_wristband_main` (`FinishBirthdayWristbandMain`, 600 s) | M1, M2, M3 |
   | Device B (clone of main) | `pass_wristband_b` (`FinishPassWristbandB`, 700 s) | M4–M13 |
   | | `paste_b` (`FinishPasteB`, 480 s) | B1 |
@@ -242,7 +242,8 @@ documentation files from `808950f`:
   Build 1 (`907d7401`) never counts.
   - Device classes: main and device B are one class (the iPhone 17 Pro Max model and runtime; B is
     its clone); small is the iPhone 17e. A build whose recorded devices are other models counts for
-    no row of that class, and the counted builds must share one runtime.
+    no row of that class, a build whose runtime is not recorded counts for no row of either class,
+    and the counted builds must share one runtime.
   - Identity exceptions, stated and printed where they apply: P1 runs with short holds, unrecorded
     (the places scope's P1 was the recorded journey, full holds; its assertions are the same); the M
     rows run on device B instead of main (the same model and runtime).

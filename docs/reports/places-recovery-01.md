@@ -423,8 +423,9 @@ this recovery's tests, manifest, harness and workflow. Each build is pinned by
 
 **After build 2: the last two builds.** Build 2's iPhone 17 Pro Max ran nothing, so 79 of the
 120 minutes and two of the four builds remain. The correction gate's nine 17 Pro Max rows and the
-49 earlier rows cannot all fit in two builds. Both builds will run on one commit, not yet made,
-whose product and test files are identical to `808950f`; only the harness and documents differ. So
+49 earlier rows cannot all fit in two builds. Both builds run on one commit (the one that adds this
+section, or a later harness- and document-only one), whose product and test files are identical to
+`808950f`; only the harness and documents differ. So
 build 2's passed rows count toward the same verdicts.
 
 | Build | Scope | iPhone 17 Pro Max ("main") | Other device |
