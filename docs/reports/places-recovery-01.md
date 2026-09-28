@@ -1,6 +1,6 @@
 # Places recovery 01: diagnosis, corrections and the verification plan
 
-Date: 2026-09-27. Not production-ready.
+Date: 2026-09-27, extended 2026-09-28 (§9). Not production-ready.
 
 **Status:**
 - **Recovery build 1** (`6ab8adb429a3df446d9749a3`, on `907d7401`) passed 14 of its 15 required
@@ -12,10 +12,14 @@ Date: 2026-09-27. Not production-ready.
   `808950f`) passed all nine gate rows on the iPhone 17 Pro Max and all 12 extras.
 - **Recovery build 4** (`6ab8f638d1a64821265b5f4d`, same commit) ran out of time on the iPhone 17 Pro
   Max: 21 passed, none failed, 3 interrupted, 5 not run.
+- **Recovery builds 5 and 6** (extension, §9): build 5 (`6aba2b51`) passed 15 of the 16 rows builds
+  2–4 left unverified, and B2 failed there on a 36-s XCTest query stall on an overloaded, momentarily
+  blocked host. Build
+  6 (`6aba3533`) passed B2 alone on one simulator.
 - **TARGETED CORRECTION: PASS**, 15 of 15.
-- **FULL REGRESSION: FAIL.** 40 of 56 earlier executions passed. Three were interrupted
-  by time bounds without a failed assertion (P3, P6, M2). Thirteen never ran (P1, S9, S10, S12, S13,
-  and the Guest List's B2–B9). All four authorised builds are used (§7).
+- **FULL REGRESSION: FAIL, 55 of 56 (B2)**, from the final reconciliation of builds 2–6 (§9.3). B2
+  failed in build 5 and passed in build 6, and under the rule that failures win it stays failed.
+  After builds 1–4 it read 40 of 56 (§7), with three rows interrupted by time and thirteen never run.
 Build `6ab8801175ac3236c0f1514f`, on `358f59f1204c02fa167d21ebd9e6226d8799ff02`, failed the targeted
 correction: 8 of 13 required executions passed (`places-correction-01.md` §6). This recovery:
 - diagnoses that build's five failures and one interruption from its logs, keeping what is proven
@@ -351,9 +355,10 @@ Birthday shows no badge, as approved; it is reached only through Welcome's demo 
 its copy in `Places-Gate-Review.zip`'s `app/` folder). Its app bundle is byte-identical to build 2's, built at `808950f`. Off the repository it
 is copied, under the same hash, to
 `/home/proximeet/proximeet-preview/Proximeet-Prototype-verified-candidate-product-808950f-build-6ab8efca.zip`,
-with `README-PREVIEW.md` beside it. The steps below apply with that file (step 3 names it); its status is
-"Places correction verified; full regression sweep incomplete" (§7). The table below records the
-earlier, superseded candidate.
+with `README-PREVIEW.md` beside it. The steps below apply with that file (step 3 names it). Its status,
+after the final reconciliation (§9.3), is
+"Places correction verified; full regression FAIL, 55 of 56: B2 failed once in build 5 on a 36-s XCTest stall and passed alone in build 6; accepting it is the founder's decision". After builds 2–4 it was "Places correction verified; full regression sweep incomplete".
+The table below records the earlier, superseded candidate.
 
 **The earlier upload-ready artifact (superseded).**
 
@@ -373,7 +378,7 @@ test fixtures.
    authenticated, and the same for debugLog, networkProxy and networkIntercept, so the new build is
    never runnable by anyone who has its link.
 3. Upload the simulator zip itself, not a review zip: now build 3's (above), with the note
-   "Places correction verified; full regression sweep incomplete". (Before build 3 this step named
+   "Places correction verified; full regression FAIL, 55 of 56: B2 failed once in build 5 on a 36-s XCTest stall and passed alone in build 6; accepting it is the founder's decision" (§9.3). (Before build 3 this step named
    `Proximeet-Debug-iphonesimulator-358f59f1204c.zip`, with the note "Prototype — Places
    verification pending".) It creates a new app,
    `com.proximeet.demo`. Do not update the earlier preview's entry. If the plan refuses a second
@@ -762,8 +767,9 @@ Also fixed:
 - no run is claimed with under 180 s left;
 - the disclosure lists every target with more than one attempt, whatever its result.
 
-**Preview.** The upload-ready app is unchanged and was not rebuilt; see §5. Its status is "Places
-correction verified; full regression sweep incomplete" until the reconcile below says otherwise.
+**Preview.** The upload-ready app is unchanged and was not rebuilt; see §5. Before builds 5 and 6 its
+status was "Places correction verified; full regression sweep incomplete". After the final
+reconciliation (§9.3) it is "Places correction verified; full regression FAIL, 55 of 56: B2 failed once in build 5 on a 36-s XCTest stall and passed alone in build 6; accepting it is the founder's decision".
 
 ### 9.1 Build 5: result
 
@@ -841,3 +847,85 @@ The mechanism is unknown, so the repair is a load-reduction hypothesis.
   REGRESSION.
 - **Who decides.** Whether build 5's failure is accepted as an automation stall is the founder's
   decision, not the reconcile's.
+
+### 9.3 Build 6: result, and the final reconciliation
+
+| | |
+| --- | --- |
+| Build | Codemagic `6aba3533692264e7055496a6`, workflow `proximeet-places-review-30`, scope `regression_repair` |
+| Commit | `56f0e76901ced9ff1a3fce4857e7780a76c5a2d6`, pinned. `git diff` of the product and test paths against `808950f` prints nothing |
+| Time | 09:37:34–09:44:30 UTC: 6.92 minutes exact, 7 rounded |
+| Own verdict | PASS |
+| Downloads | Every artifact matched its published size, and both zips matched their published SHA-256. Copies are in `/home/proximeet/proximeet-places-recovery-review/builds/` (`build6-*`) |
+
+**B2 passed in 146.3 s**, alone on the selected iPhone 17 Pro Max. Its host telemetry, against build
+5's:
+
+| | Build 6 | Build 5 |
+| --- | --- | --- |
+| CPU 0% idle | 6 of 7 samples | 29 of 34 |
+| One-minute load | 278–497 | up to 845 |
+| Most processes stuck | 106 | 330 |
+| Longest sampler interval | 34 s | 99 s |
+| XCTest step stalls of 10 s or more | none (longest 9.99 s, at the first app launch) | 10–43 s |
+
+This is one data point. It fits the load-reduction hypothesis, but it does not prove that build 5's
+failure was only the stall.
+
+**Same app in every build.** The app bundle of builds 5 and 6 is byte-identical, file by file, to the
+preview app, as it was for builds 2–4.
+
+**Final reconciliation of the real builds 2–6.** Run from this repository; every head is
+product-equivalent to `808950f` by git.
+- `TARGETED CORRECTION: PASS (C1-C15: 15 of 15 passed at product-equivalent commits; none failed)`
+- `FULL REGRESSION: FAIL (55 of 56 earlier required executions covered; failed: regressions:B2)`
+- Repeated executions, disclosed:
+  - P3, P6 and M2: interrupted in build 4, passed in build 5;
+  - B2: failed in build 5 (200.5 s), passed in build 6 (146.3 s).
+- Under the rule that failures win, B2 stays failed. Whether build 5's B2 failure, a 36-s XCTest query
+  stall on a blocked host with the headline correct when read, is accepted as an automation stall is
+  the founder's decision.
+
+**The 16 rows.**
+
+| Row | Test | Build 5 | Build 6 |
+| --- | --- | --- | --- |
+| P3 | PlacesReviewTests/testLargestTextKeepsEveryStageReachable | passed, 145.6 s, main | – |
+| P6 | PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept | passed, 55.4 s, main | – |
+| P1 | PlacesReviewTests/testWalkthroughRealJourney (short holds, unrecorded) | passed, 175.9 s, main | – |
+| M2 | WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint | passed, 178.0 s, main | – |
+| S9 | SignalReviewTests/testLargestTextKeepsEveryChoiceReachable | passed, 40.0 s, main | – |
+| S10 | SignalReviewTests/testMissingIntentKeepsSignalClosed | passed, 12.1 s, main | – |
+| S12 | SignalReviewTests/testReduceMotionPreviewAttachesAtOnce | passed, 32.3 s, main | – |
+| S13 | SignalReviewTests/testRelaunchStartsWithoutAnApproach | passed, 82.5 s, main | – |
+| B2 | GuestListReviewTests/testBlankInternationalAndLongNames | **failed**, 200.5 s, device B | passed, 146.3 s, main |
+| B3 | GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted | passed, 79.7 s, device B | – |
+| B4 | GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal | passed, 38.5 s, device B | – |
+| B5 | GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable | passed, 48.4 s, device B | – |
+| B6 | GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary | passed, 21.3 s, device B | – |
+| B7 | GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred | passed, 69.1 s, device B | – |
+| B8 | GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute | passed, 76.0 s, main (taken from device B) | – |
+| B9 | GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint | passed, 96.2 s, main (taken from device B) | – |
+
+**Minutes and money for this extension.**
+- Build 5 took 29.09 minutes exact (30 rounded), and build 6 took 6.92 (7 rounded).
+- That is 36.01 exact, or 37 rounded, of the 70 authorised minutes.
+- At $0.095 a minute: $3.42 exact, or $3.52 rounded, of the USD 7 cap.
+- No free minutes were left this month. The invoice is not readable through the API.
+- No browser preview minutes were used.
+
+**Offline review.** `/home/proximeet/proximeet-places-recovery-review/Places-Recovery-Review.zip`
+covers builds 2–6. The earlier one, for builds 2–4, is kept as
+`Places-Recovery-Review-builds2-4-20260927.zip`. The C10 video in it is labelled as what it is: a
+direct Places fixture recording, not a Welcome-to-Places walkthrough. The real route from Welcome
+into Places ran, unrecorded, as C8 (build 3) and P1 (build 5).
+
+**Still open, and not established by automation:**
+- founder visual approval;
+- VoiceOver, hands-on;
+- the system Reduce Motion setting;
+- composing keyboards;
+- a physical device;
+- the Appetize session.
+
+Not production-ready.
