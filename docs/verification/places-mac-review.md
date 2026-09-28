@@ -278,12 +278,17 @@ unrecorded.
 
 **Why build 4 was slow.** These points are measured from its logs, not guessed:
 - The slowdown was inside build 4's main simulator. Its XCTest queries and synthesised events ran
-  2.7–7× slower per paired step from its first test to the deadline, including 7 minutes after
-  device B had finished.
-- Device B, its clone on the same host, ran at normal pace.
-- Scrolling, compile time, result-bundle closes and export were normal.
+  about 2.7–7× slower per paired step from its first test to the deadline, including 7 minutes
+  after device B had finished.
+- Device B, its clone on the same host, ran at normal per-step pace. Its first runner start took
+  105 s, against 40 s in build 6ab81e22.
+- Its drags moved the page normally, but each took 2–5× longer: 4.2–11.2 s, against 1.8–2.2 s on
+  build 3's main lane.
+- Result-bundle closes and export were normal.
+- Its compile was 52 s slower (200.6 s against 148.8 s), which took 53 s off the UI budget. Compile
+  time does not predict test pace: build 1 compiled in 223 s and tested at normal pace.
 
-The mechanism is unknown. In 7 of 7 recovery-era builds, the main device's first test runner
+The mechanism is unknown. In all 7 builds examined (recovery builds 1–4, 6ab88011, 6ab8639c and 6ab81e22; a pattern fitted to those same builds), the main device's first test runner
 started late (199–301 s) or failed to initialize whenever a device's first boot was still in
 progress or had just finished. It started in 32–46 s when both devices were already booted. That
 start-up delay did not predict the lasting slowdown (1 of 3 builds).
@@ -306,31 +311,36 @@ start-up delay did not predict the lasting slowdown (1 of 3 builds).
   the deadline still apply.
 - **Host telemetry.** Every 30 s, `logs/places-host-load.log` records `top`, `vm_stat`, memory
   pressure, swap, and each simulator's processes (count, CPU, memory, the busiest).
-- **Every run's result bundle** is kept, including any that a time bound stopped (SIGINT lets
-  xcodebuild close it), in `Places-Remaining-Results.zip`.
+- **Result bundles.** Every run's result bundle is kept in `Places-Remaining-Results.zip`,
+  including any that a time bound stopped (SIGINT lets xcodebuild close it). The exception is a
+  first attempt that started no test: its bundle is replaced by its infrastructure rerun's.
 
 | Preferred lane | Run (bundle, bound) | Rows |
 | --- | --- | --- |
 | Main | `rf_p3` (`RemainingP3`, 960 s) | P3 |
 | | `rf_places` (`RemainingPlaces`, 1080 s) | P6, P1 |
-| | `rf_wristband` (`RemainingWristband`, 780 s) | M2 |
-| | `rf_signal` (`RemainingSignal`, 780 s) | S9, S10, S12, S13 |
+| | `rf_wristband` (`RemainingWristband`, 960 s) | M2 |
+| | `rf_signal` (`RemainingSignal`, 960 s) | S9, S10, S12, S13 |
 | Device B | `rf_guest_a` (`RemainingGuestA`, 1080 s) | B2, B3 |
-| | `rf_guest_b` (`RemainingGuestB`, 900 s) | B4, B5, B6, B7 |
-| | `rf_guest_c` (`RemainingGuestC`, 900 s) | B8, B9 |
+| | `rf_guest_b` (`RemainingGuestB`, 960 s) | B4, B5, B6, B7 |
+| | `rf_guest_c` (`RemainingGuestC`, 960 s) | B8, B9 |
 
 - **Time.** The workflow is `proximeet-places-review-40`: 40 minutes, with a UI deadline 2040 s
   after the source gate. At the worst that is 72 + 2040 + 75 (grace) + 100 (export) + 45
   (publishing) + 60 (the bundles' zip) = 2392 s. The zip's bound is whatever is left of that plan,
   between 15 and 240 s.
-- **Bounds and cut-offs.** Each run's bound leaves room for a slow runner start (build 4: 302 s),
-  the 600-s allowance and a close. A lane claims no new run with less than 180 s left. A lane whose
+- **Bounds and cut-offs.** Every run's bound is at least 960 s. That is room for a slow runner
+  start (build 4: 302 s), one test's full 600-s allowance and a start on its close; the close itself
+  gets the separate 75-s grace. A run whose tests together take longer at a slow pace is stopped by
+  its bound and recorded as interrupted, never passed. The UI deadline caps every bound. A lane claims no new run with less than 180 s left. A lane whose
   run started no test at all, even after its infrastructure rerun, stops and leaves the rest to the
   other lane. A broken device therefore cannot take and fail the healthy lane's runs.
 - **Boot barrier record.** Each device's line says `boot_finished` only when `simctl bootstatus`
   exited 0. Otherwise it says `boot_NOT_CONFIRMED`, with its exit code.
 - **The shorter workflow.** `proximeet-places-review-30` (30 minutes, deadline 1440 s) is for a
-  later build when less of the allowance is left.
+  later build when less of the allowance is left. As committed, the regression_finish scope queues
+  all 16 rows and names itself build 5. So a second build needs its own scope, with only the
+  unverified rows and its own build label, before it is started.
 - **Omitted.** Neither workflow makes a runnable preview copy or a compact video: the app build 3
   published is the preview, and this scope records nothing.
 - **Reconciliation.** `scripts/places_recovery_reconcile.py` now treats an interrupted execution

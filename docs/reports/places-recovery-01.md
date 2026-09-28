@@ -669,15 +669,24 @@ A further authorisation extends the four-build, 120-minute assignment by up to t
 - at most 40 minutes a build, or the remaining allowance if lower;
 - no more than USD 7 of extra charges before tax.
 
-The rate was checked on 2026-09-28 at codemagic.io/pricing: $0.095 a minute. The month's 500 free
-minutes are spent: 580 rounded minutes were used by 2026-09-28, summed from the account's build list.
-Both builds are therefore fully billable, and 70 minutes cost at most $6.65.
+The rate was read on 2026-09-28 from codemagic.io/pricing: "$0.095 / minute" for the Mac mini M2,
+and "500 free macOS M2 minutes / month". The page was fetched live and not saved; the saved copy is
+from 2026-09-27. The month's free minutes are spent:
+- summing the account's build list on 2026-09-28 gives 580 rounded (564.8 exact) over 30 builds, a
+  lower bound, since the API may return only a page of builds;
+- §6's 510 rounded after build 1, plus builds 2–4's 16, 27 and 32, gives 585.
+
+Either way both builds are fully billable, and 70 minutes cost at most $6.65.
 
 **Starting point.**
 - Reconciled from builds 2–4 at this commit's harness: TARGETED CORRECTION PASS (15 of 15), FULL
   REGRESSION INCOMPLETE (40 of 56, none failed).
 - The 16 uncovered rows are:
-  - P3, P6 and M2: interrupted in build 4, with no assertion failure;
+  - P3, P6 and M2: interrupted in build 4, with no assertion failure. Their `failure` column is
+    empty, and the logs hold no assertion error for them. XCTest's own result bundle marks all three
+    "Failed", with the messages "Test exceeded execution time allowance of 5 minutes" (P3) and
+    "Testing was canceled" (P6, M2): a timeout and a cancellation. "Interrupted" is the harness's
+    reading of those;
   - P1, S9, S10, S12 and S13: never started in build 4;
   - B2–B9: never scheduled.
 - Candidate: product commit `808950f8102d1c0e0f6c3422fc0aed3a0df555fe`, on the recovery branch
@@ -689,32 +698,35 @@ Both builds are therefore fully billable, and 70 minutes cost at most $6.65.
 
 **Build 4's slowdown.** Established from its logs by three independent investigations and a
 sceptic's check:
-- It was confined to the main simulator. Per paired XCTest step it was 2.7–7× slower, from its first
+- It was confined to the main simulator. Per paired XCTest step it was about 2.7–7× slower, from its first
   test to the deadline, including the 7 minutes after device B had finished.
 - Device B, its clone on the same host, ran at normal per-step pace.
 - Ruled out as sufficient causes:
   - product and test code (same commit as build 3);
-  - scrolling (drags moved the page normally);
-  - compile time, result-bundle closes and export;
+  - scrolling: drags moved the page normally, though each took 2–5× longer;
+  - result-bundle closes and export, which were normal;
+  - compile time: 52 s slower, which took 53 s off the UI budget, but build 1 compiled in 223 s
+    and tested normally;
   - device B's concurrent tests;
   - the two-Pro-Max layout on its own (build 6ab81e22 ran it at normal pace).
 - How the rows were lost:
   - the main runner took 275 s to start;
   - P3 was still progressing when XCTest's 300-s allowance ended it, which with the runner's restart
     cost 372 s;
-  - the 1020-s bound stopped P6, and P1 and S9–S13 were queued behind it;
+  - the 1020-s bound stopped P6, and P1, S9, S10, S12 and S13 were queued behind it;
   - M2 was cut at the deadline.
 - The mechanism is unknown. One 5-s spindump shows the main simulator's cfprefsd as a hot spot, from
   one sample.
-- In 7 of 7 recovery-era builds, the main runner started late or failed whenever a first boot was in
-  progress or had just finished. That start-up delay did not predict the lasting slowdown: 1 of 3.
+- In all 7 builds examined (recovery builds 1–4, 6ab88011, 6ab8639c and 6ab81e22; a pattern fitted to those same builds), the main runner started late or failed whenever a
+  first boot was in progress or had just finished. That start-up delay did not predict the lasting slowdown: 1 of 3.
 
 **What changed.** Only the harness, workflow and documents changed; the product and tests did not.
 - `regression_finish` runs the 16 rows in one queue shared by the two iPhone 17 Pro Max simulators,
   after a boot barrier.
 - XCTest's allowance is 600 s for this scope only.
 - Host load is sampled every 30 s.
-- Every result bundle is kept.
+- Every run's result bundle is kept, except a no-test first attempt's, which its infrastructure
+  rerun replaces.
 - The reconcile now treats an interrupted execution as unverified. A later pass covers it and is
   disclosed as a repeated execution; a real failure still fails the row.
 - `docs/verification/places-mac-review.md` §0c has the runs, bounds and time plan.
@@ -745,7 +757,8 @@ Also fixed:
   launchd_sim tree;
 - the boot barrier records bootstatus exits;
 - the bundles' zip is bounded by the plan;
-- run bounds leave room for a slow start plus the 600-s allowance;
+- every run's bound is at least 960 s, room for a slow start plus one test's full 600-s allowance.
+  At first only `rf_p3`'s was raised; the guardrail audit caught the rest;
 - no run is claimed with under 180 s left;
 - the disclosure lists every target with more than one attempt, whatever its result.
 

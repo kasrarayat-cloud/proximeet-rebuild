@@ -27,7 +27,7 @@
 #                B15 (hardware keys). 29 required rows; nothing recorded. B2-B9 and the optional B14
 #                run in no recovery build (pending)
 #   regression_finish  recovery build 5 (after build 4 ran out of time on a main simulator that ran
-#                2.7-7x slower per step): the 16 earlier rows no recovery build verified, P3, P6 and M2
+#                about 2.7-7x slower per step): the 16 earlier rows no recovery build verified, P3, P6 and M2
 #                (interrupted in build 4), P1, S9, S10, S12 and S13 (never started) and B2-B9 (never
 #                scheduled), under their own row IDs. Its runs are one shared queue for the two iPhone 17
 #                Pro Max simulators (main and device B, one device class): each lane takes its own next
@@ -215,7 +215,7 @@ LOG="$LOGS/places-$STAGE${PLACES_LOG_SUFFIX:-}.log"
 SCOPE="$(cat "$SCOPE_FILE" 2>/dev/null || true)"
 [ -n "$SCOPE" ] || SCOPE="${PLACES_REVIEW_SCOPE:-places}"
 # regression_finish: build 4's P3 was progressing (it reached its last stage) when XCTest's 300-s
-# allowance ended it on a main simulator running 2.7-7x slower per step; B2's healthy time (190 s) has
+# allowance ended it on a main simulator running about 2.7-7x slower per step; B2's healthy time (190 s) has
 # only 1.6x headroom under 300 s. The allowance is a hang guard, not a check, so this scope gives
 # every test 600 s (maximum 660 s); the run bounds and the UI deadline still apply.
 case "$SCOPE" in
@@ -1269,7 +1269,8 @@ stage_ui_review() {
     main_boot=0
     run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || main_boot=$?
     if queue_scope; then
-        # Readiness barrier: in 7 of 7 recovery-era builds the main device's first runner started late
+        # Readiness barrier: in all 7 builds examined (recovery builds 1-4, 6ab88011, 6ab8639c and
+        # 6ab81e22; a pattern fitted to those same builds) the main device's first runner started late
         # (199-301 s) or failed to initialize whenever a device's first boot was still in progress or had
         # just finished, and quickly (32-46 s) when both were already booted. So no lane starts until
         # both devices report their boot finished; the times are recorded.
@@ -1755,7 +1756,8 @@ save_result_bundles() {
         (cd "$ROOT/$ARTIFACTS" && shasum -a 256 "$name" > "$name.sha256")
         summary_line "places-bundles" "$(du -k "$zip_path" | cut -f1) KB in $name: $bundles"
     else
-        summary_line "places-bundles" "NOT MADE: zip failed or took over its ${cap}-s bound"
+        rm -f "$zip_path" "$zip_path.sha256"
+        summary_line "places-bundles" "NOT MADE: zip failed or took over its ${cap}-s bound (a partial zip is removed)"
     fi
 }
 
