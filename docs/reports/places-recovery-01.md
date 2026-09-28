@@ -17,6 +17,8 @@ Date: 2026-09-27, extended 2026-09-28 (§9). Not production-ready.
   blocked host. Build
   6 (`6aba3533`) passed B2 alone on one simulator.
 - **TARGETED CORRECTION: PASS**, 15 of 15.
+- **Disposition (§10):** frozen for private prototype preview. The lead accepted B2's isolated pass as a
+  preview-only exception, with its build-5 failure retained. The strict regression gate stays FAIL.
 - **FULL REGRESSION: FAIL, 55 of 56 (B2)**, from the final reconciliation of builds 2–6 (§9.3). B2
   failed in build 5 and passed in build 6, and under the rule that failures win it stays failed.
   After builds 1–4 it read 40 of 56 (§7), with three rows interrupted by time and thirteen never run.
@@ -927,5 +929,117 @@ into Places ran, unrecorded, as C8 (build 3) and P1 (build 5).
 - composing keyboards;
 - a physical device;
 - the Appetize session.
+
+Not production-ready.
+
+## 10. Disposition, 2026-09-28: frozen for private prototype preview
+
+**The lead's decision, verbatim:** "I accept the isolated B2 passing execution as sufficient to
+proceed with private prototype preview, with its earlier failure explicitly retained. This is a
+preview-only exception, not a clean regression pass, proof of an infrastructure-only cause, visual
+approval or production approval."
+- The product is frozen at `808950f8102d1c0e0f6c3422fc0aed3a0df555fe`.
+- No further Mac build is dispatched, and Room is not started.
+
+**Verified before recording.** Three independent read-only checks and a sceptic covered:
+- the manifest;
+- every build's `executions.tsv`;
+- the Mac-side xcresulttool exports (`*-tests.json`, `*-summary.json`);
+- the raw `database.sqlite3` in builds 5 and 6's result bundles;
+- the xcodebuild logs;
+- `git diff` of every counted head;
+- the device, model and runtime records.
+
+Every archive in `/home/proximeet/proximeet-places-recovery-review/builds/` matches its
+`SHA256SUMS.txt`.
+
+| | Status |
+| --- | --- |
+| Targeted Places correction | **PASS, 15 of 15** (C1–C15), none failed, each on its first and only counted attempt at a product-equivalent commit. C10–C15 passed in build 2 (6ab8c585, 808950f) on the iPhone 17e; C1–C9 in build 3 (6ab8efca, e0d2b2e3) on the iPhone 17 Pro Max |
+| Execution coverage | **56 of 56 earlier required rows executed. Each has at least one passing execution** on product-equivalent source, in the same device class (iPhone 17 Pro Max or its clone on iOS 26.5 23F77, or the iPhone 17e) and the same run type. The only identity exceptions: P1 ran with short holds, unrecorded; M4–M13 ran on device B instead of main; B8 and B9 (build 5) and B2 (build 6) ran on main instead of device B. The reconcile's own covered count is **55 of 56**, because B2's failure in build 5 outranks its pass in build 6 |
+| B2 | Failed in build 5 (6aba2b51, e9f51fe) on device B, alongside main, after 200.501 s. The failure is at `GuestListReviewTests.swift:728`: a 5-s wait for the headline "Your first hello." timed out after an accessibility query stalled for about 36 s, and the headline was correct when read. It passed in the separately authorised build 6 (6aba3533, 56f0e76) alone on main, with no second simulator, in 146.338 s. The suspected cause is a host stall, **unconfirmed**. The run conditions differed: main rather than device B, and one simulator rather than two. It is one data point |
+| Strict regression gate | **FAIL, retained:** `FULL REGRESSION: FAIL (55 of 56 earlier required executions covered; failed: regressions:B2)`. Failures win. Every historical build result stands as recorded in §7 and §9 |
+| Interrupted, then completed | P3, P6 and M2 did not complete in build 4, and none recorded an assertion failure. P3 was ended by XCTest's 300-s execution allowance while still making progress. P6 was cancelled by its run's 1020-s bound. M2 was cancelled by its run's bound, which the deadline had shortened to 376 s. All three passed in build 5 on main: 145.555, 55.390 and 178.022 s |
+| Private prototype preview | **Accepted, with the disclosed B2 exception.** The Appetize launch is **unverified**: not performed |
+
+**Discrepancies and disclosures.** None changes a result, and none is hidden.
+1. **XCTest's own record for P3, P6 and M2.** It marks all three "Failed": P3 with "Test exceeded
+   execution time allowance of 5 minutes", P6 and M2 with "Testing was canceled". Build 4's harness
+   files label them "interrupted", and its `ui-review-tests.txt` wrongly says "started, no outcome
+   recorded". The archived file is left as built.
+2. **The reclassification came after build 4.** Before it, the reconcile listed P3, P6 and M2 as
+   failed (§7). The extension's instruction treats timed-out and unstarted tests as unverified, and
+   the reconcile follows that (§9). Treating them as failed instead, the gate reads FAIL (52 of 56;
+   P3, P6, M2, B2). The gate is FAIL under either reading.
+3. **Where the device swaps are stated.** The swaps from device B to main (B8, B9, B2) are stated in
+   the manifest, in the shared-queue and repair rows. They are not in the coverage file's note or the
+   reconcile's exception list, which names P1 and M4–M13 only. The reconcile prints B8 and B9 under a
+   generic label and omits B2's swap, because B2's final state is failed. Every swap is inside one
+   device class: the same model and runtime, confirmed in the exports and the bundle databases.
+4. **Other conditions that differed without counting as a run type.**
+   - XCTest's execution allowance was 300/360 s in builds 2–4 and 600/660 s in builds 5–6. No
+     counted pass needed more than 300 s; the longest was M2 at 178.0 s.
+   - UI deadlines differed by workflow.
+5. **One incomplete result bundle.** Build 4's `FinishPlacesSignalMain.xcresult` was saved without its
+   action log ("Could not write the 1_Test action log …"). Its test outcomes are intact and agree
+   with `executions.tsv` and the log.
+6. **Out-of-date narrative.** The manifest's and the coverage file's header narratives predated build
+   6. This commit updates their comments; their data rows are unchanged.
+
+Explicitly not found:
+- a counted row from a head that is not product-equivalent;
+- a model or runtime mismatch;
+- a run-type mismatch other than P1;
+- a test executed twice in one run;
+- a retry or infrastructure rerun in builds 5–6;
+- an unexplained extra execution.
+
+**Candidate and artifact, reused unchanged.**
+
+| | |
+| --- | --- |
+| Branch | `places-recovery/verification-20260927T035353Z`, tip `d341782d5fd3c0fb3029aaba4469725ed72dd633` before this commit |
+| Artifact | Codemagic build `6ab8efca2cbed2e4829060fa`, https://codemagic.io/app/6ab4d02869609bf0cdd94b08/build/6ab8efca2cbed2e4829060fa → Artifacts → `Proximeet-Debug-iphonesimulator-e0d2b2e3a76b.zip` |
+| SHA-256 | `977e58af6b524858153582c83cc0496f212bf8ab0bfbb8abc12223ead7543df7`, re-downloaded and matched on 2026-09-28 |
+| Local copy | `/home/proximeet/proximeet-preview/Proximeet-Prototype-verified-candidate-product-808950f-build-6ab8efca.zip` |
+
+- The app bundle is byte-identical, all 11 files, across the preview and builds 2–6.
+- It is an arm64-only iOS Simulator app with a minimum of iOS 17.0. Appetize's iOS documentation
+  recommends ARM simulator builds, so arm64 alone is no sign of incompatibility.
+- Appetize's device list offers the iPhone 17 Pro Max on iOS 26.0 only. That is distinct from the
+  tested iOS 26.5, and the runtime must be confirmed at launch.
+
+**Appetize: not launched.** The agent has no authorised Appetize access: no sign-in and no API
+access it may use. Alternate credential routes are not pursued. The old repository's hidden Appetize
+secret is not used, and that repository is not modified. The single remaining action is the
+founder's own upload, in `/home/proximeet/proximeet-preview/README-PREVIEW.md`:
+1. Sign in at appetize.io.
+2. Upload the zip as a new app, with run = authenticated set for that app.
+3. Confirm a signed-out session cannot run it.
+4. Launch on the iPhone 17 Pro Max with no launch arguments, and walk Welcome → More options →
+   Continue the demo (no account) → Birthday → Pass → Guest List → Wristband → Signal → Places.
+
+The old Halo preview is to be left untouched.
+
+**The permission-bypass incident, preserved.**
+- **What happened.** During the extension's investigation, the agent checking Appetize access wanted
+  the NAMES of GitHub Actions secrets. `gh secret list` was denied by the project's permission
+  settings. The agent then listed secret and variable names through `gh api repos/...` for
+  `kasrarayat-cloud/proximeet` and `kasrarayat-cloud/proximeet-rebuild`. That route went around the
+  deny rule.
+- **What was exposed.** No credential value was read, printed or exposed.
+- **Standing rule.** The denied operation is not to be retried through `gh api`, another agent, a
+  workflow or any equivalent route.
+- **Evidence.** Kept unmodified at
+  `/home/proximeet/proximeet-scratch-salvage-20260927/evidence/permission-incident-2026-09-28/`, with
+  `SHA256SUMS.txt`. The originals are in this session's workflow journal `wf_4884700a-d29`.
+
+**Still open.**
+- founder visual approval;
+- VoiceOver, hands-on;
+- the system Reduce Motion setting;
+- composing keyboards;
+- a physical device;
+- the Appetize launch.
 
 Not production-ready.

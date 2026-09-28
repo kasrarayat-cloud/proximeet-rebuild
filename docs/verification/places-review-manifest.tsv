@@ -57,9 +57,10 @@
 #            regressions scope ran them on main, the same model and runtime), B1 (paste_b), B10-B13
 #            (welcome_b), then B15 (hardware_keys_b), last on its device because it sends hardware key
 #            events. 29 rows, all required. It records nothing.
-#            Not run in any recovery build: B2-B9 (the Guest List's regressions_b tests) and the
-#            optional repeat B14; the reconcile script lists them as pending. Every new row keeps the
-#            row ID and the test method of the earlier row it runs again.
+#            Not run in builds 2-4: B2-B9 (the Guest List's regressions_b tests), later run in
+#            regression_finish (build 5; B2 again in regression_repair, build 6), and the optional
+#            repeat B14, which no recovery build runs (pending). Every new row keeps the row ID and the
+#            test method of the earlier row it runs again.
 #   device   main = the selected iPhone 17 Pro Max; b = device B, its clone (same model and runtime);
 #            small = a smaller installed iPhone. A scope uses main and one other device, and the two
 #            run in parallel: regressions and sweep_finish use main and b, every other scope main and

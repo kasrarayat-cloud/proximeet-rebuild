@@ -10,7 +10,9 @@
 # P9-P13, S15 and S16; build 4 (sweep_finish) ran P2, P4, P5, M1, M3-M13, B1, B10-B13 and B15, but ran
 # out of time: P3, P6 and M2 were interrupted and P1, S9, S10, S12 and S13 never started. Build 5
 # (regression_finish, a further authorisation) runs those eight and B2-B9 (the Guest List's regressions_b
-# tests, which builds 2-4 never scheduled). The optional B14 is pending: no recovery build runs it.
+# tests, which builds 2-4 never scheduled); B2 failed there and passed in build 6 (regression_repair, B2
+# alone on one simulator, an evidence-driven repair that is no target's expected executor; the failure
+# still counts). The optional B14 is pending: no recovery build runs it.
 # scripts/places_recovery_reconcile.py checks this file against the manifest and reconciles row by row:
 # a target is covered by a PASSED execution (kind required or extra) of the same test on the same
 # device class, in the same run type, in any given build whose git_head is product-equivalent to
@@ -27,7 +29,9 @@
 #                and "-" when no recovery build runs it.
 #   note         the stated identity exceptions: P1 runs with short holds, unrecorded (the places scope's
 #                P1 was the recorded journey, full holds); M4-M13 run on device B instead of main (the
-#                same model and runtime). "-" when there is none.
+#                same model and runtime). "-" when there is none. Also applied, within the same device
+#                class: B8 and B9 ran on main instead of device B in build 5 (the shared queue), and B2
+#                on main in build 6 (the repair row).
 target	requirement	test	class	build	scope	run	row	kind	note
 correction:C3	required	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	main	3	gate_finish	correction_first	C3	required	-
 correction:C1	required	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	main	3	gate_finish	correction_main	C1	required	-
