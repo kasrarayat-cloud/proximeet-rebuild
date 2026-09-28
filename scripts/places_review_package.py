@@ -96,6 +96,7 @@ PACKAGES = {
     "gate_finish": ("Places-Gate-Review", "Places-Gate"),
     "sweep_finish": ("Places-Finish-Review", "Places-Finish"),
     "regression_finish": ("Places-Remaining-Review", None),
+    "regression_repair": ("Places-Repair-Review", None),
 }
 # The recovery after the Places correction, and the role and number each build's pages name. Build 1
 # (the first correction build, 6ab8adb4 on 907d7401) counts toward none of it. Build 2 (6ab8c585, scope
@@ -442,6 +443,18 @@ def main(argv):
                       "scripts/places_recovery_reconcile.py reconciles the builds row by row, counting only "
                       "builds whose product and test files equal %s's. Product and test files changed since %s: %s."
                       % (REFERENCE[:12], REFERENCE[:12], product_changes(root).replace("\n", "; ")))
+    elif scope == "regression_repair":
+        scope_note = ("This is recovery build 6 (regression_repair), an evidence-driven repair of recovery build 5's one "
+                      "failure. In build 5, B2 (GuestListReviewTests.testBlankInternationalAndLongNames) failed when an XCTest "
+                      "accessibility query stalled for 36 s inside a 5-s wait for the Guest List's headline, which was "
+                      "correct when read; that build's host telemetry showed an overloaded host (0%% idle CPU in 29 of 34 "
+                      "samples, sampler intervals up to 99 s, XCTest step stalls of 10-43 s on both lanes; at the stall itself "
+                      "330 processes stuck and 55%% idle; the mechanism is unknown). Here B2 "
+                      "runs alone on the selected iPhone 17 Pro Max with no second simulator. This is a disclosed repeated "
+                      "execution, not a retry: build 5's failure stands in scripts/places_recovery_reconcile.py (failures "
+                      "win). The result bundle is zipped separately as Places-Repair-Results.zip unless summary.txt's "
+                      "places-bundles line says NOT MADE. Product and test files changed since %s: %s."
+                      % (REFERENCE[:12], product_changes(root).replace("\n", "; ")))
     else:
         others = [s for s in ("places", "signal", "regressions") if s != scope]
         scope_note = ("The other scopes (%s) run as their own builds, each on a pinned commit named in its own verdict; "

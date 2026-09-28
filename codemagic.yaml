@@ -743,6 +743,10 @@ workflows:
       - build/artifacts/Places-Remaining-Review.zip.sha256
       - build/artifacts/Places-Remaining-Results.zip
       - build/artifacts/Places-Remaining-Results.zip.sha256
+      - build/artifacts/Places-Repair-Review.zip
+      - build/artifacts/Places-Repair-Review.zip.sha256
+      - build/artifacts/Places-Repair-Results.zip
+      - build/artifacts/Places-Repair-Results.zip.sha256
       - build/artifacts/summary.txt
       - build/artifacts/logs/*.log
       - build/artifacts/metadata/*

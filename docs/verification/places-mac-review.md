@@ -351,6 +351,24 @@ start-up delay did not predict the lasting slowdown (1 of 3 builds).
   - A failed, skipped or twice-executed execution still fails its row.
   - `sweep_finish`'s rows for the eight moved targets stay as build 4's record.
 
+## 0d. Recovery build 6: `regression_repair`, an evidence-driven repair of B2
+
+Build 5 (Codemagic `6aba2b51`) passed 15 of its 16 rows. B2 failed:
+- A 5-s wait for the Guest List's headline timed out because one XCTest accessibility query stalled
+  for about 36 s.
+- The headline was correct when read.
+- The host was overloaded for most of the run: CPU 0% idle in 29 of 34 samples, 71–437 MB of memory
+  unused (30–57% free, no swap), sampler intervals up to 99 s, and XCTest step stalls of 10–43 s on
+  both lanes.
+- At the stall itself the host was blocked, not busy: 330 processes stuck, 55% idle, both simulators
+  near idle. The mechanism is unknown, so the repair below is a load-reduction hypothesis.
+
+`regression_repair` runs B2 alone on the selected iPhone 17 Pro Max, with no second simulator. It
+keeps the sampler, the 600-s allowance and `Places-Repair-Results.zip`, in
+`proximeet-places-review-30`, which publishes `Places-Repair-Review.zip`. The build is a disclosed
+repeated execution, not a retry. Build 5's failure still counts in the reconciliation, because
+failures win.
+
 ## 1. The source gate
 
 `PLACES_REVIEW_SCOPE=<scope> bash scripts/places_review.sh checkpoint` fails the build unless the

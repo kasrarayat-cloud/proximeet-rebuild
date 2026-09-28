@@ -94,6 +94,14 @@
 #            rest. Where a run actually ran is recorded in runs.txt and judged there. Neither lane starts
 #            until both devices report their boot finished; XCTest's execution time allowance is 600 s
 #            (maximum 660 s) for this scope, so a slow but progressing test is not cut off at 300 s.
+# regression_repair (recovery build 6): an evidence-driven repair of build 5's one failure. B2 failed there
+#            when an XCTest accessibility query stalled for 36 s inside a 5-s wait for the Guest List's
+#            headline (the headline was correct when read); build 5's host telemetry showed 0% idle CPU in
+#            29 of 34 samples, sampler intervals up to 99 s, XCTest step stalls of 10-43 s on both lanes,
+#            and at the stall itself a blocked host (330 processes stuck, 55% idle; mechanism unknown).
+#            The repair is a load-reduction hypothesis: B2 runs alone on the selected
+#            iPhone 17 Pro Max, with no second simulator booted. It is a disclosed repeated execution, not a
+#            retry: build 5's failure stands in the reconciliation (failures win).
 places	P1	main	journey	PlacesJourney	480	PlacesReviewTests/testWalkthroughRealJourney	required
 places	P2	main	places_main	PlacesMain	720	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
 places	P3	main	places_main	PlacesMain	720	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
@@ -254,3 +262,4 @@ regression_finish	B6	b	rf_guest_b	RemainingGuestB	960	GuestListReviewTests/testR
 regression_finish	B7	b	rf_guest_b	RemainingGuestB	960	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	required
 regression_finish	B8	b	rf_guest_c	RemainingGuestC	960	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required
 regression_finish	B9	b	rf_guest_c	RemainingGuestC	960	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required
+regression_repair	B2	main	rr_b2	RepairB2	900	GuestListReviewTests/testBlankInternationalAndLongNames	required

@@ -764,3 +764,80 @@ Also fixed:
 
 **Preview.** The upload-ready app is unchanged and was not rebuilt; see §5. Its status is "Places
 correction verified; full regression sweep incomplete" until the reconcile below says otherwise.
+
+### 9.1 Build 5: result
+
+| | |
+| --- | --- |
+| Build | Codemagic `6aba2b514f00f1fbd2b04180`, workflow `proximeet-places-review-40`, scope `regression_finish` |
+| Commit | `e9f51fec73bdf4838da5ba3379298d26f3161bd6`, pinned. `git diff` of the product and test paths against `808950f` prints nothing |
+| Time | 08:55:06–09:24:12 UTC: 29.1 minutes exact, 30 rounded |
+| Own verdict | FAIL: 15 of 16 passed, B2 failed |
+| Downloads | Every artifact matched its published size. The review zip and the results zip matched their published SHA-256; copies are in `/home/proximeet/proximeet-places-recovery-review/builds/` (`build5-*`, listed in its `SHA256SUMS.txt`) |
+
+**The rows**, in seconds:
+- P3 145.6, P6 55.4, P1 175.9 (short holds, unrecorded) and M2 178.0: passed on main.
+- S9 40.0, S10 12.1, S12 32.3 and S13 82.5: passed on main.
+- B3 79.7 and B4–B7 (38.5, 48.4, 21.3, 69.1): passed on device B.
+- B8 76.0 and B9 96.2: passed on main, which took device B's last run, `rf_guest_c`, from the shared
+  queue.
+- **B2 failed** on device B after 200.5 s, at `GuestListReviewTests.swift:728`. The message was
+  `XCTAssertEqual failed: ("XCTWaiterResult(rawValue: 2)") is not equal to
+  ("XCTWaiterResult(rawValue: 1)") - Expected "Your first hello.", found "Your first hello."`.
+
+**What the evidence shows about B2.** From the device-B log and `logs/places-host-load.log`:
+- The failed check is a 5-s wait for the Guest List's headline after Preview my card.
+- XCTest started evaluating that predicate at t = 157.11 s. Its next logged step came at t = 193.00 s,
+  so one accessibility query stalled for about 36 s.
+- When the headline was read at t = 196.57 s it said "Your first hello.", the expected value.
+- The host was overloaded for most of the run:
+  - CPU was 0% idle in 29 of 34 samples;
+  - the one-minute load average was 480–845 on 3 CPUs until 09:18 (771–845 during B2), falling to
+    155 by 09:23;
+  - memory was heavily used but not exhausted: 10 GB used, 71–437 MB unused, about 3.9 GB
+    compressed, `memory_pressure` 30–57% free, and no swap;
+  - the 30-s sampler's intervals stretched to a median of 34 s and a maximum of 99 s;
+  - XCTest steps stalled for 10–43 s on both lanes, 6 of 9 at an app launch or terminate.
+- **The sample taken during B2's stall** (09:12:14, about 8 s into it) shows something else. The host
+  was blocked, not CPU-bound:
+  - 2 processes running and 330 stuck;
+  - CPU 55% idle;
+  - both simulators near idle (0.9% and 9.9% CPU);
+  - 79 MB unused, 41% free.
+
+  The next sample, at 09:12:46, got no `top` output within its 10-s bound. Episodes of 110 or more
+  stuck processes appear in 7 of the 34 samples. Their cause is unknown.
+- B2's 36-s stall was the longest in the middle of a test.
+- The app itself was idle before the check ("Wait for com.proximeet.demo to idle" completed at
+  t = 154.80 s).
+
+It is still a recorded assertion failure. The reconciliation counts it: failures win.
+
+**Reconciliation of the real builds 2–5**, run from this repository so git checks equivalence:
+- `TARGETED CORRECTION: PASS (C1-C15: 15 of 15 passed at product-equivalent commits; none failed)`
+- `FULL REGRESSION: FAIL (55 of 56 earlier required executions covered; failed: regressions:B2)`
+- Disclosed repeated executions: P3, P6 and M2 were interrupted in build 4 and passed in build 5.
+
+### 9.2 Build 6: an evidence-driven repair of B2
+
+The authorisation allows a second build for unfinished rows or evidence-driven repairs. No row is
+unfinished; B2 failed. The evidence above points at the host, not at the app:
+- the headline was correct, and the app was idle;
+- the query stalled;
+- the CPU was saturated for most of the run;
+- a host-wide blocking episode happened at the stall itself.
+
+The mechanism is unknown, so the repair is a load-reduction hypothesis.
+- **The repair.** Scope `regression_repair` runs B2 alone on the selected iPhone 17 Pro Max, with no
+  second simulator booted. That removes device B's processes, which were 42% of the simulators'
+  sampled CPU in build 5. The sampler cannot give their memory share: each simulator's summed
+  resident size, 11–24 GB, exceeds the 10-GB host, because shared pages are counted twice. It keeps
+  the sampler, the 600-s allowance and the result bundle.
+- **Workflow.** `proximeet-places-review-30`: 30 minutes, within the 40 rounded minutes left.
+- **Not a retry.** It is a separate, disclosed execution. Build 5's failure still counts: the
+  reconcile's rule is that failures win, so this build cannot turn the full regression into a PASS.
+- **What it can tell.** Whether B2 fails again with half the simulators removed. One pass is one
+  data point: it would not show that build 5's failure was only the stall, and it cannot change FULL
+  REGRESSION.
+- **Who decides.** Whether build 5's failure is accepted as an automation stall is the founder's
+  decision, not the reconcile's.

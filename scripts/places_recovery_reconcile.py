@@ -92,7 +92,11 @@ EARLIER = ("places", "signal", "regressions")
 # Required targets per scope, so a row dropped from both the manifest and the coverage file cannot pass unseen.
 PLAN = {"correction": 15, "places": 13, "signal": 16, "regressions": 27}
 # The recovery's build numbers, by the scope that executes a row.
-BUILD = {"correction": "2", "gate_finish": "3", "sweep_finish": "4", "regression_finish": "5"}
+BUILD = {"correction": "2", "gate_finish": "3", "sweep_finish": "4", "regression_finish": "5", "regression_repair": "6"}
+# Rows that are evidence-driven repairs, not any target's expected executor: their executions count like any
+# other (failures win, so a repair can never turn an earlier failure into a pass), and are disclosed.
+REPAIRS = {("regression_repair", "B2"): "evidence-driven repair of build 5's B2 failure (a 36-s XCTest query stall on an "
+           "overloaded host): B2 alone on one simulator; build 5's failure still counts"}
 # sweep_finish rows whose targets moved to regression_finish (build 5) after build 4 ran out of time: they
 # stay in the manifest as build 4's record, but no coverage target expects them any more.
 SUPERSEDED = {("sweep_finish", order): "interrupted (P3, P6, M2) or never started (P1, S9, S10, S12, S13) in build 4; "
@@ -316,8 +320,11 @@ def main(argv):
         problems.append("manifest target %s is missing from the coverage file" % target)
     scheduled = {(e["scope"], e["row"]) for e in coverage.values() if e["scope"] != "pending"}
     for (scope, order), row in sorted(manifest.items()):
-        if scope in ("gate_finish", "sweep_finish", "regression_finish") and (scope, order) not in scheduled:
-            if (scope, order) in SUPERSEDED:
+        if scope in ("gate_finish", "sweep_finish", "regression_finish", "regression_repair") and (
+                scope, order) not in scheduled:
+            if (scope, order) in REPAIRS:
+                notes.append("manifest row %s %s: %s" % (scope, order, REPAIRS[(scope, order)]))
+            elif (scope, order) in SUPERSEDED:
                 notes.append("manifest row %s %s is build 4's record only: %s" % (scope, order, SUPERSEDED[(scope, order)]))
             else:
                 problems.append("manifest row %s %s is not the expected executor of any coverage target" % (scope, order))

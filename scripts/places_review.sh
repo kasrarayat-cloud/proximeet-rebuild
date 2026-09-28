@@ -5,7 +5,7 @@
 # the recovery's 40- and 30-minute proximeet-places-review-40 and proximeet-places-review-30
 # (codemagic.yaml). See docs/verification/places-mac-review.md.
 #
-#   PLACES_REVIEW_SCOPE=regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
+#   PLACES_REVIEW_SCOPE=regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
 #       bash scripts/places_review.sh <stage>
 #
 # Scopes (the run input PLACES_REVIEW_SCOPE; each runs as its own build, and every result says which
@@ -36,6 +36,11 @@
 #                before both devices report their boot finished; the host's load is sampled every 30 s;
 #                XCTest's execution time allowance is 600 s (maximum 660 s); every run's result bundle
 #                is kept (Places-Remaining-Results.zip). 16 rows, all required; nothing recorded
+#   regression_repair  recovery build 6: an evidence-driven repair of build 5's one failure (B2, a 36-s
+#                XCTest query stall inside a 5-s wait on an overloaded host): B2 alone on the selected
+#                iPhone 17 Pro Max, no second simulator, with the host sampler, the 600-s allowance and
+#                its result bundle kept (Places-Repair-Results.zip). A disclosed repeated execution, not a
+#                retry; build 5's failure still counts. 1 row; nothing recorded
 #   correction   the recovery's correction gate, the targeted Places correction (after build
 #                6ab8639c, reworked after 6ab88011): the adaptive ticket footer on both widths at the
 #                default and the largest text, one-stage back gestures and controls (with a cancelled
@@ -203,7 +208,7 @@ STAGE="${1:-}"
 case "$STAGE" in
     checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce) ;;
     *)
-        echo "usage: PLACES_REVIEW_SCOPE=regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
+        echo "usage: PLACES_REVIEW_SCOPE=regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -219,7 +224,7 @@ SCOPE="$(cat "$SCOPE_FILE" 2>/dev/null || true)"
 # only 1.6x headroom under 300 s. The allowance is a hang guard, not a check, so this scope gives
 # every test 600 s (maximum 660 s); the run bounds and the UI deadline still apply.
 case "$SCOPE" in
-    regression_finish)
+    regression_finish|regression_repair)
         TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 660"
         ;;
 esac
@@ -902,6 +907,21 @@ queue_scope() {
     [ "$SCOPE" = "regression_finish" ]
 }
 
+# Whether the scope samples the host's load and keeps every run's result bundle (the recovery's builds 5
+# and 6), and the name of that zip.
+sampling_scope() {
+    case "$SCOPE" in
+        regression_finish|regression_repair) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+results_zip_name() {
+    case "$SCOPE" in
+        regression_repair) echo "Places-Repair-Results.zip" ;;
+        *) echo "Places-Remaining-Results.zip" ;;
+    esac
+}
+
 # queue_init: every run of the scope, in manifest order, with its preferred lane (main or b).
 queue_init() {
     rm -rf "${QUEUE_DIR:?}"
@@ -1286,6 +1306,8 @@ stage_ui_review() {
         fi
         summary_line "places-boot-barrier" "$(tr '\n' ' ' < "$META/places-boot-ready.txt")"
         queue_init
+    fi
+    if sampling_scope; then
         (
             trap - EXIT INT TERM
             set +e
@@ -1359,10 +1381,10 @@ stage_ui_review() {
     fi
     if queue_scope; then
         queue_leftovers
-        stop_sampler
         run cat "$QUEUE_DIR/claims.tsv" || true
         cp "$QUEUE_DIR/claims.tsv" "$META/places-queue-claims.txt" 2>/dev/null || true
     fi
+    stop_sampler
     run cat "$OUT/runs.txt"
 
     # 7. What actually ran, judged against the manifest, execution by execution.
@@ -1602,6 +1624,9 @@ covered = {
                          "(the real journey, short holds, not recorded), S9, S10, S12 and S13 (never started in build 4) "
                          "and B2-B9 (the Guest List, never scheduled), shared between the two iPhone 17 Pro Max "
                          "simulators (one device class)",
+    "regression_repair": "the 1 required regression_repair execution of docs/verification/places-review-manifest.tsv: "
+                         "B2 (GuestListReviewTests.testBlankInternationalAndLongNames) alone on the selected iPhone 17 "
+                         "Pro Max, an evidence-driven repair of build 5's failure (a disclosed repeated execution)",
     "sweep_finish": "the 29 required sweep_finish executions of docs/verification/places-review-manifest.tsv: on the "
                     "iPhone 17 Pro Max P1-P6 (P1, the real journey, with short holds, not recorded), S9, S10, S12, S13 "
                     "and M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and B15 (B2-B9 and the optional B14 run in "
@@ -1613,7 +1638,8 @@ covered = {
 # failed to initialize on all three runs, so no test ran there;
 # gate_finish and sweep_finish are builds 3 and 4.
 recovery = {"correction": "correction gate, build 2", "gate_finish": "gate finish, build 3",
-            "sweep_finish": "sweep finish, build 4", "regression_finish": "remaining rows, build 5"}
+            "sweep_finish": "sweep finish, build 4", "regression_finish": "remaining rows, build 5",
+            "regression_repair": "B2 repair, build 6"}
 required = {
     "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
         source.get("result") == "MATCH",
@@ -1686,7 +1712,7 @@ if scope in recovery:
               "correction, on 808950f) passed C10-C15 on the smaller iPhone; on the iPhone 17 Pro Max its test runner failed to",
               "initialize for UI testing before any test started. Build 3 (gate_finish) runs C1-C9 and extras, build 4",
               "(sweep_finish) the other scheduled rows; B2-B9 and the optional B14 run in no recovery build (pending). A PASS"
-              if scope != "regression_finish" else
+              if scope not in ("regression_finish", "regression_repair") else
               "(sweep_finish) the other scheduled rows, but ran out of time; build 5 (regression_finish) runs the 16 rows no"
               " recovery build verified (build 4's P3, P6 and M2 are disclosed as repeated after interrupted attempts). A PASS",
               "here covers this build only: scripts/places_recovery_reconcile.py reconciles row by row, counting a passed",
@@ -1721,13 +1747,14 @@ stage_package_review() {
         gate_finish) title="Places-Gate-Review" ;;
         sweep_finish) title="Places-Finish-Review" ;;
         regression_finish) title="Places-Remaining-Review" ;;
+        regression_repair) title="Places-Repair-Review" ;;
         *)
             summary_line "places-package" "NOT MADE: unknown scope '$SCOPE' (no archive carries another scope's name)"
             return "$status"
             ;;
     esac
     summary_line "places-package" "$(unzip -l "$ARTIFACTS/$title.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in $title.zip; $(tr '\n' ' ' < "$OUT/package-links.txt" 2>/dev/null)"
-    if queue_scope; then
+    if sampling_scope; then
         save_result_bundles || true
     fi
     return "$status"
@@ -1735,9 +1762,12 @@ stage_package_review() {
 
 # save_result_bundles: every run's result bundle, including any a time bound stopped (bounded_test
 # interrupts xcodebuild with SIGINT so it closes its bundle), zipped as Places-Remaining-Results.zip
-# with its SHA-256. Bounded; a problem is a summary line, never a failure of the stage.
+# (regression_finish) or Places-Repair-Results.zip (regression_repair) with its SHA-256. Bounded; a
+# problem is a summary line, never a failure of the stage.
 save_result_bundles() {
-    local name="Places-Remaining-Results.zip" zip_path="$ROOT/$ARTIFACTS/Places-Remaining-Results.zip" bundles
+    local name zip_path bundles
+    name="$(results_zip_name)"
+    zip_path="$ROOT/$ARTIFACTS/$name"
     rm -f "$zip_path" "$zip_path.sha256"
     bundles="$(cd "$OUT" && ls -d ./*.xcresult 2>/dev/null | tr '\n' ' ')"
     if [ -z "$bundles" ]; then
