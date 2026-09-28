@@ -83,6 +83,17 @@
 #            the scroll probe's rows C16 and C17 were removed).
 # Automatic retries are off in every scope. A failed, skipped, interrupted or missing required
 # execution fails the verdict.
+# regression_finish (recovery build 5, after build 4 ran out of time): the 16 earlier rows no recovery
+#            build had verified: P3, P6 and M2 (interrupted in build 4), P1, S9, S10, S12 and S13 (never
+#            started in build 4) and B2-B9 (never scheduled). Same row IDs, test methods and device class
+#            as the rows they run again; P1 keeps its short holds, unrecorded. Its device column is a
+#            PREFERENCE: the scope's runs form one shared queue for the two iPhone 17 Pro Max simulators
+#            (main and device B, its clone: one device class). Each lane takes its own next run, and
+#            when it has none left it takes the other lane's LAST unstarted run, so a lane that is slow
+#            (build 4's main simulator ran 2.7-7x slower per step for its whole run) cannot strand the
+#            rest. Where a run actually ran is recorded in runs.txt and judged there. Neither lane starts
+#            until both devices report their boot finished; XCTest's execution time allowance is 600 s
+#            (maximum 660 s) for this scope, so a slow but progressing test is not cut off at 300 s.
 places	P1	main	journey	PlacesJourney	480	PlacesReviewTests/testWalkthroughRealJourney	required
 places	P2	main	places_main	PlacesMain	720	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
 places	P3	main	places_main	PlacesMain	720	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
@@ -227,3 +238,19 @@ sweep_finish	B11	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testHonestNot
 sweep_finish	B12	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testLargestTextSize	required
 sweep_finish	B13	b	welcome_b	FinishWelcomeB	240	WelcomeReviewTests/testReduceMotionPreviewLaunch	required
 sweep_finish	B15	b	hardware_keys_b	FinishHardwareKeysB	240	GuestListReviewTests/testHardwareTabAndShiftTabMoveBetweenFields	required
+regression_finish	P3	main	rf_p3	RemainingP3	960	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+regression_finish	P6	main	rf_places	RemainingPlaces	1080	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	required
+regression_finish	P1	main	rf_places	RemainingPlaces	1080	PlacesReviewTests/testWalkthroughRealJourney	required
+regression_finish	M2	main	rf_wristband	RemainingWristband	780	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	required
+regression_finish	S9	main	rf_signal	RemainingSignal	780	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	required
+regression_finish	S10	main	rf_signal	RemainingSignal	780	SignalReviewTests/testMissingIntentKeepsSignalClosed	required
+regression_finish	S12	main	rf_signal	RemainingSignal	780	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	required
+regression_finish	S13	main	rf_signal	RemainingSignal	780	SignalReviewTests/testRelaunchStartsWithoutAnApproach	required
+regression_finish	B2	b	rf_guest_a	RemainingGuestA	1080	GuestListReviewTests/testBlankInternationalAndLongNames	required
+regression_finish	B3	b	rf_guest_a	RemainingGuestA	1080	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	required
+regression_finish	B4	b	rf_guest_b	RemainingGuestB	900	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	required
+regression_finish	B5	b	rf_guest_b	RemainingGuestB	900	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	required
+regression_finish	B6	b	rf_guest_b	RemainingGuestB	900	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	required
+regression_finish	B7	b	rf_guest_b	RemainingGuestB	900	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	required
+regression_finish	B8	b	rf_guest_c	RemainingGuestC	900	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required
+regression_finish	B9	b	rf_guest_c	RemainingGuestC	900	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required

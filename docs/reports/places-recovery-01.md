@@ -661,3 +661,93 @@ None of them shows the app working. The app and its UI tests were compiled on th
 - A physical device: smoothness and gestures.
 - The browser preview (§5).
 - Visual approval, which is the founder's.
+
+## 9. Extension: the 16 unverified rows (authorised 2026-09-28)
+
+A further authorisation extends the four-build, 120-minute assignment by up to two sequential builds:
+- 70 rounded Mac mini M2 minutes in total, including any free minutes;
+- at most 40 minutes a build, or the remaining allowance if lower;
+- no more than USD 7 of extra charges before tax.
+
+The rate was checked on 2026-09-28 at codemagic.io/pricing: $0.095 a minute. The month's 500 free
+minutes are spent: 580 rounded minutes were used by 2026-09-28, summed from the account's build list.
+Both builds are therefore fully billable, and 70 minutes cost at most $6.65.
+
+**Starting point.**
+- Reconciled from builds 2–4 at this commit's harness: TARGETED CORRECTION PASS (15 of 15), FULL
+  REGRESSION INCOMPLETE (40 of 56, none failed).
+- The 16 uncovered rows are:
+  - P3, P6 and M2: interrupted in build 4, with no assertion failure;
+  - P1, S9, S10, S12 and S13: never started in build 4;
+  - B2–B9: never scheduled.
+- Candidate: product commit `808950f8102d1c0e0f6c3422fc0aed3a0df555fe`, on the recovery branch
+  `places-recovery/verification-20260927T035353Z`, whose remote tip was
+  `69832b87c71d82502dc182ec46f8ea793d81ed45` (`git ls-remote`).
+  - Builds 3 and 4 ran `e0d2b2e3a76b2fc16f884a974c7ac3e4a57dec2a`.
+  - Both commits are ancestors of the tip, and `git diff` of the product and test paths from
+    `808950f` to either prints nothing.
+
+**Build 4's slowdown.** Established from its logs by three independent investigations and a
+sceptic's check:
+- It was confined to the main simulator. Per paired XCTest step it was 2.7–7× slower, from its first
+  test to the deadline, including the 7 minutes after device B had finished.
+- Device B, its clone on the same host, ran at normal per-step pace.
+- Ruled out as sufficient causes:
+  - product and test code (same commit as build 3);
+  - scrolling (drags moved the page normally);
+  - compile time, result-bundle closes and export;
+  - device B's concurrent tests;
+  - the two-Pro-Max layout on its own (build 6ab81e22 ran it at normal pace).
+- How the rows were lost:
+  - the main runner took 275 s to start;
+  - P3 was still progressing when XCTest's 300-s allowance ended it, which with the runner's restart
+    cost 372 s;
+  - the 1020-s bound stopped P6, and P1 and S9–S13 were queued behind it;
+  - M2 was cut at the deadline.
+- The mechanism is unknown. One 5-s spindump shows the main simulator's cfprefsd as a hot spot, from
+  one sample.
+- In 7 of 7 recovery-era builds, the main runner started late or failed whenever a first boot was in
+  progress or had just finished. That start-up delay did not predict the lasting slowdown: 1 of 3.
+
+**What changed.** Only the harness, workflow and documents changed; the product and tests did not.
+- `regression_finish` runs the 16 rows in one queue shared by the two iPhone 17 Pro Max simulators,
+  after a boot barrier.
+- XCTest's allowance is 600 s for this scope only.
+- Host load is sampled every 30 s.
+- Every result bundle is kept.
+- The reconcile now treats an interrupted execution as unverified. A later pass covers it and is
+  disclosed as a repeated execution; a real failure still fails the row.
+- `docs/verification/places-mac-review.md` §0c has the runs, bounds and time plan.
+
+**Rehearsal on this VPS, not on a Mac.** The harness was run with stubbed Xcode tools under bash
+3.2.57, the version macOS ships. Seven scenarios:
+- normal;
+- a slow main lane: device B took three of main's unstarted runs;
+- a failing test: the verdict was FAIL;
+- a deadline that left runs unstarted: they were listed as never started, and the verdict was FAIL;
+- device B's runner never initializing: lane B stopped after its first run and its infrastructure
+  rerun, and main ran the other six runs;
+- a test that recorded an assertion failure and was then stopped: it counts as failed, not
+  unverified;
+- the reconcile of the real builds 2–4 plus a stubbed build 5, in test mode: 56 of 56 with P3, P6 and
+  M2 disclosed as repeated, and FAIL when the stubbed P3 failed.
+
+None of this shows the queue working on a Mac.
+
+**An adversarial review before the build.** Four reviewers, with a sceptic verifying each blocking
+finding, confirmed two defects. Both were fixed before the commit and rehearsed:
+- a lane whose device could not start tests would have taken the healthy lane's runs and failed them;
+- an interrupted execution that had already recorded an assertion failure would have read as
+  unverified.
+
+Also fixed:
+- the sampler detaches from the step's output and attributes processes by each simulator's
+  launchd_sim tree;
+- the boot barrier records bootstatus exits;
+- the bundles' zip is bounded by the plan;
+- run bounds leave room for a slow start plus the 600-s allowance;
+- no run is claimed with under 180 s left;
+- the disclosure lists every target with more than one attempt, whatever its result.
+
+**Preview.** The upload-ready app is unchanged and was not rebuilt; see §5. Its status is "Places
+correction verified; full regression sweep incomplete" until the reconcile below says otherwise.

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Proximeet — runtime review of the approved Places (chapter 07) and of every earlier chapter's
 # checks, in the iOS Simulator. Manual and unsigned. Codemagic workflows: proximeet-places-review,
-# its 24-minute twin proximeet-places-review-short and its 35-minute twin proximeet-places-review-35
+# its 24-minute twin proximeet-places-review-short, its 35-minute twin proximeet-places-review-35 and
+# the recovery's 40- and 30-minute proximeet-places-review-40 and proximeet-places-review-30
 # (codemagic.yaml). See docs/verification/places-mac-review.md.
 #
-#   PLACES_REVIEW_SCOPE=gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
+#   PLACES_REVIEW_SCOPE=regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
 #       bash scripts/places_review.sh <stage>
 #
 # Scopes (the run input PLACES_REVIEW_SCOPE; each runs as its own build, and every result says which
@@ -25,6 +26,16 @@
 #                S10, S12, S13, then M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and, last,
 #                B15 (hardware keys). 29 required rows; nothing recorded. B2-B9 and the optional B14
 #                run in no recovery build (pending)
+#   regression_finish  recovery build 5 (after build 4 ran out of time on a main simulator that ran
+#                2.7-7x slower per step): the 16 earlier rows no recovery build verified, P3, P6 and M2
+#                (interrupted in build 4), P1, S9, S10, S12 and S13 (never started) and B2-B9 (never
+#                scheduled), under their own row IDs. Its runs are one shared queue for the two iPhone 17
+#                Pro Max simulators (main and device B, one device class): each lane takes its own next
+#                run and, with none left, the other lane's last unstarted one (the manifest's device
+#                column is only a preference; where each run ran is recorded). Neither lane starts
+#                before both devices report their boot finished; the host's load is sampled every 30 s;
+#                XCTest's execution time allowance is 600 s (maximum 660 s); every run's result bundle
+#                is kept (Places-Remaining-Results.zip). 16 rows, all required; nothing recorded
 #   correction   the recovery's correction gate, the targeted Places correction (after build
 #                6ab8639c, reworked after 6ab88011): the adaptive ticket footer on both widths at the
 #                default and the largest text, one-stage back gestures and controls (with a cancelled
@@ -143,15 +154,18 @@ SMALLER_IPHONES="iPhone 17e|iPhone 16e|iPhone SE (3rd generation)|iPhone 17|iPho
 # inside the workflow's 28 minutes. A normal run ends minutes before the deadline.
 UI_DEADLINE_SECONDS=1380
 # Another deadline for a build with another limit: the run input PLACES_UI_DEADLINE_SECONDS, 600 to
-# 1740, digits only. The workflow proximeet-places-review-short, 24 minutes, sets 1110 (at the worst
+# 2040, digits only. The workflow proximeet-places-review-short, 24 minutes, sets 1110 (at the worst
 # 72 + 1110 + 75 + 100 + about 40 = 1397 s); proximeet-places-review-35, 35 minutes, sets 1740 (at
 # the worst 72 + 1740 + 75 + 100 + about 45 = 2032 s, inside its 2100 s; raised from 1680 after build
-# 6ab8adb4 measured the main device's first test 666 s after the gate). A value above 1380
-# belongs only to the 35-minute workflow. The source gate rejects any value outside 600 to 1740.
+# 6ab8adb4 measured the main device's first test 666 s after the gate). A value above 1380 belongs
+# only to the 30-, 35- and 40-minute workflows: proximeet-places-review-30 sets 1440 and
+# proximeet-places-review-40 sets 2040 (at the worst 72 + 2040 + 75 + 100 + about 45 for publishing +
+# at most 60 for the result bundles' zip, whose bound is what is left of that plan = 2392 s, inside
+# its 2400 s). The source gate rejects any value outside 600 to 2040.
 case "${PLACES_UI_DEADLINE_SECONDS:-}" in
     ''|*[!0-9]*|0*) ;;
     *)
-        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 1740 ]; then
+        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 2040 ]; then
             UI_DEADLINE_SECONDS="$PLACES_UI_DEADLINE_SECONDS"
         fi
         ;;
@@ -189,7 +203,7 @@ STAGE="${1:-}"
 case "$STAGE" in
     checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce) ;;
     *)
-        echo "usage: PLACES_REVIEW_SCOPE=gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
+        echo "usage: PLACES_REVIEW_SCOPE=regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -200,6 +214,18 @@ LOG="$LOGS/places-$STAGE${PLACES_LOG_SUFFIX:-}.log"
 # The scope recorded by the checkpoint (the checkpoint itself reads the run input).
 SCOPE="$(cat "$SCOPE_FILE" 2>/dev/null || true)"
 [ -n "$SCOPE" ] || SCOPE="${PLACES_REVIEW_SCOPE:-places}"
+# regression_finish: build 4's P3 was progressing (it reached its last stage) when XCTest's 300-s
+# allowance ended it on a main simulator running 2.7-7x slower per step; B2's healthy time (190 s) has
+# only 1.6x headroom under 300 s. The allowance is a hang guard, not a check, so this scope gives
+# every test 600 s (maximum 660 s); the run bounds and the UI deadline still apply.
+case "$SCOPE" in
+    regression_finish)
+        TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 660"
+        ;;
+esac
+# The shared run queue (regression_finish) and the host-load sampler.
+QUEUE_DIR="$OUT/queue"
+SAMPLER_PID=""
 
 utc_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 summary_line() { printf '%s  %-17s %s\n' "$(utc_now)" "$1" "$2" >> "$SUMMARY"; }
@@ -327,6 +353,7 @@ stop_recorder() {
 finish() {
     local status=$? udid
     stop_recorder
+    stop_sampler
     if [ -n "$B_PID" ]; then
         kill -TERM "$B_PID" 2>/dev/null || true
         wait "$B_PID" 2>/dev/null || true
@@ -641,8 +668,8 @@ if scope not in scopes:
     scope = scope or "places"
 
 deadline = os.environ.get("PLACES_UI_DEADLINE_SECONDS", "")
-if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 1740):
-    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 1740 seconds (got %r)" % deadline)
+if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 2040):
+    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 2040 seconds (got %r)" % deadline)
 
 head = git("rev-parse", "HEAD") or "unavailable"
 pin = os.environ.get("PLACES_EXPECTED_COMMIT", "").strip()
@@ -864,6 +891,141 @@ wait_for_runner() {
     fi
 }
 
+# runs_line <run> <bundle> <exit> <kind>: one line of runs.txt. In the shared queue (regression_finish) it
+# also names the lane the run actually ran on ("lane=main" or "lane=b"), which the results judge.
+runs_line() {
+    printf '%s %s %s %s%s\n' "$1" "$2" "$3" "$4" "${QUEUE_LANE:+ lane=$QUEUE_LANE}" >> "$OUT/runs.txt"
+}
+
+# Whether the scope's runs form one shared queue for the two iPhone 17 Pro Max simulators.
+queue_scope() {
+    [ "$SCOPE" = "regression_finish" ]
+}
+
+# queue_init: every run of the scope, in manifest order, with its preferred lane (main or b).
+queue_init() {
+    rm -rf "${QUEUE_DIR:?}"
+    mkdir -p "$QUEUE_DIR"
+    awk -F '\t' -v scope="$SCOPE" '!/^#/ && $1 == scope && !seen[$4]++ { print $4 "\t" $3 }' "$RUN_MANIFEST" \
+        > "$QUEUE_DIR/pending.tsv"
+    : > "$QUEUE_DIR/claims.tsv"
+}
+
+# queue_claim <lane>: under a lock (mkdir is atomic), takes the lane's own next unstarted run or, when it
+# has none left, the other lane's LAST unstarted run (the other lane keeps its nearer work), and prints
+# it; prints nothing when the queue is empty. Every claim is logged in claims.tsv with its time.
+queue_claim() {
+    local lane="$1" pick="" tries=0
+    while ! mkdir "$QUEUE_DIR/lock" 2>/dev/null; do
+        tries=$((tries + 1))
+        if [ "$tries" -gt 600 ]; then
+            note "ERROR: the run queue's lock was held for over 120 s; lane $lane takes no more runs."
+            return 1
+        fi
+        sleep 0.2
+    done
+    pick="$(awk -F '\t' -v lane="$lane" '$2 == lane { print $1; exit }' "$QUEUE_DIR/pending.tsv")"
+    if [ -z "$pick" ]; then
+        pick="$(awk -F '\t' -v lane="$lane" '$2 != lane { last = $1 } END { if (last != "") print last }' \
+            "$QUEUE_DIR/pending.tsv")"
+    fi
+    if [ -n "$pick" ]; then
+        awk -F '\t' -v run="$pick" '$1 != run' "$QUEUE_DIR/pending.tsv" > "$QUEUE_DIR/pending.tmp"
+        mv "$QUEUE_DIR/pending.tmp" "$QUEUE_DIR/pending.tsv"
+        printf '%s\t%s\t%s\t%s\n' "$pick" "$lane" "$(utc_now)" "$(remaining)" >> "$QUEUE_DIR/claims.tsv"
+    fi
+    rmdir "$QUEUE_DIR/lock" 2>/dev/null || true
+    printf '%s' "$pick"
+}
+
+# run_queue_lane <lane> <udid> <derived data>: claims and runs queued runs until the queue is empty or
+# less than 180 s is left before the deadline (a runner's start alone has taken 32-46 s on a healthy
+# device). Every run is required; none is retried. A lane whose run started no test at all, even after
+# its one infrastructure rerun, stops: its device cannot run tests, and if it kept claiming it would
+# take the other lane's runs and fail them too; what is left stays for the other lane.
+run_queue_lane() {
+    local lane="$1" udid="$2" derived="$3" name bundle seconds preferred mark
+    while :; do
+        if [ "$(remaining)" -lt 180 ]; then
+            note "Lane $lane takes no more runs: $(remaining)s left before the deadline."
+            break
+        fi
+        name="$(queue_claim "$lane")" || break
+        [ -n "$name" ] || break
+        bundle="$(manifest_field "$name" 5)"
+        seconds="$(manifest_field "$name" 6)"
+        preferred="$(manifest_field "$name" 3)"
+        if [ "$preferred" = "$lane" ]; then
+            note "Lane $lane: run $name ($(remaining)s left)."
+        else
+            note "Lane $lane: run $name, taken from lane $preferred, which had not started it ($(remaining)s left)."
+        fi
+        mark="$(wc -l < "$LOG" | tr -d ' ')"
+        # shellcheck disable=SC2046
+        QUEUE_LANE="$lane" lane_run "$name" "$udid" "$derived" "$bundle" "$seconds" $(manifest_tests "$name")
+        if [ "$LAST_RUN_STATUS" -ne 0 ] && ! awk -v from="$((mark + 1))" -v q="'" '
+                NR >= from && $0 ~ ("Test [Cc]ase " q ".*" q " started") { s = 1 } END { exit s ? 0 : 1 }' "$LOG"; then
+            note "Lane $lane stops: run $name started no test on $udid (exit $LAST_RUN_STATUS, after any infrastructure rerun); the other lane takes the runs that are left."
+            printf 'STOP\t%s\t%s\t%s\n' "$lane" "$(utc_now)" "run $name started no test (exit $LAST_RUN_STATUS)" \
+                >> "$QUEUE_DIR/claims.tsv"
+            break
+        fi
+    done
+}
+
+# queue_leftovers: runs nobody claimed (the deadline came first) are listed as left unrun for time.
+queue_leftovers() {
+    local name lane
+    [ -f "$QUEUE_DIR/pending.tsv" ] || return 0
+    while IFS="$(printf '\t')" read -r name lane; do
+        [ -n "$name" ] || continue
+        note "Run $name (preferred lane $lane) was never started: the deadline came first."
+        printf '%s %s none time\n' "$name" "$(manifest_field "$name" 5)" >> "$OUT/runs.txt"
+    done < "$QUEUE_DIR/pending.tsv"
+}
+
+# sample_host <udid...>: every 30 s until stopped, the host's load (top's second sample, since top's
+# first sample in logging mode has no CPU delta; vm_stat, memory pressure, swap), each simulator's
+# process tree (its launchd_sim, whose command names Devices/<udid>, and every descendant: count, CPU,
+# memory, the busiest) and the busiest processes overall, into places-host-load.log. Evidence only
+# (build 4's slowdown had no host telemetry); every command bounded; nothing goes to the step's output.
+sample_host() {
+    local out="$LOGS/places-host-load.log" udid
+    : > "$out"
+    while :; do
+        {
+            printf '=== %s (%ss left)\n' "$(utc_now)" "$(remaining)"
+            bounded 10 top -l 2 -n 0 -s 1 2>&1 | awk '/^Processes:/ { n++ } n == 2' | sed -n '1,10p'
+            bounded 5 vm_stat 2>&1 | sed -n '1,10p'
+            bounded 5 memory_pressure -Q 2>&1 | tail -n 2
+            printf 'swap: %s\n' "$(bounded 5 sysctl -n vm.swapusage 2>&1)"
+            for udid in "$@"; do
+                ps -Ao pid=,ppid=,pcpu=,rss=,command= 2>/dev/null | awk -v u="$udid" '
+                    { pid[NR] = $1; ppid[NR] = $2; cpu[NR] = $3; rss[NR] = $4; k = split($5, part, "/"); name[NR] = part[k]
+                      if (root == "" && index($0, "launchd_sim") && index($0, "Devices/" u)) root = $1 }
+                    END {
+                        if (root == "") { printf "simulator %s: launchd_sim not found\n", u; exit }
+                        mine[root] = 1; changed = 1
+                        while (changed) { changed = 0
+                            for (i = 1; i <= NR; i++) if (!(pid[i] in mine) && (ppid[i] in mine)) { mine[pid[i]] = 1; changed = 1 } }
+                        for (i = 1; i <= NR; i++) if (pid[i] in mine) { n++; c += cpu[i]; r += rss[i]
+                            if (cpu[i] >= 5.0) busy = busy sprintf(" %s(%s)=%s%%", name[i], pid[i], cpu[i]) }
+                        printf "simulator %s: launchd_sim %s, %d processes, %.1f%% CPU, %.0f MB resident;%s\n", u, root, n, c, r / 1024, busy }'
+            done
+            ps -Ao pcpu=,rss=,comm= 2>/dev/null | sort -rn | head -n 8
+        } >> "$out" 2>&1
+        sleep 30 > /dev/null 2>&1
+    done
+}
+
+stop_sampler() {
+    if [ -n "$SAMPLER_PID" ]; then
+        kill -TERM "$SAMPLER_PID" 2>/dev/null || true
+        wait "$SAMPLER_PID" 2>/dev/null || true
+        SAMPLER_PID=""
+    fi
+}
+
 # lane_run <name> <udid> <derived data> <bundle> <natural seconds> <-only-testing...>: one bounded run,
 # its exit recorded in $OUT/runs.txt as "<name> <bundle> <exit> no" (no retry), its attachments
 # exported. A first attempt that started no test because the simulator was not found (exit 70) or the
@@ -877,26 +1039,26 @@ lane_run() {
     mark="$(wc -l < "$LOG" | tr -d ' ')"
     xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     if [ "$status" -eq 70 ] && destination_lost "$mark"; then
-        printf '%s %s %s %s\n' "${name}_destination_unavailable" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
+        runs_line "${name}_destination_unavailable" "$bundle" "$status" "infra"
         reboot_destination "$udid"
         rm -rf "${OUT:?}/${bundle:?}.xcresult"
         status=0
         xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     elif [ "$status" -ne 0 ] && runner_not_ready "$mark"; then
-        printf '%s %s %s %s\n' "${name}_runner_not_ready" "$bundle" "$status" "infra" >> "$OUT/runs.txt"
+        runs_line "${name}_runner_not_ready" "$bundle" "$status" "infra"
         wait_for_runner "$udid" "$status"
         gate="$(run_gate "$name" "$seconds")"
         left="$(remaining)"
         if [ "$gate" -gt 0 ] && [ "$left" -lt "$gate" ]; then
             note "The optional run $name is not started again: ${left}s left, under ${gate}s."
-            printf '%s %s %s %s\n' "$name" "$bundle" none time >> "$OUT/runs.txt"
+            runs_line "$name" "$bundle" none time
             return 0
         fi
         rm -rf "${OUT:?}/${bundle:?}.xcresult"
         status=0
         xctest "$udid" "$derived" "$OUT/$bundle.xcresult" "$(budget "$seconds")" "$@" || status=$?
     fi
-    printf '%s %s %s %s\n' "$name" "$bundle" "$status" "no" >> "$OUT/runs.txt"
+    runs_line "$name" "$bundle" "$status" "no"
     LAST_RUN_STATUS="$status"
     export_results "$OUT/$bundle.xcresult" "$OUT/attachments-$bundle"
     return 0
@@ -1043,7 +1205,7 @@ stage_ui_review() {
     load_simulator
     check_app
     local build_status b_udid="" b_log="$LOGS/places-ui-review-device-b.log" waited=0 small_udid=""
-    local second="" second_udid="" second_derived="$DERIVED_DATA"
+    local second="" second_udid="" second_derived="$DERIVED_DATA" main_boot=0 second_boot=0
     rm -rf "${OUT:?}"/*.xcresult "${OUT:?}"/attachments-* "${OUT:?}"/places-walkthrough-* \
         "${OUT:?}"/*-summary.json "${OUT:?}"/*-tests.json
     rm -f "$OUT/recording-started.txt" "$OUT/runs.txt" "$OUT/smaller.txt" "$b_log" "$OUT/walkthrough-started.txt" \
@@ -1100,10 +1262,36 @@ stage_ui_review() {
             second_derived="$DERIVED_DATA_B"
         else
             note "WARNING: the build products could not be copied for the other device; its runs follow the selected simulator's."
+            run xcrun simctl shutdown "$second_udid" || true
             second=""
         fi
     fi
-    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || true
+    main_boot=0
+    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || main_boot=$?
+    if queue_scope; then
+        # Readiness barrier: in 7 of 7 recovery-era builds the main device's first runner started late
+        # (199-301 s) or failed to initialize whenever a device's first boot was still in progress or had
+        # just finished, and quickly (32-46 s) when both were already booted. So no lane starts until
+        # both devices report their boot finished; the times are recorded.
+        printf 'main %s %s=%s bootstatus_exit=%s\n' "$SIM_UDID" \
+            "$([ "$main_boot" -eq 0 ] && echo boot_finished || echo boot_NOT_CONFIRMED)" "$(utc_now)" "$main_boot" \
+            > "$META/places-boot-ready.txt"
+        if [ -n "$second" ]; then
+            second_boot=0
+            run bounded "$(budget 420)" xcrun simctl bootstatus "$second_udid" -b || second_boot=$?
+            printf '%s %s %s=%s bootstatus_exit=%s\n' "$second" "$second_udid" \
+                "$([ "$second_boot" -eq 0 ] && echo boot_finished || echo boot_NOT_CONFIRMED)" "$(utc_now)" "$second_boot" \
+                >> "$META/places-boot-ready.txt"
+        fi
+        summary_line "places-boot-barrier" "$(tr '\n' ' ' < "$META/places-boot-ready.txt")"
+        queue_init
+        (
+            trap - EXIT INT TERM
+            set +e
+            sample_host "$SIM_UDID" ${second:+"$second_udid"}
+        ) > /dev/null 2>&1 &
+        SAMPLER_PID=$!
+    fi
     status_bar "$SIM_UDID"
     if [ -n "$second" ]; then
         (
@@ -1113,19 +1301,28 @@ stage_ui_review() {
             note "Second device ($second, $second_udid), scope $SCOPE."
             run bounded "$(budget 420)" xcrun simctl bootstatus "$second_udid" -b || true
             status_bar "$second_udid"
-            run_lane "$second" "$second_udid" "$second_derived"
+            if queue_scope; then
+                run_queue_lane "$second" "$second_udid" "$second_derived"
+            else
+                run_lane "$second" "$second_udid" "$second_derived"
+            fi
         ) &
         B_PID=$!
         summary_line "places-parallel" "$second $second_udid runs its $SCOPE runs beside the selected simulator's"
     fi
 
-    # 4. The selected simulator's runs (places: the recorded journey first).
-    run_lane main "$SIM_UDID" "$DERIVED_DATA"
+    # 4. The selected simulator's runs (places: the recorded journey first; regression_finish: the shared
+    #    queue, which also takes device B's runs when device B could not be cloned or copied).
+    if queue_scope; then
+        run_queue_lane main "$SIM_UDID" "$DERIVED_DATA"
+    else
+        run_lane main "$SIM_UDID" "$DERIVED_DATA"
+    fi
 
     # 5. Without its device, device B's runs happen here, after the selected simulator's; the smaller
     #    iPhone's runs follow the selected simulator's when device B took the parallel lane (no scope
     #    uses both today), or are recorded as having no device.
-    if scope_uses b && [ "$second" != "b" ]; then
+    if scope_uses b && [ "$second" != "b" ] && ! queue_scope; then
         run_lane b "$SIM_UDID" "$DERIVED_DATA"
     fi
     if scope_uses small && [ "$second" != "small" ]; then
@@ -1159,11 +1356,17 @@ stage_ui_review() {
         wait "$COMPACT_PID" 2>/dev/null || true
         COMPACT_PID=""
     fi
+    if queue_scope; then
+        queue_leftovers
+        stop_sampler
+        run cat "$QUEUE_DIR/claims.tsv" || true
+        cp "$QUEUE_DIR/claims.tsv" "$META/places-queue-claims.txt" 2>/dev/null || true
+    fi
     run cat "$OUT/runs.txt"
 
     # 7. What actually ran, judged against the manifest, execution by execution.
     python3 scripts/places_review_results.py "$RUN_MANIFEST" "$SCOPE" "$OUT/runs.txt" "$OUT/ui-review-tests.txt" \
-        "$OUT/executions.tsv" "$SIM_UDID" "$b_udid" "$small_udid" "$LOG" ${second:+"$b_log"} \
+        "$OUT/executions.tsv" "$SIM_UDID" "${second:+$b_udid}" "$small_udid" "$LOG" ${second:+"$b_log"} \
         > "$OUT/ui-review-counts.txt" 2>>"$LOG" || note "ERROR: scripts/places_review_results.py failed; the results are incomplete."
     # The second device's log joins this one only now, after the parse, so no result is read twice.
     if [ -n "$second" ]; then
@@ -1393,6 +1596,11 @@ covered = {
                    "and its 12 extras, each started only when its bound plus 60 s was left and, if it ran, required to "
                    "pass: S3-S6 and S8 on main, P9-P13, S15 and S16 on the smaller iPhone (C10-C15 passed in recovery "
                    "build 2 and are not rerun)",
+    "regression_finish": "the 16 required regression_finish executions of docs/verification/places-review-manifest.tsv, "
+                         "the earlier rows no recovery build had verified: P3, P6 and M2 (interrupted in build 4), P1 "
+                         "(the real journey, short holds, not recorded), S9, S10, S12 and S13 (never started in build 4) "
+                         "and B2-B9 (the Guest List, never scheduled), shared between the two iPhone 17 Pro Max "
+                         "simulators (one device class)",
     "sweep_finish": "the 29 required sweep_finish executions of docs/verification/places-review-manifest.tsv: on the "
                     "iPhone 17 Pro Max P1-P6 (P1, the real journey, with short holds, not recorded), S9, S10, S12, S13 "
                     "and M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and B15 (B2-B9 and the optional B14 run in "
@@ -1404,7 +1612,7 @@ covered = {
 # failed to initialize on all three runs, so no test ran there;
 # gate_finish and sweep_finish are builds 3 and 4.
 recovery = {"correction": "correction gate, build 2", "gate_finish": "gate finish, build 3",
-            "sweep_finish": "sweep finish, build 4"}
+            "sweep_finish": "sweep finish, build 4", "regression_finish": "remaining rows, build 5"}
 required = {
     "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
         source.get("result") == "MATCH",
@@ -1476,7 +1684,10 @@ if scope in recovery:
     lines += ["", "This is the %s of the recovery after the Places correction. Build 2 (Codemagic 6ab8c585, scope" % role,
               "correction, on 808950f) passed C10-C15 on the smaller iPhone; on the iPhone 17 Pro Max its test runner failed to",
               "initialize for UI testing before any test started. Build 3 (gate_finish) runs C1-C9 and extras, build 4",
-              "(sweep_finish) the other scheduled rows; B2-B9 and the optional B14 run in no recovery build (pending). A PASS",
+              "(sweep_finish) the other scheduled rows; B2-B9 and the optional B14 run in no recovery build (pending). A PASS"
+              if scope != "regression_finish" else
+              "(sweep_finish) the other scheduled rows, but ran out of time; build 5 (regression_finish) runs the 16 rows no"
+              " recovery build verified (build 4's P3, P6 and M2 are disclosed as repeated after interrupted attempts). A PASS",
               "here covers this build only: scripts/places_recovery_reconcile.py reconciles row by row, counting a passed",
               "execution of the same test on the same device class at a commit whose product and test files equal 808950f's",
               "(docs/verification/places-recovery-coverage.tsv), and gives the targeted correction and the full regression",
@@ -1508,13 +1719,44 @@ stage_package_review() {
         sweep) title="Places-Sweep-Review" ;;
         gate_finish) title="Places-Gate-Review" ;;
         sweep_finish) title="Places-Finish-Review" ;;
+        regression_finish) title="Places-Remaining-Review" ;;
         *)
             summary_line "places-package" "NOT MADE: unknown scope '$SCOPE' (no archive carries another scope's name)"
             return "$status"
             ;;
     esac
     summary_line "places-package" "$(unzip -l "$ARTIFACTS/$title.zip" 2>/dev/null | tail -1 | awk '{print $2}') files in $title.zip; $(tr '\n' ' ' < "$OUT/package-links.txt" 2>/dev/null)"
+    if queue_scope; then
+        save_result_bundles || true
+    fi
     return "$status"
+}
+
+# save_result_bundles: every run's result bundle, including any a time bound stopped (bounded_test
+# interrupts xcodebuild with SIGINT so it closes its bundle), zipped as Places-Remaining-Results.zip
+# with its SHA-256. Bounded; a problem is a summary line, never a failure of the stage.
+save_result_bundles() {
+    local name="Places-Remaining-Results.zip" zip_path="$ROOT/$ARTIFACTS/Places-Remaining-Results.zip" bundles
+    rm -f "$zip_path" "$zip_path.sha256"
+    bundles="$(cd "$OUT" && ls -d ./*.xcresult 2>/dev/null | tr '\n' ' ')"
+    if [ -z "$bundles" ]; then
+        summary_line "places-bundles" "NOT MADE: no result bundle"
+        return 0
+    fi
+    # Its bound is what is left of the plan's worst case (deadline + 75 s grace + 100 s export + 60 s for
+    # this zip), 15-240 s, so the zip can never push the build past its limit.
+    local t0 cap
+    t0="$(cat "$T0_FILE" 2>/dev/null || date +%s)"
+    cap=$((t0 + UI_DEADLINE_SECONDS + TEST_GRACE_SECONDS + 100 + 60 - $(date +%s)))
+    [ "$cap" -le 240 ] || cap=240
+    [ "$cap" -ge 15 ] || cap=15
+    # shellcheck disable=SC2086
+    if (cd "$OUT" && bounded "$cap" zip -q -r -1 "$zip_path" $bundles) >> "$LOG" 2>&1; then
+        (cd "$ROOT/$ARTIFACTS" && shasum -a 256 "$name" > "$name.sha256")
+        summary_line "places-bundles" "$(du -k "$zip_path" | cut -f1) KB in $name: $bundles"
+    else
+        summary_line "places-bundles" "NOT MADE: zip failed or took over its ${cap}-s bound"
+    fi
 }
 
 stage_enforce() {

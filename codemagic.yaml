@@ -639,6 +639,120 @@ workflows:
   # retries. Compile-path steps stop the build on failure; evidence steps use ignore_failure so later
   # evidence is still collected; the last step fails the build unless the automated verdict is PASS.
   # See docs/verification/places-mac-review.md.
+  # Recovery build 5 (scope regression_finish), a further authorisation after build 4 ran out of time: at most 40
+  # minutes. No runnable preview copy and no compact video (the app already tested in build 3 is the preview;
+  # this scope records nothing). At the worst 72 + 2040 + 75 + 100 + 45 + 60 (the result bundles' zip, bounded
+  # by what is left of this plan) = 2392 s.
+  proximeet-places-review-40:
+    name: Proximeet Places review, 40-minute limit, recovery rows (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "2040"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Places revision and scope, its approved assets, the Signal, Places and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target, clone device B, start both first boots
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's scope by the manifest (the shared queue of both iPhone 17 Pro Max simulators after a boot barrier), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip and every run's result bundle
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Places-Remaining-Review.zip
+      - build/artifacts/Places-Remaining-Review.zip.sha256
+      - build/artifacts/Places-Remaining-Results.zip
+      - build/artifacts/Places-Remaining-Results.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+
+  # The same, capped at 30 minutes, for a later recovery build when less of the allowance is left. At the worst
+  # 72 + 1440 + 75 + 100 + 45 + 60 = 1792 s.
+  proximeet-places-review-30:
+    name: Proximeet Places review, 30-minute limit, recovery rows (manual, unsigned simulator)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "1440"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Places revision and scope, its approved assets, the Signal, Places and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target, clone device B, start both first boots
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's scope by the manifest (the shared queue of both iPhone 17 Pro Max simulators after a boot barrier), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip and every run's result bundle
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Places-Remaining-Review.zip
+      - build/artifacts/Places-Remaining-Review.zip.sha256
+      - build/artifacts/Places-Remaining-Results.zip
+      - build/artifacts/Places-Remaining-Results.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+
   proximeet-places-review-35:
     name: Proximeet Places review, 35-minute limit (manual, unsigned simulator)
     instance_type: mac_mini_m2

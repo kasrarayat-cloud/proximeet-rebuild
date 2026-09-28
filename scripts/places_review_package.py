@@ -23,7 +23,10 @@ shows this build's correction captures (C1-C9 on the iPhone 17 Pro Max) and name
 captures they made on the smaller iPhone, as recovery build 2's; its extras' captures follow; and
 Places-Gate-Screens.zip. The sweep_finish scope (recovery build 4) makes Places-Finish-Review.zip, a
 page like the sweep's with the P, S, M and B rows it runs, naming every capture that another recovery
-build makes, and Places-Finish-Screens.zip. Neither records anything. An unknown scope (the retired
+build makes, and Places-Finish-Screens.zip. Neither records anything. The regression_finish scope
+(recovery build 5) makes Places-Remaining-Review.zip, a page like the regressions scope's with its 16
+rows, each on the lane it actually ran on (its screens are inside; its result bundles are zipped
+separately by scripts/places_review.sh as Places-Remaining-Results.zip). An unknown scope (the retired
 sweep_places and sweep_signal included) makes nothing (exit 2), so no archive can carry another
 scope's name. Every archive gets a .sha256 beside it.
 Every relative link in an index must name a file in its archive; a broken link fails the stage.
@@ -92,6 +95,7 @@ PACKAGES = {
     "correction": ("Places-Correction-Review", "Places-Correction"),
     "gate_finish": ("Places-Gate-Review", "Places-Gate"),
     "sweep_finish": ("Places-Finish-Review", "Places-Finish"),
+    "regression_finish": ("Places-Remaining-Review", None),
 }
 # The recovery after the Places correction, and the role and number each build's pages name. Build 1
 # (the first correction build, 6ab8adb4 on 907d7401) counts toward none of it. Build 2 (6ab8c585, scope
@@ -424,6 +428,18 @@ def main(argv):
                       "run in the correction build, as C9 and C15, and S1, S2, S7, S11 and S14 as C4, C5, C6, C7 and C8 "
                       "(the same test on the same device, in the same short-hold run); their captures are in "
                       "Places-Correction-Screens.zip." % BUILD2_ID)
+    elif scope == "regression_finish":
+        scope_note = ("This is recovery build 5 (regression_finish), after build 4 (sweep_finish) ran out of time on a main "
+                      "simulator that ran 2.7-7x slower per step. It runs the 16 earlier rows no recovery build had verified, "
+                      "each under its earlier row ID: P3, P6 and M2 (interrupted in build 4, so these are disclosed repeated "
+                      "executions), P1 (the real journey, short holds, unrecorded), S9, S10, S12 and S13 (never started in "
+                      "build 4) and B2-B9 (the Guest List, never scheduled). Its runs are one queue shared by the two iPhone "
+                      "17 Pro Max simulators (the selected one and device B, its clone: one device class); each result names "
+                      "the lane it ran on (results/executions.tsv, results/runs.txt, results/metadata/places-queue-claims.txt). "
+                      "Every run's result bundle is in Places-Remaining-Results.zip. The other 40 earlier rows passed in "
+                      "builds 3 and 4; scripts/places_recovery_reconcile.py reconciles the builds row by row, counting only "
+                      "builds whose product and test files equal %s's. Product and test files changed since %s: %s."
+                      % (REFERENCE[:12], REFERENCE[:12], product_changes(root).replace("\n", "; ")))
     else:
         others = [s for s in ("places", "signal", "regressions") if s != scope]
         scope_note = ("The other scopes (%s) run as their own builds, each on a pinned commit named in its own verdict; "

@@ -36,6 +36,7 @@ parallel. Every test with 440-point pixel anchors runs on main, or on device B, 
 | `correction` | See §0a | The smaller iPhone; see §0a | 15 required |
 | `gate_finish` | Recovery build 3; see §0b. C3, then C1 and C2, then C4, C5, C9, C6, C7, C8 (required); then S3–S6 and S8 (extras) | The smaller iPhone: P9–P13, then S15 and S16 (extras) | 9 required, 12 extras |
 | `sweep_finish` | Recovery build 4; see §0b. P1–P6 (P1 short holds, not recorded), S9, S10, S12, S13, then M1–M3 | Device B (a clone of main): M4–M13, B1, B10–B13, and last B15 (hardware keys) | 29 required |
+| `regression_finish` | Recovery build 5; see §0c. One queue shared with device B; preferred here: P3, then P6 and P1, then M2, then S9, S10, S12, S13 | Device B (a clone of main), preferred: B2 and B3, then B4–B7, then B8 and B9 | 16 required |
 | `sweep` | P1, the real journey (short holds, not recorded), then P2–P6: the Birthday gate on the way back, the largest text, rapid taps and interruptions, the Reduce Motion preview and relaunch; then S3–S6, S8–S10, S12 and S13: both Guest List keyboard tests, the age-gate journey, twelve states, first choices, largest text, missing intent, the Reduce Motion preview and relaunch | The smaller iPhone: P9–P13, the band change, all twelve intent-venue combinations, the largest text, missing choices and the guarded explanation, and the seven screens; then S15 and S16, the keyboard Done/Back check and Signal's largest text | 22 required |
 
 **Devices and time (after build `6ab84ede`).**
@@ -44,7 +45,7 @@ parallel. Every test with 440-point pixel anchors runs on main, or on device B, 
   - A device first booted while the other ran tests needed about 15 minutes to reach its first test.
   - A second first boot during the compilation slowed it by about 2 minutes.
 - So both devices boot during the compilation and neither is ever restarted. For regressions, device B is cloned from main before either boots.
-- The UI deadline is 1380 s after the gate. The run input `PLACES_UI_DEADLINE_SECONDS` (600 to 1740) changes it; the source gate rejects any other value. A value above 1380 belongs only to the 35-minute workflow.
+- The UI deadline is 1380 s after the gate. The run input `PLACES_UI_DEADLINE_SECONDS` (600 to 2040) changes it; the source gate rejects any other value. A value above 1380 belongs only to the 30-, 35- and 40-minute workflows (1440, 1740 and 2040; see §0c for the 30- and 40-minute ones).
 - `proximeet-places-review-short` runs the same steps with a 24-minute limit. Its own `PLACES_UI_DEADLINE_SECONDS` is 1110 (at the worst 72 + 1110 + 75 + 100 + about 40 = 1397 s). It is for a final build that must fit what is left of the chapter's 90 free minutes.
 - `proximeet-places-review-35` runs the same steps with a 35-minute limit and one more (the preview copy, §2). Its own `PLACES_UI_DEADLINE_SECONDS` is 1740 (at the worst 72 + 1740 + 75 + 100 + about 45 = 2032 s of its 2100), raised from 1680 after build `6ab8adb4` measured the main device's first test 666 s after the gate.
 - The regressions repeat (B14) starts only while 420 s are left before the deadline (300 s until the recovery). At 300 s it was a coin flip that left the required hardware-key run (B15) about 110–125 s for a run measured at 103 s.
@@ -267,6 +268,78 @@ documentation files from `808950f`:
   for P2–P6 together and about 375 s for nine S rows on main, and about 511 s for P9–P13 and 82 s for
   S15 and S16 on the smaller iPhone.
 
+## 0c. Recovery build 5: `regression_finish`, the rows build 4 left unverified
+
+Build 4 (`sweep_finish`, Codemagic `6ab8f638`) ran out of time: 21 passed and none failed, but P3,
+P6 and M2 were interrupted and P1, S9, S10, S12 and S13 never started. B2–B9 were never scheduled. A
+further authorisation allows two more builds, 70 rounded minutes and USD 7. `regression_finish` runs
+exactly those 16 rows: the same row IDs, test methods and device class. P1 keeps its short holds,
+unrecorded.
+
+**Why build 4 was slow.** These points are measured from its logs, not guessed:
+- The slowdown was inside build 4's main simulator. Its XCTest queries and synthesised events ran
+  2.7–7× slower per paired step from its first test to the deadline, including 7 minutes after
+  device B had finished.
+- Device B, its clone on the same host, ran at normal pace.
+- Scrolling, compile time, result-bundle closes and export were normal.
+
+The mechanism is unknown. In 7 of 7 recovery-era builds, the main device's first test runner
+started late (199–301 s) or failed to initialize whenever a device's first boot was still in
+progress or had just finished. It started in 32–46 s when both devices were already booted. That
+start-up delay did not predict the lasting slowdown (1 of 3 builds).
+
+**What changed, and only in this scope:**
+- **Readiness barrier.** No lane starts until both devices report their boot finished. The times
+  are recorded in `metadata/places-boot-ready.txt`.
+- **One shared queue.** The runs are shared by the two iPhone 17 Pro Max simulators, the selected
+  one and device B, its clone, which are one device class. The manifest's device column is a
+  preference. Each lane takes its own next run. When a lane has none left, it takes the other
+  lane's last unstarted run, so a slow simulator cannot strand the rest.
+  - `runs.txt` names the lane each run ran on (`lane=main` or `lane=b`), and the results judge each
+    execution against that lane's device.
+  - Claims and their times are in `metadata/places-queue-claims.txt`.
+  - A run nobody started before the deadline is listed as never started. It counts as unverified,
+    never as passed.
+- **XCTest's execution time allowance** is 600 s (maximum 660 s). It was 300/360 s. In build 4, P3
+  was still making progress when the 300-s allowance ended it, and B2's healthy time of 190 s has
+  only 1.6× headroom under 300 s. The allowance is a hang guard, not a check. The run bounds and
+  the deadline still apply.
+- **Host telemetry.** Every 30 s, `logs/places-host-load.log` records `top`, `vm_stat`, memory
+  pressure, swap, and each simulator's processes (count, CPU, memory, the busiest).
+- **Every run's result bundle** is kept, including any that a time bound stopped (SIGINT lets
+  xcodebuild close it), in `Places-Remaining-Results.zip`.
+
+| Preferred lane | Run (bundle, bound) | Rows |
+| --- | --- | --- |
+| Main | `rf_p3` (`RemainingP3`, 960 s) | P3 |
+| | `rf_places` (`RemainingPlaces`, 1080 s) | P6, P1 |
+| | `rf_wristband` (`RemainingWristband`, 780 s) | M2 |
+| | `rf_signal` (`RemainingSignal`, 780 s) | S9, S10, S12, S13 |
+| Device B | `rf_guest_a` (`RemainingGuestA`, 1080 s) | B2, B3 |
+| | `rf_guest_b` (`RemainingGuestB`, 900 s) | B4, B5, B6, B7 |
+| | `rf_guest_c` (`RemainingGuestC`, 900 s) | B8, B9 |
+
+- **Time.** The workflow is `proximeet-places-review-40`: 40 minutes, with a UI deadline 2040 s
+  after the source gate. At the worst that is 72 + 2040 + 75 (grace) + 100 (export) + 45
+  (publishing) + 60 (the bundles' zip) = 2392 s. The zip's bound is whatever is left of that plan,
+  between 15 and 240 s.
+- **Bounds and cut-offs.** Each run's bound leaves room for a slow runner start (build 4: 302 s),
+  the 600-s allowance and a close. A lane claims no new run with less than 180 s left. A lane whose
+  run started no test at all, even after its infrastructure rerun, stops and leaves the rest to the
+  other lane. A broken device therefore cannot take and fail the healthy lane's runs.
+- **Boot barrier record.** Each device's line says `boot_finished` only when `simctl bootstatus`
+  exited 0. Otherwise it says `boot_NOT_CONFIRMED`, with its exit code.
+- **The shorter workflow.** `proximeet-places-review-30` (30 minutes, deadline 1440 s) is for a
+  later build when less of the allowance is left.
+- **Omitted.** Neither workflow makes a runnable preview copy or a compact video: the app build 3
+  published is the preview, and this scope records nothing.
+- **Reconciliation.** `scripts/places_recovery_reconcile.py` now treats an interrupted execution
+  (started, stopped before an outcome) as unverified, not as a failure.
+  - A later pass in a product-equivalent build covers the row, and the interrupted attempt is listed
+    under "Repeated executions (disclosed)".
+  - A failed, skipped or twice-executed execution still fails its row.
+  - `sweep_finish`'s rows for the eight moved targets stay as build 4's record.
+
 ## 1. The source gate
 
 `PLACES_REVIEW_SCOPE=<scope> bash scripts/places_review.sh checkpoint` fails the build unless the
@@ -358,6 +431,8 @@ checkout is exactly the reviewed revision:
 | `Places-Correction-Review.zip`, `Places-Correction-Screens.zip`, `Places-Correction-walkthrough.zip` | correction | See §0a. |
 | `Places-Gate-Review.zip`, `Places-Gate-Screens.zip` | gate_finish | Like the correction's page, with this build's correction captures (C1–C3 at 440 pt, C9, C4–C8) beside the BEFORE images; every capture of C10–C15 named as recovery build 2's; the extras' captures; C1–C15 and every earlier row with where it ran or is due; the product files changed since `808950f`. See §0b. |
 | `Places-Finish-Review.zip`, `Places-Finish-Screens.zip` | sweep_finish | Like the sweep's, with its P, S, M and B rows' captures (the M and B rows' by test class) and every execution by row and the earlier row it counts as; each capture another recovery build makes is named as such (`*.IN-GATE-BUILD.txt`, `*.IN-CORRECTION-BUILD.txt` in the Screens zip). See §0b. |
+| `Places-Remaining-Review.zip` | regression_finish | Its 16 rows' captures, results (each on the lane it ran on), the queue's claims, the boot barrier's times, the host-load log, logs and verdict. See §0c. |
+| `Places-Remaining-Results.zip` | regression_finish | Every run's `.xcresult`, including any that a time bound stopped. |
 | `app/Proximeet-Debug-iphonesimulator-<sha>.zip` | every scope | The unsigned simulator app. It cannot be installed on an iPhone. |
 | `build/preview/Proximeet.app`, `build/preview/PREVIEW.txt` | every scope, `proximeet-places-review-35` only | The same app, runnable. Codemagic shows Quick Launch beside a `.app` artifact only for teams with App Preview; on a personal account it is a plain download. A runnable app is not evidence that its checks passed. |
 

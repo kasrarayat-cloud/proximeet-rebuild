@@ -23,7 +23,11 @@ count toward the verdict (no manifest row is a diagnostic since the correction's
 runs probe_*, were removed; the handling stays for any later one). A skipped test, an interrupted one
 (started, no outcome) and a run that did not exit 0 are failures. A test that ran on another device
 than its row's has that in its outcome ("passed on <udid>, not on <udid> (wrong device)"), so
-executions.tsv never shows a plain "passed" for it. Standard library only; Python 3.8+.
+executions.tsv never shows a plain "passed" for it. In the shared queue of regression_finish a runs.txt
+line has a fifth field, "lane=main" or "lane=b": the lane the run actually ran on. The row's device is
+then only a preference: the run is judged against that lane's device (main and b are one device class,
+the iPhone 17 Pro Max and its clone), and executions.tsv's device column names that lane. Standard
+library only; Python 3.8+.
 """
 import os
 import re
@@ -74,7 +78,10 @@ def load_runs(path):
         for line in open(path, encoding="utf-8"):
             parts = line.split()
             if len(parts) == 4:
-                runs.append({"run": parts[0], "bundle": parts[1], "exit": parts[2], "kind": parts[3]})
+                runs.append({"run": parts[0], "bundle": parts[1], "exit": parts[2], "kind": parts[3], "lane": ""})
+            elif len(parts) == 5 and parts[4] in ("lane=main", "lane=b"):
+                runs.append({"run": parts[0], "bundle": parts[1], "exit": parts[2], "kind": parts[3],
+                             "lane": parts[4][len("lane="):]})
     return runs
 
 
@@ -147,8 +154,10 @@ def main(argv):
         problems.append("the manifest has no rows for scope %r" % scope)
     for row in rows:
         found = [e for e in by_bundle.get(row["bundle"], []) if e["test"] == row["test"]]
-        expected_device = lane_udid[row["device"]]
         run = run_exit.get(row["run"])
+        # The shared queue: where the run actually ran, when that lane is of the row's device class.
+        lane = run["lane"] if run and run.get("lane") and row["device"] in ("main", "b") else row["device"]
+        expected_device = lane_udid[lane]
         messages = errors.get((row["bundle"], row["test"]), [])
         seconds = None
         if not found:
@@ -158,6 +167,8 @@ def main(argv):
                 outcome = "not run (its run was not started)"
             elif run["kind"] == "device":
                 outcome = "not run (no %s device)" % LANE_LABEL[row["device"]]
+            elif run["kind"] == "time":
+                outcome = "not run (run %s was never started: the build's deadline came first)" % row["run"]
             else:
                 outcome = "not run (run %s ended with exit %s before this test started)" % (row["run"], run["exit"])
             if row["kind"] == "required":
@@ -165,6 +176,10 @@ def main(argv):
         else:
             execution = found[0]
             outcome, seconds = execution["outcome"], execution["seconds"]
+            if outcome == "interrupted" and messages:
+                # An assertion failed (soft checks keep a test running) before a time bound or the allowance
+                # stopped it: that is a failure, not merely an interruption.
+                outcome = "failed (interrupted after a recorded assertion failure)"
             if len(found) > 1:
                 outcome = " then ".join(e["outcome"] for e in found) + " (%d executions in one run)" % len(found)
                 problems.append("%s %s: executed %d times in %s; retries are off" % (
@@ -177,18 +192,18 @@ def main(argv):
                 pass
             elif not expected_device:
                 problems.append("%s %s: ran, but no %s device was recorded" % (row["order"], row["test"],
-                                                                          LANE_LABEL[row["device"]]))
-                outcome += " (no %s device recorded)" % LANE_LABEL[row["device"]]
+                                                                          LANE_LABEL[lane]))
+                outcome += " (no %s device recorded)" % LANE_LABEL[lane]
             elif execution["device"] and execution["device"] != expected_device:
                 problems.append("%s %s: ran on %s, not on %s" % (row["order"], row["test"], execution["device"],
                                                                 expected_device))
                 outcome += " on %s, not on %s (wrong device)" % (execution["device"], expected_device)
-            label = LANE_LABEL[row["device"]] + ((", " + kind_label(row)) if row["kind"] != "required" else "")
+            label = LANE_LABEL[lane] + ((", " + kind_label(row)) if row["kind"] != "required" else "")
             result_lines.append("%s[%s]=%s%s" % (row["test"], label, outcome, (" (%s s)" % seconds) if seconds else ""))
         if row["kind"] != "required":
             repeats.append("%s %s (%s, %s): %s" % (row["order"], row["test"], kind_label(row), LANE_LABEL[row["device"]],
                                                    outcome))
-        table.append([row["order"], row["device"], expected_device, row["run"], row["bundle"], row["test"], row["kind"],
+        table.append([row["order"], lane, expected_device, row["run"], row["bundle"], row["test"], row["kind"],
                       outcome, seconds or "", " | ".join(messages)])
 
     unexpected = [(bundle, e) for bundle, found in by_bundle.items() for e in found
@@ -258,11 +273,12 @@ def main(argv):
         "devices=main %s; device B %s; smaller %s" % (main_udid, b_udid.upper() if b_used else "not used",
                                                      small_udid.upper() or "not used"),
     ]
-    lines += ["xcodebuild_exit_%s=%s (bundle %s, %s)" % (r["run"], r["exit"], r["bundle"],
-                                                        {"infra": infra_reason(r["run"])[1] + "; rerun once",
-                                                         "time": "not started: time budget",
-                                                         "device": "not started: no device",
-                                                         "no": "retries off"}.get(r["kind"], r["kind"]))
+    lines += ["xcodebuild_exit_%s=%s (bundle %s, %s%s)" % (r["run"], r["exit"], r["bundle"],
+                                                          {"infra": infra_reason(r["run"])[1] + "; rerun once",
+                                                           "time": "not started: time budget",
+                                                           "device": "not started: no device",
+                                                           "no": "retries off"}.get(r["kind"], r["kind"]),
+                                                          ("; ran on lane " + r["lane"]) if r.get("lane") else "")
               for r in runs]
     lines += ["result=" + ("PASS" if ok else "FAIL")]
     with open(out_txt, "w", encoding="utf-8") as out:

@@ -6,10 +6,11 @@
 # Build 1 (Codemagic 6ab8adb4, on 907d7401) counts toward nothing. Build 2 (Codemagic
 # 6ab8c585873de42fcd4f1a8a, scope correction, on 808950f) passed C10-C15 on the smaller iPhone; on the
 # iPhone 17 Pro Max every run exited 65 before any test started (the test runner failed to initialize
-# for UI testing). Two builds were left: build 3 (gate_finish) runs C1-C9 and, as extras, S3-S6, S8,
-# P9-P13, S15 and S16; build 4 (sweep_finish) runs P1-P6, S9, S10, S12, S13, M1-M13, B1, B10-B13 and
-# B15. B2-B9 (the Guest List's regressions_b tests) and the optional B14 are pending: no recovery build
-# runs them.
+# for UI testing). Two builds were left: build 3 (gate_finish) ran C1-C9 and, as extras, S3-S6, S8,
+# P9-P13, S15 and S16; build 4 (sweep_finish) ran P2, P4, P5, M1, M3-M13, B1, B10-B13 and B15, but ran
+# out of time: P3, P6 and M2 were interrupted and P1, S9, S10, S12 and S13 never started. Build 5
+# (regression_finish, a further authorisation) runs those eight and B2-B9 (the Guest List's regressions_b
+# tests, which builds 2-4 never scheduled). The optional B14 is pending: no recovery build runs it.
 # scripts/places_recovery_reconcile.py checks this file against the manifest and reconciles row by row:
 # a target is covered by a PASSED execution (kind required or extra) of the same test on the same
 # device class, in the same run type, in any given build whose git_head is product-equivalent to
@@ -21,7 +22,7 @@
 #   requirement  required, or optional (repeat) for B14.
 #   class        main = the iPhone 17 Pro Max model and runtime (the selected simulator, or device B, its
 #                clone); small = the smaller iPhone (the iPhone 17e).
-#   build        2, 3 or 4; "-" when pending.
+#   build        2, 3, 4 or 5; "-" when pending.
 #   scope, run, row, kind   the executing row in the manifest (its kind: required or extra), or "pending"
 #                and "-" when no recovery build runs it.
 #   note         the stated identity exceptions: P1 runs with short holds, unrecorded (the places scope's
@@ -43,12 +44,12 @@ correction:C13	required	PlacesCorrectionTests/testFootersAtLargestTextStackAndSt
 correction:C14	required	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	small	2	correction	correction_small	C14	required	-
 correction:C15	required	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	small	2	correction	correction_small	C15	required	-
 correction:C11	required	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	small	2	correction	correction_small_b	C11	required	-
-places:P1	required	PlacesReviewTests/testWalkthroughRealJourney	main	4	sweep_finish	places_signal_main	P1	required	run type differs: P1 runs with short holds, unrecorded (the places scope's P1 was the recorded journey, full holds)
+places:P1	required	PlacesReviewTests/testWalkthroughRealJourney	main	5	regression_finish	rf_places	P1	required	run type differs: P1 runs with short holds, unrecorded (the places scope's P1 was the recorded journey, full holds); never started in build 4 (its run ended at its bound first)
 places:P2	required	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	main	4	sweep_finish	places_signal_main	P2	required	-
-places:P3	required	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	main	4	sweep_finish	places_signal_main	P3	required	-
+places:P3	required	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	main	5	regression_finish	rf_p3	P3	required	interrupted in build 4 (XCTest's 300-s allowance on a slow main simulator); run again in build 5
 places:P4	required	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	main	4	sweep_finish	places_signal_main	P4	required	-
 places:P5	required	PlacesReviewTests/testReduceMotionPreviewReplacesTheExpansion	main	4	sweep_finish	places_signal_main	P5	required	-
-places:P6	required	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	main	4	sweep_finish	places_signal_main	P6	required	-
+places:P6	required	PlacesReviewTests/testRelaunchStartsAtNowWithNothingKept	main	5	regression_finish	rf_places	P6	required	interrupted in build 4 (its run's 1020-s bound); run again in build 5
 places:P7	required	PlacesReviewTests/testSevenScreensOnThisPhone	main	3	gate_finish	correction_signal	C9	required	-
 places:P8	required	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	small	2	correction	correction_small	C15	required	-
 places:P9	required	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	small	3	gate_finish	places_small	P9	extra	-
@@ -64,16 +65,16 @@ signal:S5	required	SignalReviewTests/testAgeGateReturnJourneyBlocksForwardRoutes
 signal:S6	required	SignalReviewTests/testAllTwelveStates	main	3	gate_finish	signal_main_a	S6	extra	-
 signal:S7	required	SignalReviewTests/testEndpointDuplicateTapsAndBack	main	3	gate_finish	correction_signal	C6	required	-
 signal:S8	required	SignalReviewTests/testFirstChoicesChangesNoOpsAndReentry	main	3	gate_finish	signal_main_a	S8	extra	-
-signal:S9	required	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	main	4	sweep_finish	places_signal_main	S9	required	-
-signal:S10	required	SignalReviewTests/testMissingIntentKeepsSignalClosed	main	4	sweep_finish	places_signal_main	S10	required	-
+signal:S9	required	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	main	5	regression_finish	rf_signal	S9	required	never started in build 4 (its run ended at its bound first)
+signal:S10	required	SignalReviewTests/testMissingIntentKeepsSignalClosed	main	5	regression_finish	rf_signal	S10	required	never started in build 4 (its run ended at its bound first)
 signal:S11	required	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	main	3	gate_finish	correction_signal	C7	required	-
-signal:S12	required	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	main	4	sweep_finish	places_signal_main	S12	required	-
-signal:S13	required	SignalReviewTests/testRelaunchStartsWithoutAnApproach	main	4	sweep_finish	places_signal_main	S13	required	-
+signal:S12	required	SignalReviewTests/testReduceMotionPreviewAttachesAtOnce	main	5	regression_finish	rf_signal	S12	required	never started in build 4 (its run ended at its bound first)
+signal:S13	required	SignalReviewTests/testRelaunchStartsWithoutAnApproach	main	5	regression_finish	rf_signal	S13	required	never started in build 4 (its run ended at its bound first)
 signal:S14	required	SignalReviewTests/testWalkthroughRealJourney	main	3	gate_finish	correction_signal	C8	required	-
 signal:S15	required	GuestListReviewTests/testKeyboardDoneAndBackStayIndependent	small	3	gate_finish	signal_small	S15	extra	-
 signal:S16	required	SignalReviewTests/testLargestTextKeepsEveryChoiceReachable	small	3	gate_finish	signal_small	S16	extra	-
 regressions:M1	required	BirthdayReviewTests/testWalkthroughEntryCorrectionContinueBack	main	4	sweep_finish	birthday_wristband_main	M1	required	-
-regressions:M2	required	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	main	4	sweep_finish	birthday_wristband_main	M2	required	-
+regressions:M2	required	WristbandReviewTests/testWalkthroughRouteChoicesBackReentryEndpoint	main	5	regression_finish	rf_wristband	M2	required	interrupted in build 4 (its run's bound, cut short by the deadline); run again in build 5
 regressions:M3	required	BirthdayReviewTests/testTypedEntryPreservesComponentsAndKeyboard	main	4	sweep_finish	birthday_wristband_main	M3	required	-
 regressions:M4	required	PassReviewTests/testGateRapidTapsWaitingAndResumeNeverAdvanceOnTheirOwn	main	4	sweep_finish	pass_wristband_b	M4	required	on device b instead of main (device B is the clone of main: same model and runtime)
 regressions:M5	required	PassReviewTests/testLargestTextKeepsTheDemoLabelWholeAndControlsReachable	main	4	sweep_finish	pass_wristband_b	M5	required	on device b instead of main (device B is the clone of main: same model and runtime)
@@ -86,14 +87,14 @@ regressions:M11	required	WristbandReviewTests/testRapidChangesLeaveTheLastChoice
 regressions:M12	required	WristbandReviewTests/testReduceMotionPreviewChangesWithoutMovement	main	4	sweep_finish	pass_wristband_b	M12	required	on device b instead of main (device B is the clone of main: same model and runtime)
 regressions:M13	required	WristbandReviewTests/testRelaunchStartsUnselected	main	4	sweep_finish	pass_wristband_b	M13	required	on device b instead of main (device B is the clone of main: same model and runtime)
 regressions:B1	required	GuestListReviewTests/testOpenerLimitBoundariesAndPreservedPaste	main	4	sweep_finish	paste_b	B1	required	-
-regressions:B2	required	GuestListReviewTests/testBlankInternationalAndLongNames	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B3	required	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B4	required	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B5	required	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B6	required	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B7	required	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B8	required	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
-regressions:B9	required	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	main	-	pending	-	-	-	not scheduled: only two builds were left after build 2; the Guest List view and its tests are unchanged since b06707ec
+regressions:B2	required	GuestListReviewTests/testBlankInternationalAndLongNames	main	5	regression_finish	rf_guest_a	B2	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B3	required	GuestListReviewTests/testInterestsToggleIndependentlyAndOptionalContentIsOmitted	main	5	regression_finish	rf_guest_a	B3	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B4	required	GuestListReviewTests/testKeyboardFocusOrderReachabilityAndDismissal	main	5	regression_finish	rf_guest_b	B4	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B5	required	GuestListReviewTests/testLargestTextReflowsAndKeepsEverythingReachable	main	5	regression_finish	rf_guest_b	B5	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B6	required	GuestListReviewTests/testReduceMotionPreviewKeepsTheCardStationary	main	5	regression_finish	rf_guest_b	B6	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B7	required	GuestListReviewTests/testRelaunchResetsTheDraftAndNothingIsConferred	main	5	regression_finish	rf_guest_b	B7	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B8	required	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	main	5	regression_finish	rf_guest_c	B8	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
+regressions:B9	required	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	main	5	regression_finish	rf_guest_c	B9	required	not scheduled in builds 2-4; the Guest List view and its tests are unchanged since b06707ec
 regressions:B10	required	WelcomeReviewTests/testDefaultGeometry	main	4	sweep_finish	welcome_b	B10	required	-
 regressions:B11	required	WelcomeReviewTests/testHonestNotices	main	4	sweep_finish	welcome_b	B11	required	-
 regressions:B12	required	WelcomeReviewTests/testLargestTextSize	main	4	sweep_finish	welcome_b	B12	required	-

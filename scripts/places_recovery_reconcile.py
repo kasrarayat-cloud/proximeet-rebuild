@@ -8,8 +8,10 @@ The recovery after the Places correction ran out of builds before it could run e
 build per scope. Build 2 (Codemagic 6ab8c585873de42fcd4f1a8a, scope correction, on 808950f) passed
 C10-C15 on the smaller iPhone; on the iPhone 17 Pro Max every run exited 65 before any test started
 (the test runner failed to initialize for UI testing). Build 3 (scope gate_finish) runs C1-C9 and
-extras, build 4 (scope sweep_finish) the other scheduled rows; B2-B9 and the optional repeat B14 run
-in no recovery build. So the reconciliation is by row, not by build, and it gives two verdicts.
+extras, build 4 (scope sweep_finish) the other scheduled rows, but it ran out of time: P3, P6 and M2
+were interrupted and P1, S9, S10, S12 and S13 never started. Build 5 (scope regression_finish) runs
+those eight and B2-B9, which no earlier recovery build scheduled; the optional repeat B14 runs in none.
+So the reconciliation is by row, not by build, and it gives two verdicts.
 
 Each BUILD is one build's results, in any number and order: its downloaded review archive (for
 example Places-Correction-Review.zip, Places-Gate-Review.zip, Places-Finish-Review.zip), the folder
@@ -43,9 +45,15 @@ short holds. The stated identity exceptions, accepted and printed where they app
 holds, unrecorded (the places scope's P1 was the recorded journey); the M rows run on device B instead
 of main (the same model and runtime).
 
-An executed execution of a target's test on its device class that did not pass (failed, skipped,
-interrupted, executed twice) in a product-equivalent build is a failure, whatever its kind: retries
-are off, and an optional run that runs must pass. "not run" outcomes are neither.
+An executed execution of a target's test on its device class that failed, was skipped or was executed
+twice in one run, in a product-equivalent build, is a failure, whatever its kind: retries are off, and
+an optional run that runs must pass. An INTERRUPTED execution (started, no outcome: a time bound or
+XCTest's execution time allowance stopped it, as in build 4) proves nothing either way: it is
+UNVERIFIED, never passed, unless an assertion failure was recorded before the stop, which makes it a
+failure. A passed execution in another product-equivalent build covers the target; every target with
+more than one attempt, whatever its result, is listed under "Repeated executions (disclosed)", in the
+order the builds were given (the order is not checked against build times). Without a pass the target
+stays uncovered. "not run" outcomes are neither.
 
 Two verdicts, printed separately (build-level verdicts are informational only; build 2 failed on
 infrastructure, but its passed rows count):
@@ -84,11 +92,16 @@ EARLIER = ("places", "signal", "regressions")
 # Required targets per scope, so a row dropped from both the manifest and the coverage file cannot pass unseen.
 PLAN = {"correction": 15, "places": 13, "signal": 16, "regressions": 27}
 # The recovery's build numbers, by the scope that executes a row.
-BUILD = {"correction": "2", "gate_finish": "3", "sweep_finish": "4"}
+BUILD = {"correction": "2", "gate_finish": "3", "sweep_finish": "4", "regression_finish": "5"}
+# sweep_finish rows whose targets moved to regression_finish (build 5) after build 4 ran out of time: they
+# stay in the manifest as build 4's record, but no coverage target expects them any more.
+SUPERSEDED = {("sweep_finish", order): "interrupted (P3, P6, M2) or never started (P1, S9, S10, S12, S13) in build 4; "
+              "run again in regression_finish (build 5)" for order in ("P1", "P3", "P6", "S9", "S10", "S12", "S13", "M2")}
 RUN_TYPE_EXCEPTIONS = {"places:P1": "P1 runs with short holds, unrecorded (the places scope's P1 was the recorded "
                                     "journey with full holds; its assertions are the same)"}
-DEVICE_B_EXCEPTION = ("rows run on device B instead of the selected simulator (the M rows, in sweep_finish): device B "
-                      "is its clone, the same iPhone 17 Pro Max model and runtime")
+DEVICE_B_EXCEPTION = ("rows run on device B instead of the selected simulator (the M rows in sweep_finish; any main-class "
+                      "row that regression_finish's shared queue placed on device B): device B is its clone, the same "
+                      "iPhone 17 Pro Max model and runtime")
 WANTED = ("executions.tsv", "source-checkpoint.txt", "verdict.txt", "ui-review-tests.txt", "source.txt",
           "simulator.json", "smaller.txt")
 COVERAGE_COLUMNS = ("target", "requirement", "test", "class", "build", "scope", "run", "row", "kind", "note")
@@ -179,7 +192,8 @@ def product_check(head, assumed):
 
 
 def classify(outcome):
-    """passed | not run | identity (passed, but on the wrong or an unrecorded device) | failure."""
+    """passed | not run | identity (passed, but on the wrong or an unrecorded device) | unverified (interrupted:
+    started, no outcome) | failure."""
     if outcome == "passed":
         return "passed"
     if not outcome or outcome.startswith(("not run", "missing")):
@@ -189,6 +203,8 @@ def classify(outcome):
         return "failure"
     if outcome.startswith("passed "):
         return "identity"
+    if outcome.startswith("interrupted"):
+        return "unverified"
     return "failure"
 
 
@@ -278,8 +294,8 @@ def main(argv):
             continue
         executor = manifest.get((entry["scope"], entry["row"]))
         if entry["scope"] not in BUILD or executor is None:
-            problems.append("coverage %s names %s %s, which is not a row of the correction, gate_finish or sweep_finish "
-                            "scope" % (target, entry["scope"], entry["row"]))
+            problems.append("coverage %s names %s %s, which is not a row of the correction, gate_finish, sweep_finish or "
+                            "regression_finish scope" % (target, entry["scope"], entry["row"]))
             continue
         if entry["build"] != BUILD[entry["scope"]]:
             problems.append("coverage %s says build %s; %s is build %s" % (target, entry["build"], entry["scope"],
@@ -300,8 +316,11 @@ def main(argv):
         problems.append("manifest target %s is missing from the coverage file" % target)
     scheduled = {(e["scope"], e["row"]) for e in coverage.values() if e["scope"] != "pending"}
     for (scope, order), row in sorted(manifest.items()):
-        if scope in ("gate_finish", "sweep_finish") and (scope, order) not in scheduled:
-            problems.append("manifest row %s %s is not the expected executor of any coverage target" % (scope, order))
+        if scope in ("gate_finish", "sweep_finish", "regression_finish") and (scope, order) not in scheduled:
+            if (scope, order) in SUPERSEDED:
+                notes.append("manifest row %s %s is build 4's record only: %s" % (scope, order, SUPERSEDED[(scope, order)]))
+            else:
+                problems.append("manifest row %s %s is not the expected executor of any coverage target" % (scope, order))
 
     # 2. The builds.
     builds, seen = [], {}
@@ -365,7 +384,7 @@ def main(argv):
             cls = CLASS.get(device)
             record = {"build": build, "order": e.get("order", "?"), "device": device, "run": e.get("run", ""),
                       "kind": e.get("kind", ""), "outcome": e.get("outcome", ""), "seconds": e.get("seconds", ""),
-                      "test": dotted(e.get("test", "")), "class": cls}
+                      "test": dotted(e.get("test", "")), "class": cls, "failure": e.get("failure", "").strip()}
             if not build["counts"]:
                 if classify(record["outcome"]) != "not run":
                     ignored.append(record)
@@ -381,11 +400,13 @@ def main(argv):
             by_key.setdefault((record["test"], cls), []).append(record)
 
     def where(e):
-        return "[%d] %s %s (%s, %s%s)" % (e["build"]["index"], e["build"]["scope"], e["order"], e["kind"], e["run"],
-                                          (", %s s" % e["seconds"]) if e["seconds"] else "")
+        # [input position, Codemagic build ID when recorded] scope row (kind, run, seconds)
+        return "[%d%s] %s %s (%s, %s%s)" % (e["build"]["index"], (" " + e["build"]["build_id"][:8]) if e["build"]["build_id"]
+                                            else "", e["build"]["scope"], e["order"], e["kind"], e["run"],
+                                            (", %s s" % e["seconds"]) if e["seconds"] else "")
 
     # 4. Every target: the correction's C1-C15 in number order, then the earlier rows in manifest order.
-    table, status = [], {}
+    table, status, repeated = [], {}, []
     applied = {RUN_TYPE_EXCEPTIONS["places:P1"]: [], DEVICE_B_EXCEPTION: []}
     position = {"%s:%s" % key: index for index, key in enumerate(manifest)}
     ordered = sorted(targets, key=lambda t: (("correction",) + EARLIER).index(t.split(":")[0]) * 10000 + (
@@ -397,13 +418,21 @@ def main(argv):
         # A planned repeat (B14) is a second execution from a fresh app and runner: only an execution of
         # kind repeat stands for it, never the execution of the row it repeats.
         counting = ("repeat",) if row["kind"] == "repeat" else ("required", "extra")
-        passes, failures, others = [], [], []
+        passes, failures, others, unverified = [], [], [], []
+        attempts = [e for e in found if not e["kind"].startswith("not counted") and classify(e["outcome"]) != "not run"
+                    and e["kind"] != "diagnostic"]
         for e in found:
             kind = classify(e["outcome"])
+            if kind == "unverified" and e["failure"]:
+                # An assertion failure was recorded before the stop: failures win.
+                kind = "failure"
             if e["kind"].startswith("not counted"):
                 others.append("%s: %s" % (where(e), e["outcome"]))
             elif kind == "failure" and e["kind"] != "diagnostic":
                 failures.append(e)
+            elif kind == "unverified" and e["kind"] != "diagnostic":
+                unverified.append(e)
+                others.append("%s: %s (unverified: started, stopped before an outcome)" % (where(e), e["outcome"]))
             elif kind == "passed" and e["kind"] in counting:
                 if run_type(e["run"]) == run_type(row["run"]) or target in RUN_TYPE_EXCEPTIONS:
                     passes.append(e)
@@ -415,12 +444,18 @@ def main(argv):
                                                       "repeat)" if row["kind"] == "repeat" else "its kind does not count"))
             else:
                 others.append("%s: %s" % (where(e), e["outcome"]))
+        if len(attempts) > 1:
+            repeated.append("%s: %s" % (target, "; ".join(
+                "%s: %s" % (where(e), e["outcome"]) for e in sorted(attempts, key=lambda e: e["build"]["index"]))))
         if failures:
-            result = "FAILED: " + "; ".join("%s: %s" % (where(e), e["outcome"]) for e in failures)
+            result = "FAILED: " + "; ".join("%s: %s%s" % (where(e), e["outcome"], (" (%s)" % e["failure"][:200])
+                                                           if e["failure"] else "") for e in failures)
             state = "failed"
         elif passes:
             first = passes[0]
-            result = "PASSED: " + "; ".join(where(e) for e in passes)
+            result = "PASSED: " + "; ".join(where(e) for e in passes) + (
+                "; with interrupted attempt(s) in other builds: " + "; ".join(where(e) for e in unverified)
+                if unverified else "")
             state = "passed"
             if run_type(first["run"]) != run_type(row["run"]):
                 applied[RUN_TYPE_EXCEPTIONS[target]].append(target)
@@ -432,6 +467,9 @@ def main(argv):
         elif entry.get("scope") == "pending":
             result = "PENDING: not scheduled in any recovery build" + ("; seen: " + "; ".join(others) if others else "")
             state = "pending"
+        elif unverified:
+            result = "UNVERIFIED: " + "; ".join(others)
+            state = "missing"
         else:
             result = "NOT COVERED: " + ("; ".join(others) if others else "no execution in the builds given")
             state = "missing"
@@ -469,6 +507,7 @@ def main(argv):
 
     def why(t):
         return "%s (%s)" % (t, "pending, not scheduled" if status[t] == "pending" else "not covered")
+    # A target whose only executions were interrupted is uncovered, not failed: nothing was proven either way.
     if e_failed or problems:
         full = "FAIL (%d of %d earlier required executions covered%s%s%s)%s" % (
             covered, len(earlier), ("; failed: " + ", ".join(e_failed)) if e_failed else "",
@@ -507,6 +546,9 @@ def main(argv):
     if ignored:
         out += ["", "Executions not counted (their build is not product-equivalent to %s, or never counts):" % REFERENCE[:12]]
         out += ["  %s %s: %s" % (where(e), e["test"], e["outcome"]) for e in ignored]
+    out += ["", "Repeated executions (disclosed; retries are off, so each is a separate build's execution of the "
+            "same row, never a rerun inside one build):"]
+    out += ["  " + line for line in repeated] or ["  none"]
     if optional:
         out += ["", "Optional, part of no verdict: " + "; ".join("%s %s" % (t, status[t]) for t in optional)]
     if notes:
