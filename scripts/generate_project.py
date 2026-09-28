@@ -20,10 +20,9 @@ Format decisions
   matching what Xcode 15 writes for products of local packages.
 * Object IDs are the first 24 upper-case hex digits of SHA-1 over a namespaced,
   stable key (never random), so re-running produces byte-identical output.
-* No team, signing identity, entitlements, capabilities, usage descriptions,
-  script phases or copy phases. PRODUCT_BUNDLE_IDENTIFIER com.proximeet.demo is
-  provisional and must be registered under the owner's team before any
-  distribution.
+* Automatic signing uses the owner's Goseng LLC team and registered bundle ID.
+  No signing identity, provisioning profile, entitlements, capabilities, usage
+  descriptions, script phases or copy phases are stored in the project.
 * ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS (present in the
   Xcode 15 template) is deliberately omitted so generated asset symbols cannot
   collide with hand-written Color/Image extensions in the app.
@@ -70,7 +69,8 @@ COMPATIBILITY_VERSION = "Xcode 15.0"
 TOOLS_VERSION = "1500"  # LastUpgradeCheck / LastSwiftUpdateCheck / scheme LastUpgradeVersion
 CREATED_ON_TOOLS_VERSION = "15.0"
 
-BUNDLE_IDENTIFIER = "com.proximeet.demo"  # provisional; see module docstring
+BUNDLE_IDENTIFIER = "com.goseng.proximeet"  # registered to Goseng LLC
+DEVELOPMENT_TEAM = "2G437MAN6W"  # Goseng LLC; public team identifier
 
 FIXTURE_ARGUMENTS = (
     "-ProximeetFixture band",
@@ -169,6 +169,7 @@ _TARGET_SHARED = {
     "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
     "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
     "CODE_SIGN_STYLE": "Automatic",
+    "DEVELOPMENT_TEAM": DEVELOPMENT_TEAM,
     "CURRENT_PROJECT_VERSION": "1",
     "ENABLE_PREVIEWS": "YES",
     "GENERATE_INFOPLIST_FILE": "YES",
@@ -192,9 +193,10 @@ _TARGET_SHARED = {
 TARGET_SETTINGS = {"Debug": dict(_TARGET_SHARED), "Release": dict(_TARGET_SHARED)}
 UI_TEST_SETTINGS = {name: {
     "CODE_SIGN_STYLE": "Automatic",
+    "DEVELOPMENT_TEAM": DEVELOPMENT_TEAM,
     "GENERATE_INFOPLIST_FILE": "YES",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @loader_path/Frameworks",
-    "PRODUCT_BUNDLE_IDENTIFIER": "com.proximeet.demo.uitests",
+    "PRODUCT_BUNDLE_IDENTIFIER": f"{BUNDLE_IDENTIFIER}.uitests",
     "PRODUCT_NAME": "$(TARGET_NAME)",
     "SWIFT_STRICT_CONCURRENCY": "complete",
     "SWIFT_VERSION": "5.0",
