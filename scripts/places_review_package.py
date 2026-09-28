@@ -430,14 +430,16 @@ def main(argv):
                       "Places-Correction-Screens.zip." % BUILD2_ID)
     elif scope == "regression_finish":
         scope_note = ("This is recovery build 5 (regression_finish), after build 4 (sweep_finish) ran out of time on a main "
-                      "simulator that ran 2.7-7x slower per step. It runs the 16 earlier rows no recovery build had verified, "
+                      "simulator that ran about 2.7-7x slower per step. It runs the 16 earlier rows no recovery build had verified, "
                       "each under its earlier row ID: P3, P6 and M2 (interrupted in build 4, so these are disclosed repeated "
                       "executions), P1 (the real journey, short holds, unrecorded), S9, S10, S12 and S13 (never started in "
                       "build 4) and B2-B9 (the Guest List, never scheduled). Its runs are one queue shared by the two iPhone "
                       "17 Pro Max simulators (the selected one and device B, its clone: one device class); each result names "
                       "the lane it ran on (results/executions.tsv, results/runs.txt, results/metadata/places-queue-claims.txt). "
-                      "Every run's result bundle is in Places-Remaining-Results.zip. The other 40 earlier rows passed in "
-                      "builds 3 and 4; scripts/places_recovery_reconcile.py reconciles the builds row by row, counting only "
+                      "Every run's result bundle is zipped separately as Places-Remaining-Results.zip unless summary.txt's "
+                      "places-bundles line says NOT MADE; a first attempt that started no test has its bundle replaced by its "
+                      "infrastructure rerun's. The other 40 earlier rows passed in builds 2-4 (P8 as C15 in build 2); "
+                      "scripts/places_recovery_reconcile.py reconciles the builds row by row, counting only "
                       "builds whose product and test files equal %s's. Product and test files changed since %s: %s."
                       % (REFERENCE[:12], REFERENCE[:12], product_changes(root).replace("\n", "; ")))
     else:

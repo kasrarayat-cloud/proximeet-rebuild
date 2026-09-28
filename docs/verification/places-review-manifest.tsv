@@ -90,7 +90,7 @@
 #            PREFERENCE: the scope's runs form one shared queue for the two iPhone 17 Pro Max simulators
 #            (main and device B, its clone: one device class). Each lane takes its own next run, and
 #            when it has none left it takes the other lane's LAST unstarted run, so a lane that is slow
-#            (build 4's main simulator ran 2.7-7x slower per step for its whole run) cannot strand the
+#            (build 4's main simulator ran about 2.7-7x slower per step for its whole run) cannot strand the
 #            rest. Where a run actually ran is recorded in runs.txt and judged there. Neither lane starts
 #            until both devices report their boot finished; XCTest's execution time allowance is 600 s
 #            (maximum 660 s) for this scope, so a slow but progressing test is not cut off at 300 s.

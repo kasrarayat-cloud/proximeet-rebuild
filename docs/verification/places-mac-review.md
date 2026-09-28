@@ -332,7 +332,8 @@ start-up delay did not predict the lasting slowdown (1 of 3 builds).
 - **Bounds and cut-offs.** Every run's bound is at least 960 s. That is room for a slow runner
   start (build 4: 302 s), one test's full 600-s allowance and a start on its close; the close itself
   gets the separate 75-s grace. A run whose tests together take longer at a slow pace is stopped by
-  its bound and recorded as interrupted, never passed. The UI deadline caps every bound. A lane claims no new run with less than 180 s left. A lane whose
+  its bound: the test in flight is recorded as interrupted and any test it never reached as not
+  run, and neither ever counts as passed. The UI deadline caps every bound. A lane claims no new run with less than 180 s left. A lane whose
   run started no test at all, even after its infrastructure rerun, stops and leaves the rest to the
   other lane. A broken device therefore cannot take and fail the healthy lane's runs.
 - **Boot barrier record.** Each device's line says `boot_finished` only when `simctl bootstatus`
