@@ -2,8 +2,13 @@
 
 Date: 2026-09-29. Not production-ready.
 
-**Status: implementation committed; Mac verification in progress.** Nothing in this report has run on
-a Mac yet unless a build is cited. Every Mac result below names its Codemagic build and commit.
+**Status: implemented and Mac-tested in four builds. The Room's automated checks did NOT all pass.**
+R14, the largest-text check on the smaller iPhone, failed in builds 1–4:
+- in builds 1 and 2, partly from product behaviour since changed;
+- in builds 3 and 4, at six panel reveals attributed to the test helper, which is unverified.
+
+R7 was not rerun. Founder visual review is pending. Every Mac result below names its Codemagic build and
+commit; §9 gives the outcome row by row.
 
 ## 1. Founder approval on record
 
@@ -171,7 +176,7 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   - **Build 4:** R6 and R13 again on the final commit, plus the 12 main-phone regression rows. It
     takes the 35-minute workflow only if build 3 bills 44 rounded minutes or fewer; otherwise the
     30-minute one, dropping rows if they cannot fit.
-  - **As now planned, after build 3 billed 30 minutes:** build 4 takes the 45-minute workflow (at most min(45, 49)).
+  - **As run (build 4, §7), after build 3 billed 30 minutes:** build 4 takes the 45-minute workflow (at most min(45, 49)).
     It uses scope `room_all` with rows R6, R13, the 12 main-phone regression rows, and R14 last on the
     smaller iPhone, on the final commit. Product files are identical to `b5ee804`; only the test helper
     differs.
@@ -282,6 +287,36 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   the unedited walkthrough, the unsigned simulator app and the small artifacts bundle. All four
   published `.sha256` files match.
 
+### Build 4: `6abc3ebee1c7948817c7bb8b`, scope `room_all`, commit `c7716a1`
+
+Rows: R6, R13, the 12 main-phone Places regression rows, then R14 on the smaller iPhone.
+
+- **Timing:** the build ran from 22:42:13Z to 23:11:53Z, 29.7 minutes (30 rounded).
+- **Verdict: 14 of 15 passed**, first attempt, no retries. The app compiled and the Mac domain tests
+  passed. Every Places regression row passed on the iPhone 17 Pro Max:
+  - C1, C2, C3 and P2 (the age gate on the way back);
+  - P4, P1 (the real Places journey, now returning through the Room);
+  - C4, C5, C9, C6, C7 and C8 (the Signal boundary).
+
+  R6 (ineligible and stale entry refused) and R13 (terminal re-entry resets the demo) passed on the final
+  commit.
+- **R14 failed again**, at the same six panel reveals, with the same bar top of 592.3.
+  - **The rounding explanation was wrong:** a within-a-point comparison of scroll-view frames did not
+    change it.
+  - **Diagnosis, from builds 3 and 4, not verified on a Mac:** under a panel the dimmed page's elements
+    stay in XCUITest's tree, as build 3 showed, but without a scroll-view ancestor there. The helper
+    counts anything outside a scroll view in the lower half of the screen as a fixed bar in front of
+    the panel.
+  - **Next step, not done because no build is left:** in `RoomReviewTests.reveal`, ignore fixed bars
+    when the target is inside a panel (identifier `roomPanel.*`), since nothing can be drawn over a
+    panel. Then rerun R14 alone.
+  - **The product side is shown by the captures, as in build 3:** the three largest-text panels show
+    every action, Leave included, on screen after scrolling.
+- **Evidence:** `/home/proximeet/proximeet-room-review-6abc3ebe` holds Room-All-Review.zip (its hash
+  matches) with every capture, the verdict and the logs. Build 4's app zip was removed locally after a
+  file-by-file comparison with build 3's Proximeet.app (identical; see the folder's README). Both
+  remain on Codemagic.
+
 ## 8. Minutes and cost
 
 The September free minutes were already used up, so every minute is billed at USD 0.095
@@ -292,4 +327,71 @@ The September free minutes were already used up, so every minute is billed at US
 | 1 (`6abc1b80`) | 34 | USD 3.23 |
 | 2 (`6abc2ae1`) | 37 | USD 3.52 |
 | 3 (`6abc3654`) | 30 | USD 2.85 |
-| **Total so far** | **101 of 150** | **USD 9.60 of 15** |
+| 4 (`6abc3ebe`) | 30 | USD 2.85 |
+| **Total** | **131 of 150** | **USD 12.45 of 15** |
+
+All four authorised builds are used. The Codemagic build list shows exactly these four builds on
+2026-09-29, all on the Room branch; no other build, workflow or paid action was started.
+
+## 9. Outcome
+
+**Room automated checks: not all passed.** Row by row:
+
+| Row | Check | Last result | Build | Commit |
+| --- | --- | --- | --- | --- |
+| R1 | real journey from Common Ground's explanation through the Room and back (recorded) | PASS | 3 | `b5ee804` |
+| R2 | every state and overlay captured and checked at 440 pt | PASS | 3 | `b5ee804` |
+| R3 | back gestures (completed, cancelled, nested, from ended) | PASS | 3 | `b5ee804` |
+| R4 | Business compatibility | PASS | 3 | `b5ee804` |
+| R5 | both deliberate entry gates | PASS | 3 | `b5ee804` |
+| R6 | ineligible and stale entry refused | PASS | 4 | `c7716a1` |
+| R7 | largest text on the iPhone 17 Pro Max | FAIL (not rerun) | 1 | `51fe52a` |
+| R8 | Leave from every context | PASS | 3 | `b5ee804` |
+| R9 | notes filtering and both block orders | PASS, not on the final product (§6) | 2 | `82eef53` |
+| R10 | the app's Reduce Motion preview flag | PASS | 3 | `b5ee804` |
+| R11 | report preview local, restores its caller | PASS | 3 | `b5ee804` |
+| R12 | Social compatibility with both approaches | PASS | 3 | `b5ee804` |
+| R13 | terminal re-entry resets the demo | PASS | 4 | `c7716a1` |
+| R14 | largest text on the smaller iPhone | FAIL (builds 3–4 attributed to the test helper, unverified) | 1, 2, 3, 4 | `c7716a1` |
+
+- **Product files:** `b5ee804` and `c7716a1` have identical product files. `c7716a1` changes only the
+  test helper and docs.
+- **Places regression, affected rows:**
+  - **Main phone:** 12 of 12 passed on `c7716a1` (build 4).
+  - **Smaller iPhone:** 11 rows not run (C15, P9, P10, P11, P12, P13, C10, C12, C13, C14, C11), so
+    `room_regression` is not PASS.
+- **Historical status, unchanged:**
+  - the Places correction passed 15 of 15;
+  - all 56 regression rows have passing executions;
+  - B2's build-5 failure and the interruptions are retained;
+  - the strict regression gate stays **FAIL** (§2).
+- **Not claimed:** VoiceOver, the system Reduce Motion setting (R10 uses the app's own preview flag),
+  device, TestFlight or App Store behaviour. The global Safety panel at the largest text is untested.
+
+## 10. Deliverables
+
+The deliverables are in `/home/proximeet/proximeet-room-review-6abc3654`, from build 3; its README
+describes each file:
+- `Room-Review.zip`, the offline viewer;
+- `Room-Screens.zip`: all 15 states, 8 overlays and 4 report variants at 440 pt, the 14 real-journey
+  frames and the smaller-iPhone largest-text screens;
+- the unedited `Room-walkthrough-original.zip`;
+- `Room-walkthrough.mp4`, trimmed on the VPS: 75.5 s, from the explanation to Back to Signal;
+- the unsigned simulator app `Proximeet-Debug-iphonesimulator-b5ee804eb160.zip`, with `Proximeet.app`
+  at its root.
+
+**Codemagic:**
+- **Build page, authenticated:**
+  https://codemagic.io/app/6ab4d02869609bf0cdd94b08/build/6abc3654613b43be72355452
+- **Artifact name:** `Proximeet-Debug-iphonesimulator-b5ee804eb160.zip`
+
+**Appetize:** no existing authorised Appetize access was available, and none was searched for. The one
+upload action is the founder's:
+1. At appetize.io, upload that zip as a new iOS app.
+2. In its App Permissions, set run = authenticated.
+3. Open its link in a signed-out private window and confirm it will not run.
+
+These are the same private-preview safeguards as `places-recovery-01.md` §10 and
+`/home/proximeet/proximeet-preview/README-PREVIEW.md`. To reach the Room, walk Welcome → More options → Continue the demo (no account) → Birthday → Pass →
+Guest List → Wristband (Social or Business) → Signal → Places → View place (Common Ground, Now) →
+Preview check-in → Preview room demo.
