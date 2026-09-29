@@ -969,6 +969,15 @@ DISHONEST_PHRASES = (
     "locks only when you join", "visible only after venue check-in", "checked in", "you're live",
     "is nearby", "sign in with",
 )
+# Approved copy that contains a phrase above but makes no claim about the guest: each entry is the exact
+# literal, the phrase it may contain, and where it was approved. Nothing else is excused.
+APPROVED_COPY_EXCEPTIONS = {
+    # Room waiting (chapter 08, Figma 67:341): explains a future venue privacy threshold; nobody is
+    # checked in by the demo.
+    "Introductions appear only when a venue session has enough people checked in.": "checked in",
+}
+# Domain sources that hold visible copy, scanned for dishonest copy like the app's own sources.
+COPY_SOURCES = ("ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift",)
 # Built by concatenation so this file does not match its own repository scan.
 REPOSITORY_PATTERNS = (
     ("legacy bundle identifier", re.compile(re.escape("app.projecthalo" + ".lab"))),
@@ -1094,6 +1103,8 @@ def scan_swift(text: str) -> list[tuple[int, str]]:
         lowered = literal.lower().replace("’", "'")
         for phrase in DISHONEST_PHRASES:
             index = lowered.find(phrase)
+            if index >= 0 and APPROVED_COPY_EXCEPTIONS.get(literal.strip()) == phrase:
+                continue
             if index >= 0:
                 findings.append((start_line + literal.count("\n", 0, index),
                                  f"dishonest copy {phrase!r} in {literal.strip()[:60]!r}"))
@@ -1111,6 +1122,8 @@ SCANNER_FIXTURE = (
     'let c = Text("""\n    Age VERIFIED\n    """)\n'
     "let d = Text(\"You’re verified\")\n"
     "let shimmerAmplitude = 2.0\n"
+    'let e = Text("Introductions appear only when a venue session has enough people checked in.")\n'
+    'let f = Text("You are checked in.")\n'
 )
 SCANNER_EXPECTED = [
     (3, "forbidden API 'Timer.'"),
@@ -1118,6 +1131,7 @@ SCANNER_EXPECTED = [
     (7, "dishonest copy 'VERIFIED'"),
     (7, "dishonest copy 'age verified' in 'Age VERIFIED'"),
     (9,"dishonest copy \"you're verified\" in 'You’re verified'"),
+    (12, "dishonest copy 'checked in' in 'You are checked in.'"),
 ]
 
 
@@ -1127,10 +1141,11 @@ def check_guardrails(ctx: Context, c: Check) -> None:
     c.require(self_test == SCANNER_EXPECTED,
               f"scanner self-test mismatch: got {self_test}, expected {SCANNER_EXPECTED}")
     swift_files = sorted(APP_DIR.rglob("*.swift")) if APP_DIR.is_dir() else []
+    swift_files += [ROOT / name for name in COPY_SOURCES if (ROOT / name).is_file()]
     for path in swift_files:
         for number, finding in scan_swift(path.read_text(encoding="utf-8")):
             c.fail(f"{rel(path)}:{number}: {finding}")
-    c.note(f"scanner self-test passed; scanned {len(swift_files)} Swift file(s) under Proximeet/"
+    c.note(f"scanner self-test passed; scanned {len(swift_files)} Swift file(s) under Proximeet/ and the domain copy sources"
            if self_test == SCANNER_EXPECTED else f"scanned {len(swift_files)} Swift file(s)")
     scanned = 0
     for directory, subdirectories, files in os.walk(ROOT):

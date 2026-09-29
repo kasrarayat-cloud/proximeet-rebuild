@@ -846,3 +846,314 @@ workflows:
       - build/artifacts/places/*.json
       - build/preview/Proximeet.app
       - build/preview/PREVIEW.txt
+
+  # The Room (chapter 08) review: the Places harness with the room scopes, started by hand with
+  # PLACES_EXPECTED_COMMIT (full 40-hex SHA; required) and PLACES_REVIEW_SCOPE (required): room (the Room
+  # candidate, 14 rows), room_regression (the 23 Places rows the Room touches), room_regression_main (its
+  # 12 iPhone 17 Pro Max rows), room_regression_small (its 11 smaller-iPhone rows) or room_all (room and
+  # room_regression; it does not fit this workflow at the estimated durations: see
+  # docs/verification/room-mac-review.md). Optional: PLACES_ROW_FILTER, comma-separated row IDs of the
+  # scope (for example R3,R9,R14); the source gate validates and records it, and only those rows run and
+  # are judged. At most 45 minutes. Its own UI deadline, PLACES_UI_DEADLINE_SECONDS=2340 (a plain,
+  # non-secret value): at the worst 72 (the gate's start) + 2340 + 75 (an interrupted run's grace) + 100
+  # (its export) + 45 (publishing) + about 20 (the Room zips, which store images and the movie
+  # uncompressed) = 2652 s of its 2700. One simulator at a time: destinations boots only the iPhone 17 Pro
+  # Max, and the smaller iPhone (iPhone 17e first) boots after its runs, once it is shut down; a build with
+  # no selected row on the iPhone 17 Pro Max (room_regression_small, or a filter) never boots it and boots
+  # the smaller iPhone in destinations instead, alone. The room scope records the Room journey
+  # from launch and delivers it unedited: no compact video on the Mac (the VPS trims it from the
+  # ROOM_WALKTHROUGH_START marker in build/artifacts/places/room-walkthrough-started.txt), and no runnable
+  # preview copy (the named unsigned simulator app zip in build/artifacts/app is the build's app). Manual
+  # start only: no triggering section, no code signing, Apple credentials, provisioning, archive/IPA,
+  # TestFlight, publishing, notifications or environment groups. No automatic test retries.
+  # Compile-path steps stop the build on failure; evidence steps use ignore_failure so later evidence is
+  # still collected; the last step fails the build unless the automated verdict is PASS.
+  proximeet-room-review-45:
+    name: Proximeet Room review, 45-minute limit (manual, unsigned simulator, one simulator at a time)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "2340"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Room revision and scope, its approved assets and Room handoff copy, the Signal, Places, Room and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target and start its first boot (the smaller iPhone boots after its runs, or at once when no selected row is on the iPhone 17 Pro Max; one simulator at a time)
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Room, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's room scope by the manifest and the optional row filter (the Room journey recorded first; the smaller iPhone after the iPhone 17 Pro Max), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip (and the Room's screens and unedited walkthrough zips)
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Room-Review.zip
+      - build/artifacts/Room-Review.zip.sha256
+      - build/artifacts/Room-Screens.zip
+      - build/artifacts/Room-Screens.zip.sha256
+      - build/artifacts/Room-walkthrough-original.zip
+      - build/artifacts/Room-walkthrough-original.zip.sha256
+      - build/artifacts/Room-Regression-Review.zip
+      - build/artifacts/Room-Regression-Review.zip.sha256
+      - build/artifacts/Room-Regression-Main-Review.zip
+      - build/artifacts/Room-Regression-Main-Review.zip.sha256
+      - build/artifacts/Room-Regression-Small-Review.zip
+      - build/artifacts/Room-Regression-Small-Review.zip.sha256
+      - build/artifacts/Room-All-Review.zip
+      - build/artifacts/Room-All-Review.zip.sha256
+      - build/artifacts/Room-All-Screens.zip
+      - build/artifacts/Room-All-Screens.zip.sha256
+      - build/artifacts/Room-All-walkthrough-original.zip
+      - build/artifacts/Room-All-walkthrough-original.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+
+  # proximeet-room-review-45's 35-minute twin, identical but for its name, its limit and its UI deadline, for a
+  # Room build that needs less time (room_regression_main or room_regression_small, or a row filter) or when
+  # less of the aggregate allowance is left. PLACES_UI_DEADLINE_SECONDS=1740: at the worst 72 (the gate's
+  # start) + 1740 + 75 (an interrupted run's grace) + 100 (its export) + 45 (publishing) + about 20 (the Room
+  # zips) = 2052 s of its 2100, the 45's 48-s margin. Every other rule of the 45 holds (manual start, no signing,
+  # one simulator at a time, no retries, the verdict enforced last).
+  proximeet-room-review-35:
+    name: Proximeet Room review, 35-minute limit (manual, unsigned simulator, one simulator at a time)
+    instance_type: mac_mini_m2
+    max_build_duration: 35
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "1740"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Room revision and scope, its approved assets and Room handoff copy, the Signal, Places, Room and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target and start its first boot (the smaller iPhone boots after its runs, or at once when no selected row is on the iPhone 17 Pro Max; one simulator at a time)
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Room, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's room scope by the manifest and the optional row filter (the Room journey recorded first; the smaller iPhone after the iPhone 17 Pro Max), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip (and the Room's screens and unedited walkthrough zips)
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Room-Review.zip
+      - build/artifacts/Room-Review.zip.sha256
+      - build/artifacts/Room-Screens.zip
+      - build/artifacts/Room-Screens.zip.sha256
+      - build/artifacts/Room-walkthrough-original.zip
+      - build/artifacts/Room-walkthrough-original.zip.sha256
+      - build/artifacts/Room-Regression-Review.zip
+      - build/artifacts/Room-Regression-Review.zip.sha256
+      - build/artifacts/Room-Regression-Main-Review.zip
+      - build/artifacts/Room-Regression-Main-Review.zip.sha256
+      - build/artifacts/Room-Regression-Small-Review.zip
+      - build/artifacts/Room-Regression-Small-Review.zip.sha256
+      - build/artifacts/Room-All-Review.zip
+      - build/artifacts/Room-All-Review.zip.sha256
+      - build/artifacts/Room-All-Screens.zip
+      - build/artifacts/Room-All-Screens.zip.sha256
+      - build/artifacts/Room-All-walkthrough-original.zip
+      - build/artifacts/Room-All-walkthrough-original.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+
+  # proximeet-room-review-45's 30-minute twin, identical but for its name, its limit and its UI deadline, for a
+  # Room build that needs less time (room_regression_main or room_regression_small, or a row filter) or when
+  # less of the aggregate allowance is left. PLACES_UI_DEADLINE_SECONDS=1440: at the worst 72 (the gate's
+  # start) + 1440 + 75 (an interrupted run's grace) + 100 (its export) + 45 (publishing) + about 20 (the Room
+  # zips) = 1752 s of its 1800, the 45's 48-s margin. Every other rule of the 45 holds (manual start, no signing,
+  # one simulator at a time, no retries, the verdict enforced last).
+  proximeet-room-review-30:
+    name: Proximeet Room review, 30-minute limit (manual, unsigned simulator, one simulator at a time)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "1440"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Room revision and scope, its approved assets and Room handoff copy, the Signal, Places, Room and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target and start its first boot (the smaller iPhone boots after its runs, or at once when no selected row is on the iPhone 17 Pro Max; one simulator at a time)
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Room, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's room scope by the manifest and the optional row filter (the Room journey recorded first; the smaller iPhone after the iPhone 17 Pro Max), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip (and the Room's screens and unedited walkthrough zips)
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Room-Review.zip
+      - build/artifacts/Room-Review.zip.sha256
+      - build/artifacts/Room-Screens.zip
+      - build/artifacts/Room-Screens.zip.sha256
+      - build/artifacts/Room-walkthrough-original.zip
+      - build/artifacts/Room-walkthrough-original.zip.sha256
+      - build/artifacts/Room-Regression-Review.zip
+      - build/artifacts/Room-Regression-Review.zip.sha256
+      - build/artifacts/Room-Regression-Main-Review.zip
+      - build/artifacts/Room-Regression-Main-Review.zip.sha256
+      - build/artifacts/Room-Regression-Small-Review.zip
+      - build/artifacts/Room-Regression-Small-Review.zip.sha256
+      - build/artifacts/Room-All-Review.zip
+      - build/artifacts/Room-All-Review.zip.sha256
+      - build/artifacts/Room-All-Screens.zip
+      - build/artifacts/Room-All-Screens.zip.sha256
+      - build/artifacts/Room-All-walkthrough-original.zip
+      - build/artifacts/Room-All-walkthrough-original.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json
+
+  # proximeet-room-review-45's 25-minute twin, identical but for its name, its limit and its UI deadline, for a
+  # Room build that needs less time (room_regression_main or room_regression_small, or a row filter) or when
+  # less of the aggregate allowance is left. PLACES_UI_DEADLINE_SECONDS=1140: at the worst 72 (the gate's
+  # start) + 1140 + 75 (an interrupted run's grace) + 100 (its export) + 45 (publishing) + about 20 (the Room
+  # zips) = 1452 s of its 1500, the 45's 48-s margin. Every other rule of the 45 holds (manual start, no signing,
+  # one simulator at a time, no retries, the verdict enforced last).
+  proximeet-room-review-25:
+    name: Proximeet Room review, 25-minute limit (manual, unsigned simulator, one simulator at a time)
+    instance_type: mac_mini_m2
+    max_build_duration: 25
+    environment:
+      xcode: "26.6"
+      vars:
+        PLACES_UI_DEADLINE_SECONDS: "1140"
+    scripts:
+      - name: Record source revision, host and tool versions (fails unless Xcode 26.6)
+        script: bash scripts/codemagic_verify.sh metadata
+      - name: Source gate - exactly the reviewed Room revision and scope, its approved assets and Room handoff copy, the Signal, Places, Room and intent colour guards
+        script: bash scripts/places_review.sh checkpoint
+      - name: Validate the checked-in Xcode project (no regeneration)
+        script: bash scripts/codemagic_verify.sh validate
+      - name: Select an installed iPhone simulator (iPhone 17 Pro Max preferred; no downloads)
+        script: bash scripts/codemagic_verify.sh select-simulator
+      - name: Destinations - report the iPhone 17 Pro Max target and start its first boot (the smaller iPhone boots after its runs, or at once when no selected row is on the iPhone 17 Pro Max; one simulator at a time)
+        script: bash scripts/places_review.sh destinations
+        ignore_failure: true
+      - name: App compilation - Proximeet Debug for the simulator, code signing disabled
+        script: bash scripts/codemagic_verify.sh build
+      - name: Zip the unsigned simulator app (simulator only; not installable on a device)
+        script: bash scripts/codemagic_verify.sh package
+        ignore_failure: true
+      - name: ProximeetDomain tests on the Mac host (swift test, Room, Places, Signal, age-gate return, Wristband, Guest List, Pass and Birthday rules)
+        script: bash scripts/codemagic_verify.sh domain-tests
+        ignore_failure: true
+      - name: XCTest review for the run's room scope by the manifest and the optional row filter (the Room journey recorded first; the smaller iPhone after the iPhone 17 Pro Max), no retries
+        script: bash scripts/places_review.sh ui-review
+        ignore_failure: true
+      - name: Verdict - automated results apart from outstanding manual review
+        script: bash scripts/places_review.sh verdict
+        ignore_failure: true
+      - name: Package the scope's review zip (and the Room's screens and unedited walkthrough zips)
+        script: bash scripts/places_review.sh package-review
+        ignore_failure: true
+      - name: Enforce the automated verdict (fails the build unless PASS)
+        script: bash scripts/places_review.sh enforce
+    artifacts:
+      - build/artifacts/Room-Review.zip
+      - build/artifacts/Room-Review.zip.sha256
+      - build/artifacts/Room-Screens.zip
+      - build/artifacts/Room-Screens.zip.sha256
+      - build/artifacts/Room-walkthrough-original.zip
+      - build/artifacts/Room-walkthrough-original.zip.sha256
+      - build/artifacts/Room-Regression-Review.zip
+      - build/artifacts/Room-Regression-Review.zip.sha256
+      - build/artifacts/Room-Regression-Main-Review.zip
+      - build/artifacts/Room-Regression-Main-Review.zip.sha256
+      - build/artifacts/Room-Regression-Small-Review.zip
+      - build/artifacts/Room-Regression-Small-Review.zip.sha256
+      - build/artifacts/Room-All-Review.zip
+      - build/artifacts/Room-All-Review.zip.sha256
+      - build/artifacts/Room-All-Screens.zip
+      - build/artifacts/Room-All-Screens.zip.sha256
+      - build/artifacts/Room-All-walkthrough-original.zip
+      - build/artifacts/Room-All-walkthrough-original.zip.sha256
+      - build/artifacts/summary.txt
+      - build/artifacts/logs/*.log
+      - build/artifacts/metadata/*
+      - build/artifacts/app/*
+      - build/artifacts/places/*.sha256
+      - build/artifacts/places/*.log
+      - build/artifacts/places/*.txt
+      - build/artifacts/places/*.tsv
+      - build/artifacts/places/*.json

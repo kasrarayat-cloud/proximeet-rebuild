@@ -29,8 +29,27 @@ rows, each on the lane it actually ran on (its screens are inside; its result bu
 separately by scripts/places_review.sh as Places-Remaining-Results.zip). An unknown scope (the retired
 sweep_places and sweep_signal included) makes nothing (exit 2), so no archive can carry another
 scope's name. Every archive gets a .sha256 beside it.
-Every relative link in an index must name a file in its archive; a broken link fails the stage.
-Standard library only; Python 3.8+.
+
+The Room (chapter 08): the room scope makes Room-Review.zip (an offline index.html: the approved Room
+board and the Common Ground delivery, the recorded journey's facts, every Room capture grouped by state
+beside the board's frame for it, each named as a real journey or a direct-launch fixture, the scope's
+manifest rows, every execution's outcome, the tests' notes, the verdict, the logs, the approved Room
+handoff documents and a SHA256SUMS.txt of every file inside), Room-Screens.zip (every capture, each file
+name saying REAL-JOURNEY or FIXTURE) and Room-walkthrough-original.zip (the unedited recording; no
+compact video is made on the Mac, the VPS trims it from ROOM_WALKTHROUGH_START). room_all makes the same
+under Room-All, with the Places rows' captures and executions beside the Room's. room_regression, the
+Places rows the Room touches, makes Room-Regression-Review.zip, a generic page with every execution by
+row and the earlier row it reruns; its halves make the same page as Room-Regression-Main-Review.zip
+(room_regression_main, the iPhone 17 Pro Max rows) and Room-Regression-Small-Review.zip
+(room_regression_small, the smaller iPhone's). The recording is not packed in the review zip (it is the
+walkthrough zip's), and images and the movie are stored uncompressed, which keeps the zips inside the
+build's time. Every relative link in an index must name a file in its archive; a broken link fails the
+stage.
+
+A build run with a row filter (PLACES_ROW_FILTER, validated and recorded by the source gate as
+row_filter= in source-checkpoint.txt) says so at the top of every page, in every README, and in a
+README.txt inside the review zip: which rows were selected and that the scope's other rows were not part
+of the build. Without a filter nothing changes. Standard library only; Python 3.8+.
 """
 import hashlib
 import html
@@ -97,7 +116,15 @@ PACKAGES = {
     "sweep_finish": ("Places-Finish-Review", "Places-Finish"),
     "regression_finish": ("Places-Remaining-Review", None),
     "regression_repair": ("Places-Repair-Review", None),
+    "room": ("Room-Review", "Room"),
+    "room_regression": ("Room-Regression-Review", None),
+    "room_regression_main": ("Room-Regression-Main-Review", None),
+    "room_regression_small": ("Room-Regression-Small-Review", None),
+    "room_all": ("Room-All-Review", "Room-All"),
 }
+# The scopes whose page is the Room's (package_room); room_regression's and its halves' is the generic page.
+ROOM_PAGES = ("room", "room_all")
+ROOM_REGRESSION = ("room_regression", "room_regression_main", "room_regression_small")
 # The recovery after the Places correction, and the role and number each build's pages name. Build 1
 # (the first correction build, 6ab8adb4 on 907d7401) counts toward none of it. Build 2 (6ab8c585, scope
 # correction, on 808950f) passed C10-C15 on the smaller iPhone; on the iPhone 17 Pro Max its test runner
@@ -233,6 +260,27 @@ def coverage_lines(root):
     return lines
 
 
+def row_filter_note(root, out, scope):
+    """The build's row filter as the source gate recorded it: (the filter, a plain-text statement naming the
+    selected rows and the rows left out, the same as an HTML paragraph). ("", "", "") without a filter."""
+    value = kv(os.path.join(out, "source-checkpoint.txt")).get("row_filter", "none")
+    if value in ("", "none"):
+        value = kv(os.path.join(out, "ui-review-tests.txt")).get("row_filter", "none")
+    if value in ("", "none"):
+        return "", "", ""
+    wanted = value.split(",")
+    orders = [line.split("\t")[1] for line in read(os.path.join(root, "docs/verification/places-review-manifest.tsv"))
+              .splitlines() if line.strip() and not line.startswith("#") and line.split("\t")[0] == scope]
+    left_out = [o for o in orders if o not in wanted]
+    text = ("ROW FILTER: PLACES_ROW_FILTER=%s (validated and recorded by the source gate). This build ran and judged "
+            "only rows %s of scope %s (%d of its %d rows); the verdict's PASS or FAIL is about those rows alone. The "
+            "other %d rows (%s) were NOT PART OF THIS BUILD: not run, not judged and not reported as passed."
+            % (value, ", ".join(wanted), scope, len(wanted), len(orders), len(left_out), ", ".join(left_out) or "none"))
+    # Styled inline, so a page without a filter is exactly what it was.
+    return value, text, ('<p class="filter" style="color:#ffd479;max-width:1100px;border:1px solid #806000;'
+                         'padding:8px 12px;border-radius:8px"><b>%s</b></p>' % html.escape(text))
+
+
 def main(argv):
     if len(argv) != 5:
         sys.stderr.write(__doc__)
@@ -257,20 +305,30 @@ def main(argv):
             missing.append(name)
         return None
 
-    board = add("approved/places-review.png", os.path.join(ref, "places-review.png"),
-                required=places or scope in ("correction", "gate_finish"))
-    deliveries = {key: add("approved/%s-delivery.png" % key, os.path.join(ref, "%s-delivery.png" % key), required=places)
-                  for key, _, _ in VENUES}
-    # Only the original places scope re-encodes its recording on the Mac; the sweep records nothing.
-    compact = add("captures/places-walkthrough-compact.mp4", os.path.join(out, "places-walkthrough-compact.mp4"),
-                  required=scope == "places")
-    # The sweep records nothing: its P1 runs with short holds (docs/verification/places-review-manifest.tsv).
-    original = add("captures/places-walkthrough-original.mp4", os.path.join(out, "places-walkthrough-original.mp4"),
-                   required=scope in ("places", "correction"))
+    if scope in ROOM_PAGES:
+        # The Room's page packs the Room board (package_room), and its recording goes only into the
+        # walkthrough zip.
+        board, deliveries, compact, original = None, {}, None, None
+    else:
+        board = add("approved/places-review.png", os.path.join(ref, "places-review.png"),
+                    required=places or scope in ("correction", "gate_finish"))
+        deliveries = {key: add("approved/%s-delivery.png" % key, os.path.join(ref, "%s-delivery.png" % key),
+                               required=places)
+                      for key, _, _ in VENUES}
+        # Only the original places scope re-encodes its recording on the Mac; the sweep records nothing.
+        compact = add("captures/places-walkthrough-compact.mp4", os.path.join(out, "places-walkthrough-compact.mp4"),
+                      required=scope == "places")
+        # The sweep records nothing: its P1 runs with short holds (docs/verification/places-review-manifest.tsv).
+        original = add("captures/places-walkthrough-original.mp4", os.path.join(out, "places-walkthrough-original.mp4"),
+                       required=scope in ("places", "correction"))
+    # The Room's recording facts: when simctl confirmed it, the journey's marker and its duration.
+    room_results = ("recording-started.txt", "room-walkthrough-started.txt",
+                    "walkthrough-duration.txt") if scope in ROOM_PAGES else ()
     for key in sorted(os.listdir(out)) if os.path.isdir(out) else []:
         if key.endswith(("-summary.json", "-tests.json", ".sha256")) or key in (
                 "verdict.txt", "ui-review-tests.txt", "ui-review-counts.txt", "runs.txt", "destination.txt",
-                "source-checkpoint.txt", "compact-video.txt", "smaller.txt", "executions.tsv", "manifest-rows.tsv"):
+                "source-checkpoint.txt", "compact-video.txt", "smaller.txt", "executions.tsv",
+                "manifest-rows.tsv") + room_results:
             add("results/" + key, os.path.join(out, key), required=key == "verdict.txt")
     add("results/summary.txt", os.path.join(artifacts, "summary.txt"))
     add("results/places-review-manifest.tsv", os.path.join(root, "docs/verification/places-review-manifest.tsv"))
@@ -322,11 +380,15 @@ def main(argv):
     if scope in ("correction", "gate_finish"):
         return package_correction(root, out, artifacts, title, archive_prefix, scope, entries, missing, shots,
                                   shot_tests, notes, board, original, add)
+    if scope in ROOM_PAGES:
+        return package_room(root, out, artifacts, title, archive_prefix, scope, entries, missing, shots, stamps,
+                            shot_tests, notes, add)
 
     verdict = read(os.path.join(out, "verdict.txt")) or "No verdict was produced in this run."
     headline = next((l for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), "AUTOMATED VERDICT: not produced")
     checkpoint = kv(os.path.join(out, "source-checkpoint.txt"))
     head = checkpoint.get("git_head", "unknown")
+    row_filter, filter_text, filter_html = row_filter_note(root, out, scope)
     compact_info = kv(os.path.join(out, "compact-video.txt"))
     compact_note = compact_info.get("result", "not produced")
     smaller_device = kv(os.path.join(out, "smaller.txt")).get("device", "not run")
@@ -455,6 +517,33 @@ def main(argv):
                       "win). The result bundle is zipped separately as Places-Repair-Results.zip unless summary.txt's "
                       "places-bundles line says NOT MADE. Product and test files changed since %s: %s."
                       % (REFERENCE[:12], product_changes(root).replace("\n", "; ")))
+    elif scope in ("room_regression_main", "room_regression_small"):
+        main_half = scope == "room_regression_main"
+        scope_note = ("Half of room_regression, the Places rows the Room (chapter 08) touches, run again on the Room commit: "
+                      "%s. Each keeps its earlier row ID, test method, device, run and bound, with short holds, nothing "
+                      "recorded, and is listed below with the row it reruns. The explanation's primary action is now "
+                      "Preview room demo, which opens the Room's entry; the tests that used to leave the explanation by "
+                      "it now return to Places through the Room (Enter, Leave, Return to Places). %s None of these "
+                      "executions counts toward the Places recovery, which is frozen at %s; the Room's own review is "
+                      "Room-Review.zip, a build of its own."
+                      % ("the 12 iPhone 17 Pro Max rows, C1, C2, C3, P2, P4 and P1, then C4, C5, C9, C6, C7 and C8" if main_half
+                         else "the 11 smaller-iPhone rows, C15, P9, P10, P11, P12 and P13, then C10, C12, C13 and C14, then "
+                              "C11 alone",
+                         "The other half, room_regression_small (the 11 smaller-iPhone rows), is a build of its own; the "
+                         "smaller iPhone is not used here." if main_half else
+                         "The other half, room_regression_main (the 12 iPhone 17 Pro Max rows), is a build of its own; the "
+                         "iPhone 17 Pro Max is not booted here, and only the smaller iPhone runs.",
+                         REFERENCE[:12]))
+    elif scope == "room_regression":
+        scope_note = ("The Places rows the Room (chapter 08) touches, run again on the Room commit: entry and return (P1, "
+                      "C15, C1, C12, C11, C10), category (P9, P4, C9, P13), eligibility (P10, P12), the age gate (P2), the "
+                      "footers (C3, C14, C2, C13, P11) and the Signal boundary (C4-C8). Each keeps its earlier row ID, "
+                      "test method and device, with short holds, nothing recorded, and is listed below with the row it "
+                      "reruns. The explanation's primary action is now Preview room demo, which opens the Room's entry; "
+                      "the tests that used to leave the explanation by it now return to Places through the Room (Enter, "
+                      "Leave, Return to Places). The iPhone 17 Pro Max and the smaller iPhone run one at a time, the "
+                      "smaller iPhone after. None of these executions counts toward the Places recovery, which is frozen "
+                      "at %s; the Room's own review is Room-Review.zip, a build of its own." % REFERENCE[:12])
     else:
         others = [s for s in ("places", "signal", "regressions") if s != scope]
         scope_note = ("The other scopes (%s) run as their own builds, each on a pinned commit named in its own verdict; "
@@ -566,12 +655,19 @@ def main(argv):
     # row each counts as (docs/verification/places-recovery-coverage.tsv; the sweep, planned before
     # build 2, is not in it: its P and S rows count as the places and signal rows of the same ID).
     execution_section = ""
-    if sweep or finish:
+    if sweep or finish or scope in ROOM_REGRESSION:
         counts_as = {}
         for entry in coverage_lines(root):
             if entry["scope"] == scope:
                 counts_as.setdefault(entry["row"], []).append(entry["target"])
         counts_as = {order: ", ".join(names) for order, names in counts_as.items()}
+        if scope in ROOM_REGRESSION:
+            # Each row reruns the earlier row of its ID: P rows the places scope's, C rows the correction's.
+            counts_as = {}
+            for cells in (line.split("\t") for line in read(os.path.join(out, "manifest-rows.tsv")).splitlines()):
+                if len(cells) > 1:
+                    counts_as[cells[1]] = ("reruns places:" if cells[1].startswith("P") else "reruns correction:") \
+                        + cells[1]
         if sweep:
             counts_as = {}
             for key in (r[1] for r in (line.split("\t") for line in read(os.path.join(out, "manifest-rows.tsv")).splitlines())
@@ -589,7 +685,7 @@ def main(argv):
                 e.get("failure", "")))
             for e in executed) or '<tr><td colspan="10">executions.tsv was not produced in this run.</td></tr>'
         tally = ", ".join("%d %s rows" % (n, letter) for letter, n in (
-            (letter, sum(1 for e in executed if e.get("order", "").startswith(letter))) for letter in "PSMB") if n)
+            (letter, sum(1 for e in executed if e.get("order", "").startswith(letter))) for letter in "PSMBC") if n)
         execution_section = (
             "<h2>Every execution in this build, by row (%s; retries off)</h2>"
             "<table><tr><th>Row</th><th>Counts as</th><th>Device</th><th>UDID</th><th>Run</th><th>Test</th><th>Kind</th>"
@@ -617,7 +713,7 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 .note{color:#ccc;max-width:780px}</style></head><body>
 <h1>Proximeet Places: iOS Simulator review, scope “%s”</h1>
 <p><b>%s</b></p>
-<table><tr><th>Scope</th><th>Build</th><th>Source commit</th><th>Result</th></tr>%s</table>
+%s<table><tr><th>Scope</th><th>Build</th><th>Source commit</th><th>Result</th></tr>%s</table>
 <p class="note">%s Real captures from %s (%s, %s; the smaller iPhone, %s, where a caption names another width).
 The approved design they are compared with is unchanged. Captures named “journey” come from the real route, driven by
 real taps and typing. Captures marked FIXTURE open a prepared state directly (a direct launch through the same gates).
@@ -638,7 +734,7 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
 <p>Details: %s</p>
 <p class="missing">%s</p>
 </body></html>""" % (
-        html.escape(scope), html.escape(scope), html.escape(headline), scope_rows, html.escape(scope_note),
+        html.escape(scope), html.escape(scope), html.escape(headline), filter_html, scope_rows, html.escape(scope_note),
         html.escape(build_label), html.escape(simulator.get("device_name", "an unrecorded simulator")),
         html.escape(simulator.get("runtime_name", "an unrecorded runtime")), html.escape(smaller_device), body,
         deviation_rows, manifest_rows, test_rows, execution_section, html.escape("\n\n".join(notes) or "none"),
@@ -658,10 +754,15 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
     os.makedirs(artifacts, exist_ok=True)
     with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as bundle:
         bundle.writestr(title + "/index.html", page)
+        if filter_text:
+            # Only a filtered build's review zip has a README: the rows it ran, and the rows it did not.
+            bundle.writestr(title + "/README.txt", "%s\n%s\nScope %s, source %s, %s. The page is index.html; the "
+                            "verdict is results/verdict.txt.\n" % (filter_text, headline, scope, head, build_label))
         for name, source in entries:
             bundle.write(source, title + "/" + name)
-    print("%s.zip: %d files, %d relative links checked, %d broken%s" % (
-        title, len(entries) + 1, len(targets), len(broken), ("; missing: " + ", ".join(missing)) if missing else ""))
+    print("%s.zip: %d files, %d relative links checked, %d broken%s%s" % (
+        title, len(entries) + 1 + (1 if filter_text else 0), len(targets), len(broken),
+        ("; missing: " + ", ".join(missing)) if missing else "", ("; row filter " + row_filter) if row_filter else ""))
     open(os.path.join(out, "package-links.txt"), "w").write("links=%d\nbroken=%s\nmissing=%s\n" % (
         len(targets), ",".join(broken) or "none", ",".join(missing) or "none"))
     made = [title + ".zip"]
@@ -675,6 +776,8 @@ keyboards, the system Reduce Motion setting, other orientations and on-device mo
                   "the full verdict (results/verdict.txt) are in %s.zip. Automated checks are not visual "
                   "approval.\n" % (headline, head, build_label, simulator.get("device_name", "an unrecorded simulator"),
                                    simulator.get("runtime_name", "an unrecorded runtime"), title))
+        if filter_text:
+            readme = filter_text + "\n" + readme
         if sweep:
             readme += ("P7 (the seven screens at 440 pt) and P8 (Back routes) run in the correction build as C9 and C15, "
                        "and S1, S2, S7, S11 and S14 as C4-C8, on the same commit; their screens are in "
@@ -805,6 +908,7 @@ def package_correction(root, out, artifacts, title, prefix, scope, entries, miss
     head = kv(os.path.join(out, "source-checkpoint.txt")).get("git_head", "unknown")
     build_id = os.environ.get("CM_BUILD_ID", "")
     build_label = ("Codemagic build %s" % build_id) if build_id else "a simulator run outside Codemagic"
+    row_filter, filter_text, filter_html = row_filter_note(root, out, scope)
 
     def git(*args):
         return git_in(root, *args) or ""
@@ -1050,7 +1154,7 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 .note{color:#ccc;max-width:820px}</style></head><body>
 <h1>%s</h1>
 <p><b>%s</b></p>
-<p class="note">%s</p>
+%s<p class="note">%s</p>
 %s
 <h2>Files changed since %s</h2><pre>%s</pre>
 <h2>Product and test files changed since the tested %s</h2><pre>%s</pre>
@@ -1070,7 +1174,7 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
 <p class="missing">%s</p>
 </body></html>""" % (
         html.escape("Places gate finish" if gate else "Places correction"), html.escape(heading), html.escape(headline),
-        intro, build2_block, CORRECTION_BASE[:12], html.escape(changed), CORRECTION_TESTED[:12], html.escape(changed_product),
+        filter_html, intro, build2_block, CORRECTION_BASE[:12], html.escape(changed), CORRECTION_TESTED[:12], html.escape(changed_product),
         FIRST_CORRECTION_COMMIT[:12], html.escape(changed_since_first), body, run_rows, correction_table,
         len(covered_here), len(unrun), earlier_table, deviation_rows, html.escape("\n\n".join(notes) or "none"),
         html.escape(verdict),
@@ -1086,14 +1190,21 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
     if broken:
         print("BROKEN relative links in index.html: " + ", ".join(broken))
     sums = "".join("%s  %s\n" % (sha256(source), name) for name, source in entries)
+    filter_readme = ("%s\n%s\nScope %s, source %s, %s. The page is index.html; the verdict is results/verdict.txt.\n"
+                     % (filter_text, headline, scope, head, build_label)) if filter_text else ""
+    if filter_readme:
+        sums += "%s  README.txt\n" % hashlib.sha256(filter_readme.encode("utf-8")).hexdigest()
     os.makedirs(artifacts, exist_ok=True)
     with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as bundle:
         bundle.writestr(title + "/index.html", page)
         bundle.writestr(title + "/SHA256SUMS.txt", sums)
+        if filter_readme:
+            bundle.writestr(title + "/README.txt", filter_readme)
         for name, source in entries:
             bundle.write(source, title + "/" + name)
-    print("%s.zip: %d files, %d relative links checked, %d broken%s" % (
-        title, len(entries) + 2, len(targets), len(broken), ("; missing: " + ", ".join(missing)) if missing else ""))
+    print("%s.zip: %d files, %d relative links checked, %d broken%s%s" % (
+        title, len(entries) + 2 + (1 if filter_readme else 0), len(targets), len(broken),
+        ("; missing: " + ", ".join(missing)) if missing else "", ("; row filter " + row_filter) if row_filter else ""))
     open(os.path.join(out, "package-links.txt"), "w").write(
         "links=%d\nbroken=%s\nmissing=%s\nearlier_required_executed_here=%d\nunrun_required_earlier=%d\n" % (
             len(targets), ",".join(broken) or "none", ",".join(missing) or "none", len(covered_here), len(unrun)))
@@ -1113,6 +1224,8 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
                   "same gates; files named XCTest-journey come from Signal's real onboarding route. BEFORE-* files are 1x copies of "
                   "build 6ab8639c's captures, named in before/provenance.json of Places-Correction-Review.zip. Automated checks are "
                   "not visual approval.\n" % (headline, head, build_label))
+    if filter_text:
+        readme = filter_text + "\n" + readme
     made = [title + ".zip"]
     screens_zip = prefix + "-Screens.zip"
     with zipfile.ZipFile(os.path.join(artifacts, screens_zip), "w", zipfile.ZIP_STORED) as bundle:
@@ -1143,6 +1256,387 @@ pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-
         path = os.path.join(artifacts, name)
         open(path + ".sha256", "w").write("%s  %s\n" % (sha256(path), name))
         print("%s sha256 %s" % (name, sha256(path)))
+    return 1 if broken else 0
+
+
+# The Room (chapter 08): its approved handoff copy (docs/design/room-approved, checked by the source gate
+# against its own SHA256SUMS.txt) and the files of it this page packs besides the board and the delivery.
+ROOM_APPROVED = "docs/design/room-approved"
+ROOM_HANDOFF = ("README.md", "DESIGN_NOTES.md", "CLAUDE_PROMPT.md", "fixtures/ROOM_DEMO_CONTRACT.json", "SHA256SUMS.txt")
+# reference/room-review.png is 1480 x 2020 at 1x. Its frames, measured on it (x, y, width, height): the top
+# row's three 440 x 956 frames at y 172; the bottom row's frames drawn at about 0.64 (282 x 606 at y 1323);
+# Maya's safety panel (66:128) drawn on the ground between them, with a margin.
+ROOM_BOARD = (1480, 2020)
+ROOM_FRAMES = {
+    "waiting": ((40, 172, 440, 956), "01 / Privacy first (the waiting screen)"),
+    "people": ((520, 172, 440, 956), "02 / Sample introductions (People)"),
+    "profile": ((1000, 172, 440, 956), "03 / A personal card (Maya's profile)"),
+    "entry": ((69, 1323, 282, 606), "Enter by choice (the entry)"),
+    "notes": ((429, 1323, 282, 606), "Read-only room notes"),
+    "safety": ((772, 1377, 316, 395), "Contextual safety (Maya · safety)"),
+    "ended": ((1149, 1323, 282, 606), "Leave immediately (ended)"),
+}
+# The states in the approved flow's order: (state, heading, the Figma nodes of its approved frames).
+ROOM_STATES = (
+    ("entry", "Entry: Come in. Stay yourself.", "66:112"),
+    ("waiting", "Waiting: a little privacy first (no actor, initials, note or count anywhere)", "66:113"),
+    ("people", "People: the sample introductions, every block set and the empty state", "66:115, 66:119, 66:122, 66:125"),
+    ("notes", "Room notes: read-only demo notes, every block set", "66:116, 66:120, 66:123, 66:126"),
+    ("profile", "Profiles: Maya and Jules, with and without the other blocked", "66:117, 66:118, 66:121, 66:124"),
+    ("safety", "Safety panels: the Room's and each actor's (profile and note)", "66:127, 66:128, 66:129, 66:130, 66:131"),
+    ("report", "Report preview: unsent, and its four reason selections (not on the board)",
+     "66:132, 66:133; reasons 67:816, 67:826, 67:836, 67:846"),
+    ("wave", "Wave information (not on the board)", "66:134"),
+    ("ended", "Ended: You've left the room.", "66:114"),
+    ("places", "Back in Places: Return to Places, and back to Signal (Places' own approved design)", ""),
+    ("other", "Every other Room capture", ""),
+)
+# How a capture's name picks its state: the first rule with a word in the name wins, the most specific
+# first (whatever follows Leave is the ended screen; an overlay drawn over a screen is the overlay; a
+# bare sample name, as the briefs' maya-0 or jules-1, is that sample's profile). A move names its
+# destination last ("gesture-profile-to-people", "back-to-signal"), so only the words after the last
+# "-to-" count.
+ROOM_MATCH = (
+    ("ended", ("ended", "leave", "left")),
+    ("report", ("report", "reason")),
+    ("wave", ("wave", "waves")),
+    ("safety", ("safety",)),
+    ("profile", ("profile",)),
+    ("notes", ("notes", "note")),
+    ("people", ("people", "card", "cards", "populated", "empty")),
+    ("waiting", ("waiting",)),
+    ("entry", ("entry", "explanation", "enter", "refused")),
+    ("profile", ("maya", "jules")),
+    ("places", ("places", "now", "signal", "return")),
+)
+# The states the capture test must show (every approved state and overlay); any other may be empty.
+ROOM_EXPECTED = ("entry", "waiting", "people", "notes", "profile", "safety", "report", "wave", "ended")
+# Already compressed: stored as they are, so a zip costs the build copying, not deflating.
+STORED = (".png", ".jpg", ".jpeg", ".mp4", ".mov", ".zip")
+
+
+def room_state(key):
+    """The state a Room capture shows, from its name (room-<state>-… or room-journey-<step>)."""
+    stem = key[len("room-journey-"):] if key.startswith("room-journey-") else key[len("room-"):]
+    if stem.startswith("scroll-"):
+        # A scroll helper's failure screen (named by the element it could not reach): the failed row's.
+        return "other"
+    words = set(re.split(r"[-_.]", stem.lower().rsplit("-to-", 1)[-1]))
+    return next((state for state, keys in ROOM_MATCH if words & set(keys)), "other")
+
+
+def room_kind(key):
+    """What the capture's name says it is: the recorded real journey, a direct-launch fixture, or neither."""
+    if key.startswith("room-journey-"):
+        return "REAL JOURNEY"
+    if key.endswith("fixture"):
+        return "FIXTURE"
+    return "XCTest"
+
+
+def room_caption(key):
+    width = re.search(r"-(\d+)pt(?=-|$)", key)
+    where = "%s, %s" % ("largest text" if "-largest-" in key else "default text",
+                        ("%s pt" % width.group(1)) if width else "width not in the name")
+    kind = room_kind(key)
+    if kind == "REAL JOURNEY":
+        return "%s: REAL JOURNEY (the recorded run, real taps from Welcome)" % key
+    if kind == "FIXTURE":
+        return "%s: FIXTURE (a direct launch through the same gates; %s)" % (key, where)
+    return "%s: XCTest capture (its name says neither journey nor fixture)" % key
+
+
+def package_room(root, out, artifacts, title, prefix, scope, entries, missing, shots, stamps, shot_tests, notes, add):
+    """The room scope's downloads and room_all's (see the module's documentation)."""
+    everything = scope == "room_all"
+    approved = os.path.join(root, ROOM_APPROVED)
+    board = add("approved/room-review.png", os.path.join(approved, "reference", "room-review.png"))
+    delivery = add("approved/common-ground-delivery.png", os.path.join(approved, "reference", "common-ground-delivery.png"))
+    handoff = [(name, add("approved/" + name, os.path.join(approved, name))) for name in ROOM_HANDOFF]
+    movie = os.path.join(out, "room-walkthrough-original.mp4")
+    has_movie = os.path.isfile(movie) and os.path.getsize(movie) > 0
+    row_filter, filter_text, filter_html = row_filter_note(root, out, scope)
+    # With a row filter, the recorded journey runs only if its row (R1) was selected.
+    journey_row = next((line.split("\t")[1] for line in read(os.path.join(root, "docs/verification/places-review-manifest.tsv"))
+                        .splitlines() if line.strip() and not line.startswith("#") and line.split("\t")[0] == scope
+                        and line.split("\t")[3] == "journey"), "")
+    journey_selected = not row_filter or journey_row in row_filter.split(",")
+    if not has_movie:
+        missing.append("%s-walkthrough-original.zip (%s)" % (prefix, "no recording" if journey_selected else
+                                                             "not recorded: the journey row %s was not selected by "
+                                                             "PLACES_ROW_FILTER" % journey_row))
+
+    verdict = read(os.path.join(out, "verdict.txt")) or "No verdict was produced in this run."
+    headline = next((l for l in verdict.splitlines() if l.startswith("AUTOMATED VERDICT")), "AUTOMATED VERDICT: not produced")
+    head = kv(os.path.join(out, "source-checkpoint.txt")).get("git_head", "unknown")
+    smaller_device = kv(os.path.join(out, "smaller.txt")).get("device", "not run")
+    build_id = os.environ.get("CM_BUILD_ID", "")
+    build_label = ("Codemagic build %s" % build_id) if build_id else "a simulator run outside Codemagic"
+    try:
+        simulator = json.load(open(os.path.join(artifacts, "metadata", "simulator.json")))
+    except (OSError, ValueError):
+        simulator = {}
+    device = "%s, %s" % (simulator.get("device_name", "an unrecorded simulator"),
+                         simulator.get("runtime_name", "an unrecorded runtime"))
+
+    # The recording's facts. Both times are the host's clock in epoch seconds: simctl's confirmation that
+    # it records, and the marker the journey prints as Common Ground's explanation shows.
+    marker = read(os.path.join(out, "room-walkthrough-started.txt")).strip()
+    started = read(os.path.join(out, "recording-started.txt")).strip()
+    took = read(os.path.join(out, "walkthrough-duration.txt")).strip()
+    try:
+        offset = "%.2f" % (float(marker) - float(started))
+    except ValueError:
+        offset = ""
+    movie_sha = sha256(movie) if has_movie else ""
+    facts = [
+        "Test: RoomReviewTests.testRealJourneyFromTheExplanationThroughTheRoomAndBack, alone in its run, full holds.",
+        "Recording: %s" % ("%s-walkthrough-original.zip, holding %s-walkthrough-original.mp4 (%.1f MB, SHA-256 %s), "
+                           "unedited: it starts before the app's launch and ends after the test" % (
+                               prefix, prefix, os.path.getsize(movie) / 1e6, movie_sha)
+                           if has_movie else "NOT PRODUCED in this run" if journey_selected else
+                           "NOT PART OF THIS BUILD: the journey row %s was not selected by PLACES_ROW_FILTER=%s, so "
+                           "nothing was recorded" % (journey_row, row_filter)),
+        "simctl confirmed the recording at epoch %s" % (started or "unknown"),
+        "ROOM_WALKTHROUGH_START (Common Ground's explanation showing, before Preview room demo): %s" % (
+            ("epoch %s, %s s into the recording" % (marker, offset)) if marker and offset else
+            ("epoch %s (the recording's start is unknown)" % marker) if marker else "NOT FOUND in the journey's log"),
+        "The journey test took %s" % (("%s s" % took) if took else "an unrecorded time"),
+        "No compact video is made on the Mac: any trim is made on the VPS from the marker, as an edit of this file.",
+    ]
+
+    def img(name, caption):
+        if not name:
+            return '<p class="missing">%s: not produced in this run.</p>' % html.escape(caption)
+        return '<figure><img src="%s" alt="%s"><figcaption>%s</figcaption></figure>' % (
+            name, html.escape(caption), html.escape(caption))
+
+    def row(*cells):
+        return '<div class="row">%s</div>' % "".join(cells)
+
+    def crop(state):
+        frame = ROOM_FRAMES.get(state)
+        if not frame or not board:
+            return ""
+        (x, y, w, h), label = frame
+        scale = 330.0 / w
+        return ('<figure><div class="crop" style="height:%dpx;background-image:url(%s);background-size:%dpx %dpx;'
+                'background-position:-%dpx -%dpx"></div><figcaption>APPROVED board: %s</figcaption></figure>'
+                % (round(h * scale), board, round(ROOM_BOARD[0] * scale), round(ROOM_BOARD[1] * scale),
+                   round(x * scale), round(y * scale), html.escape(label)))
+
+    room_keys = [k for k in shots if k.startswith("room-")]
+    journey = sorted((k for k in room_keys if room_kind(k) == "REAL JOURNEY"), key=lambda k: (stamps.get(k, 0), k))
+    by_state = {}
+    for key in room_keys:
+        by_state.setdefault(room_state(key), []).append(key)
+    sections = []
+    for state, heading, nodes in ROOM_STATES:
+        keys = by_state.get(state, [])
+        # The real journey's captures first, in the order they were taken; then the fixtures by name.
+        ordered = [k for k in journey if k in keys] + sorted(k for k in keys if room_kind(k) != "REAL JOURNEY")
+        if not ordered and state not in ROOM_EXPECTED:
+            continue
+        if not ordered:
+            missing.append("captures of the %s state%s" % (state, " (no selected row captured it)" if row_filter else ""))
+        cells = [crop(state)] + [img(shots[k], room_caption(k)) for k in ordered]
+        body = row(*cells) if ordered else row(crop(state)) + (
+            '<p class="missing">No capture of this state in this run.</p>' if not row_filter else
+            '<p class="missing">No capture of this state in this build: only the rows PLACES_ROW_FILTER selected ran.</p>')
+        sections.append(("%s%s" % (heading, (" (Figma %s)" % nodes) if nodes else ""), body))
+    others = sorted(k for k in shots if not k.startswith("room-"))
+    if others:
+        sections.append((("The Places rows of this build (room_regression's): every capture, by the test that attached "
+                          "it" if everything else "Every other capture of this build"),
+                         row(*[img(shots[k], "%s (%s)" % (k, shot_tests.get(k, "?").split("/")[0].replace("()", "")))
+                               for k in others])))
+    body = "".join("<h2>%s</h2>%s" % (html.escape(t), c) for t, c in sections)
+
+    # Every execution, by row, with the row it reruns (room_all's Places rows keep their earlier IDs).
+    tsv_lines = read(os.path.join(out, "executions.tsv")).splitlines()
+    header = tsv_lines[0].split("\t") if tsv_lines else []
+    executed = [dict(zip(header, line.split("\t"))) for line in tsv_lines[1:] if line.strip()]
+    if not executed:
+        missing.append("results/executions.tsv (every execution by row)")
+
+    def what(order):
+        if order.startswith("R"):
+            return "Room"
+        if order.startswith("P"):
+            return "reruns places:" + order
+        if order.startswith("C"):
+            return "reruns correction:" + order
+        return "-"
+
+    execution_rows = "".join(
+        "<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(c) for c in (
+            e.get("order", ""), what(e.get("order", "")), e.get("device", ""), e.get("udid", ""), e.get("run", ""),
+            e.get("test", ""), e.get("kind", ""), e.get("outcome", ""), e.get("seconds", ""), e.get("failure", "")))
+        for e in executed) or '<tr><td colspan="10">executions.tsv was not produced in this run.</td></tr>'
+    manifest_rows = "".join("<tr>%s</tr>" % "".join("<td>%s</td>" % html.escape(c) for c in line.split("\t"))
+                            for line in read(os.path.join(out, "manifest-rows.tsv")).splitlines() if line.strip())
+    results = {}
+    for line in read(os.path.join(out, "ui-review-tests.txt")).splitlines():
+        if re.match(r"^\w+Tests\.test\w+\[", line):
+            key, _, value = line.partition("=")
+            name, _, lane = key.partition("[")
+            results.setdefault(name, []).append("%s: %s" % (lane.rstrip("]"), value))
+    test_rows = "".join("<tr><td>%s</td><td>%s</td></tr>" % (html.escape(t), html.escape("; ".join(r)))
+                        for t, r in sorted(results.items()))
+    handoff_links = " | ".join('<a href="%s">%s</a>' % (packed, html.escape(name)) for name, packed in handoff if packed) \
+        or "missing"
+    counts = "%d Room captures: %d from the real journey, %d fixtures, %d other" % (
+        len(room_keys), len(journey), sum(1 for k in room_keys if room_kind(k) == "FIXTURE"),
+        sum(1 for k in room_keys if room_kind(k) == "XCTest"))
+    intro = ("Real captures from %s (%s; the smaller iPhone, %s, where a caption names another width). The iPhone 17 "
+             "Pro Max and the smaller iPhone ran one at a time, the smaller one after. Captures marked REAL JOURNEY come "
+             "from the recorded journey: real taps from Welcome through Signal and Places into the Room and back to "
+             "Places. Captures marked FIXTURE open a prepared Room state directly (a direct launch through the same "
+             "gates). The Room is a fictional demo: its people, notes and venue are samples, and in the approved design "
+             "nothing is sent, no report is submitted and no Wave is sent. Automated checks are not visual approval; "
+             "that is the founder's decision. The simulator app cannot be installed on an iPhone. %s."
+             % (build_label, device, smaller_device, counts))
+    if everything:
+        intro += (" This build also ran room_regression's %s Places rows (the rows the Room touches, under their earlier "
+                  "IDs); their captures and executions follow the Room's." % ("23" if not row_filter else "selected"))
+    page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Proximeet Room review (%s)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;background:#111;color:#eee}
+h1{font-size:22px}h2{font-size:17px;margin-top:32px;border-top:1px solid #333;padding-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:16px}figure{margin:0}
+figcaption{color:#aaa;font-size:13px;max-width:330px;overflow-wrap:anywhere}
+img,video{width:330px;max-width:100%%;border:1px solid #333;border-radius:8px;background:#000}
+img.board{width:740px;max-width:100%%}img.delivery{width:216px;height:auto;background:#050606}
+.crop{width:330px;border:1px solid #333;border-radius:8px;background-repeat:no-repeat;background-color:#050606}
+table{border-collapse:collapse;max-width:1200px}td,th{border:1px solid #333;padding:5px 7px;vertical-align:top;font-size:12px;text-align:left}
+pre{white-space:pre-wrap;background:#1b1b1b;padding:12px;border-radius:8px;font-size:12px}.missing{color:#f99}
+.note{color:#ccc;max-width:820px}</style></head><body>
+<h1>Proximeet Room: iOS Simulator review, scope “%s”</h1>
+<p><b>%s</b></p>
+%s<table><tr><th>Scope</th><th>Build</th><th>Source commit</th><th>Result</th></tr>
+<tr><td>%s</td><td>%s</td><td><code>%s</code></td><td>%s</td></tr></table>
+<p class="note">%s</p>
+<h2>The approved board</h2>
+<div class="row">%s%s</div>
+<p class="note">The approved Room handoff, copied into the repository and checked by the source gate against its own
+record: %s. Each state below sets the board's frame for it (APPROVED) beside this build's captures.</p>
+<h2>The recorded journey</h2><pre>%s</pre>
+%s
+<h2>This scope's manifest</h2><table><tr><th>Scope</th><th>Order</th><th>Device</th><th>Run</th><th>Bundle</th><th>Bound (s)</th><th>Test</th><th>Kind</th></tr>%s</table>
+<h2>Every execution in this build, by row (retries off)</h2>
+<table><tr><th>Row</th><th>What</th><th>Device</th><th>UDID</th><th>Run</th><th>Test</th><th>Kind</th><th>Outcome</th><th>Seconds</th><th>Failure</th></tr>%s</table>
+<h2>Every test in this build</h2><table><tr><th>Test</th><th>Device: outcome (duration)</th></tr>%s</table>
+<p class="note">The Reduce Motion captures use the app's preview flag, not the system setting. VoiceOver, the system
+Reduce Motion setting, other orientations and on-device motion are manual checks.</p>
+<h2>Notes attached by the tests</h2><pre>%s</pre>
+<h2>Result</h2><pre>%s</pre>
+<p>Unsigned simulator app (simulator only): %s</p>
+<p>Details: %s | <a href="SHA256SUMS.txt">SHA256SUMS.txt</a></p>
+<p class="missing">%s</p>
+</body></html>""" % (
+        html.escape(scope), html.escape(scope), html.escape(headline), filter_html, html.escape(scope),
+        html.escape(build_label), html.escape(head), html.escape(headline), html.escape(intro),
+        ('<figure><a href="%s"><img class="board" src="%s" alt="The approved Room board"></a><figcaption>The approved '
+         'board, reference/room-review.png (1480 x 2020)</figcaption></figure>' % (board, board)) if board else
+        '<p class="missing">The approved board is missing.</p>',
+        ('<figure><img class="delivery" src="%s" alt="Common Ground delivery"><figcaption>The approved Common Ground '
+         'art delivery (the Room reuses the Places scene)</figcaption></figure>' % delivery) if delivery else
+        '<p class="missing">The Common Ground delivery is missing.</p>',
+        handoff_links, html.escape("\n".join(facts)), body, manifest_rows, execution_rows, test_rows,
+        html.escape("\n\n".join(notes) or "none"), html.escape(verdict),
+        " ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries if n.startswith("app/") and n.endswith(".zip"))
+        or "not produced",
+        " | ".join('<a href="%s">%s</a>' % (n, html.escape(n)) for n, _ in entries
+                   if n.startswith(("results/", "logs/")) or (n.startswith("xctest/") and n.endswith((".txt", ".json")))),
+        ("Not produced in this run: " + ", ".join(missing)) if missing else "")
+
+    # Every relative link and image in the page must name a file in the archive.
+    targets = set(re.findall(r'(?:src|href)="([^"#:]+)"', page)) | set(re.findall(r"url\(([^)]+)\)", page))
+    packed = {n for n, _ in entries} | {"SHA256SUMS.txt"}
+    broken = sorted(t for t in targets if t not in packed)
+    if broken:
+        print("BROKEN relative links in index.html: " + ", ".join(broken))
+    sums = "".join("%s  %s\n" % (sha256(source), name) for name, source in entries)
+    filter_readme = ("%s\n%s\nScope %s, source %s, %s. The page is index.html; the verdict is results/verdict.txt.\n"
+                     % (filter_text, headline, scope, head, build_label)) if filter_text else ""
+    if filter_readme:
+        sums += "%s  README.txt\n" % hashlib.sha256(filter_readme.encode("utf-8")).hexdigest()
+    os.makedirs(artifacts, exist_ok=True)
+
+    def pack(bundle, source, name):
+        bundle.write(source, name, compress_type=zipfile.ZIP_STORED if name.lower().endswith(STORED)
+                     else zipfile.ZIP_DEFLATED)
+
+    with zipfile.ZipFile(os.path.join(artifacts, title + ".zip"), "w", zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr(title + "/index.html", page)
+        bundle.writestr(title + "/SHA256SUMS.txt", sums)
+        if filter_readme:
+            bundle.writestr(title + "/README.txt", filter_readme)
+        for name, source in entries:
+            pack(bundle, source, title + "/" + name)
+    print("%s.zip: %d files, %d relative links checked, %d broken%s%s" % (
+        title, len(entries) + 2 + (1 if filter_readme else 0), len(targets), len(broken),
+        ("; missing: " + ", ".join(missing)) if missing else "", ("; row filter " + row_filter) if row_filter else ""))
+    open(os.path.join(out, "package-links.txt"), "w").write("links=%d\nbroken=%s\nmissing=%s\n" % (
+        len(targets), ",".join(broken) or "none", ",".join(missing) or "none"))
+
+    # Room-Screens.zip: every capture, its file name saying where it came from and what it shows.
+    sources = dict(entries)
+    readme = ("%s\nProximeet Room, source %s, %s, on %s (the smaller iPhone: %s). File names say where each screen came "
+              "from: REAL-JOURNEY is the recorded real route (real taps from Welcome through Signal and Places into the "
+              "Room and back), numbered in the order it was taken; FIXTURE-direct-launch opens a prepared Room state "
+              "directly, through the same gates, and is filed under the state it shows (the order of the approved flow). "
+              "The approved board, the verdict (results/verdict.txt) and every execution are in %s.zip. Every person, "
+              "note and venue is fictional. Automated checks are not visual approval.\n"
+              % (headline, head, build_label, device, smaller_device, title))
+    if everything:
+        readme += ("Places-rows-* files are the captures of room_regression's Places rows, run in the same build, under "
+                   "the names their tests gave them ('journey' in a name means a real route, 'fixture' a direct launch).\n")
+    if filter_text:
+        readme = filter_text + "\n" + readme
+    order = {state: index for index, (state, _, _) in enumerate(ROOM_STATES, start=1)}
+    screens = []
+    for number, key in enumerate(journey, start=1):
+        # The journey numbers its own steps (room-journey-07-wave-info); an unnumbered step gets its place.
+        step = key[len("room-journey-"):]
+        screens.append((key, "Room-journey-%s-XCTest-REAL-JOURNEY" % (
+            step if re.match(r"\d+-", step) else "%02d-%s" % (number, step))))
+    for key in sorted((k for k in room_keys if k not in journey), key=lambda k: (order[room_state(k)], k)):
+        label = "XCTest-FIXTURE-direct-launch" if room_kind(key) == "FIXTURE" else "XCTest"
+        state, stem = room_state(key), key[len("room-"):]
+        # The state leads the name once: room-people-… is filed as Room-03-people-…, room-maya-safety-… as
+        # Room-06-safety-maya-safety-….
+        named = stem if stem.startswith(state + "-") else "%s-%s" % (state, stem)
+        screens.append((key, "Room-%02d-%s-%s" % (order[state], named, label)))
+    for key in others:
+        label = ("XCTest-journey" if "journey" in key else "XCTest-FIXTURE-direct-launch" if key.endswith("fixture")
+                 else "XCTest")
+        screens.append((key, "%s-%s-%s" % ("Places-rows" if everything else "Other-capture", key, label)))
+    made = [title + ".zip"]
+    with zipfile.ZipFile(os.path.join(artifacts, prefix + "-Screens.zip"), "w", zipfile.ZIP_STORED) as bundle:
+        bundle.writestr("README.txt", readme)
+        for key, target in screens:
+            name = shots[key]
+            bundle.write(sources[name], target + (os.path.splitext(name)[1] or ".png"))
+        if not screens:
+            bundle.writestr("NO-CAPTURES.MISSING.txt", "No capture was produced in this run.\n")
+        if notes:
+            bundle.writestr("Notes-attached-by-the-tests.txt", "\n\n".join(notes) + "\n")
+    made.append(prefix + "-Screens.zip")
+    for stale in ("", ".sha256"):
+        # No archive may outlive the recording it names.
+        if os.path.isfile(os.path.join(artifacts, prefix + "-walkthrough-original.zip" + stale)):
+            os.remove(os.path.join(artifacts, prefix + "-walkthrough-original.zip" + stale))
+    if has_movie:
+        with zipfile.ZipFile(os.path.join(artifacts, prefix + "-walkthrough-original.zip"), "w", zipfile.ZIP_STORED) as bundle:
+            bundle.writestr("README.txt", readme + "\n" + "\n".join(facts) + "\n")
+            bundle.write(movie, prefix + "-walkthrough-original.mp4")
+        made.append(prefix + "-walkthrough-original.zip")
+    for name in made:
+        path = os.path.join(artifacts, name)
+        digest = sha256(path)
+        open(path + ".sha256", "w").write("%s  %s\n" % (digest, name))
+        print("%s sha256 %s" % (name, digest))
     return 1 if broken else 0
 
 

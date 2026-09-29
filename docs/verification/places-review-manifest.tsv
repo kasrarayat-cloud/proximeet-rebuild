@@ -64,11 +64,18 @@
 #   device   main = the selected iPhone 17 Pro Max; b = device B, its clone (same model and runtime);
 #            small = a smaller installed iPhone. A scope uses main and one other device, and the two
 #            run in parallel: regressions and sweep_finish use main and b, every other scope main and
-#            small. Every test with 440-point pixel anchors runs on main (or b, the same model). The
+#            small; except the room scopes (room, room_regression, room_regression_main,
+#            room_regression_small and room_all), which run ONE SIMULATOR AT A TIME: the smaller iPhone
+#            boots, and its runs start, only after the selected simulator's runs end and it is shut
+#            down; a room build with no selected row on main (room_regression_small, or a row filter
+#            without main rows) never boots main (it is shut down if it is booting) and boots the smaller
+#            iPhone at once, alone. Every test with 440-point pixel anchors runs on main (or b, the same model). The
 #            signal scope's former device-B tests run on main, which is the same model and runtime.
 #   run      one bounded xcodebuild test-without-building; within a run XCTest orders the tests by
 #            class, then by name. A run named "journey" is recorded and alone, with full holds (places:
-#            the full journey; correction: C10; the sweep, gate_finish and sweep_finish have none);
+#            the full journey; correction: C10; room and room_all: the Room journey R1; the sweep,
+#            gate_finish, sweep_finish, room_regression, room_regression_main and room_regression_small
+#            have none);
 #            every other run uses short holds. A run whose test runner fails to initialize for UI
 #            testing before any test starts (build 6ab8c585), or whose simulator is not found, is run
 #            once more after the device is ready; that is an infrastructure rerun, not a test retry.
@@ -103,6 +110,61 @@
 #            The repair is a load-reduction hypothesis: B2 runs alone on the selected
 #            iPhone 17 Pro Max, with no second simulator booted. It is a disclosed repeated execution, not a
 #            retry: build 5's failure stands in the reconciliation (failures win).
+# room (chapter 08, the Room candidate; docs/verification/room-mac-review.md): RoomReviewTests' 13
+#            methods, all on the iPhone 17 Pro Max, then testLargestTextKeepsRoomReachable again on the
+#            smaller iPhone (R14). R1, the real journey from Welcome through Common Ground's explanation
+#            into the Room and back to Places, is the recorded run: alone, first, full holds, recorded from
+#            before the app's launch and delivered unedited (its ROOM_WALKTHROUGH_START marker lets the VPS
+#            trim it). R2, the captures of the 15 states, 8 overlays and 4 report variants (about 27 direct
+#            launches), is alone in room_capture, so the longest test has its own bound; R3-R13 follow in
+#            room_main in XCTest's order. Nothing Room has run on a Mac, so the bounds are estimates from
+#            the nearest measured tests (Places build 6ab8639c: the recorded journey 187.9 s, the seven
+#            screens 73.7 s for 7 launches; the recovery: 107.2 s): R1 about 250-400 s, R2 about 280-410 s,
+#            R3-R13 about 500-1000 s together, R14 about 100-160 s; each bound adds the runner's start (up to
+#            about 340 s for the first) and close. XCTest's allowance is 600 s (maximum 660 s) in every room
+#            scope: in room and room_all because R2 would sit near 300 s; in room_regression and its halves
+#            because P1 now takes two Room detours (near 200 s) and build 4 once ended a test of about 145 s
+#            at the 300-s allowance on a slow host. 14 rows, 13 unique methods, all required.
+# room_regression: the Places rows Room's integration touches, the recommended minimal rerun set (entry
+#            and return, category, eligibility, the age gate, the footers and the Signal boundary): P1,
+#            P2, P4 and C1-C9 on the iPhone 17 Pro Max, C10-C15 and P9-P13 on the smaller iPhone, each with
+#            its earlier row ID, test method and device; short holds, nothing recorded (C10, the
+#            correction's recorded walkthrough, runs unrecorded here). Runs and bounds from the latest
+#            measured passes: rr_places_main (C1, C2, C3, P2, P4, P1: 666 s measured, 1080 s bound, the
+#            first run, so its bound includes the runner's first start), rr_signal_main (C4, C5, C9, C6-C8:
+#            367 s, 600 s, correction_signal's run), rr_places_small (C15, P9-P13: 614 s, 900 s),
+#            rr_correction_small (C10, C12-C14: 253 s, 600 s) and rr_correction_small_b (C11 alone, as in
+#            the correction scope: 63 s, 240 s). 1964 s of tests measured in the recovery's two-simulator
+#            builds (about 1710 s at each row's fastest measured pace), so with its five runner starts,
+#            the smaller iPhone's first boot and about 200 s before the first test it is at the edge of
+#            the 45-minute workflow's 2340-s deadline, and past it when run one simulator at a time:
+#            room_regression_main and room_regression_small (below) split it by lane. 23 rows, all required.
+# room_all:  room's rows, then room_regression's, with the same runs, bundles and bounds, for one build if
+#            the time allows. At the estimates above it needs about 3800-4900 s of UI time and does not
+#            fit proximeet-room-review-45 (2340 s): run room and room_regression as two builds instead.
+#            37 rows, all required.
+# room_regression_main: room_regression's 12 iPhone 17 Pro Max rows, copied under the same row IDs, test
+#            methods, devices, runs, bundles and bounds: C1, C2, C3, P2, P4 and P1 (rr_places_main), then C4,
+#            C5, C9, C6, C7 and C8 (rr_signal_main). 1034 s of tests measured (666 s and 368 s), so it fits a
+#            35-minute build (1740 s) with room to spare: room_regression split by lane, because the whole set
+#            (1964 s of tests, run one simulator at a time) does not fit one 45-minute build. 12 rows, all
+#            required.
+# room_regression_small: room_regression's 11 smaller-iPhone rows, copied the same way: C15 and P9-P13
+#            (rr_places_small), then C10, C12, C13 and C14 (rr_correction_small), then C11 alone
+#            (rr_correction_small_b). 930 s of tests measured (614 s, 253 s and 63 s). It has no main row, so
+#            the iPhone 17 Pro Max is never booted: the smaller iPhone boots in destinations, alone, behind the
+#            compilation. 11 rows, all required.
+# All five run one simulator at a time (the device column above) and keep every recovery rule: no
+# retries, infrastructure reruns only for a run that started no test. None of their results counts
+# toward the Places recovery, which is frozen at 808950f.
+# PLACES_ROW_FILTER (optional run input, any scope): comma-separated row IDs of the chosen scope, for
+#            example R3,R9,R14. The source gate accepts it only if every ID matches ^[A-Z][0-9]{1,2}$,
+#            belongs to the scope and appears once, and records it (row_filter= in its result, and
+#            build/artifacts/metadata/places-row-filter.txt). Then only the selected rows run: each keeps
+#            its run, order and device; a run with no selected row is skipped whole (the recorded journey
+#            too, unless its row is selected); the results, the verdict and the package judge and count
+#            only the selected rows, name them and say the others were not part of the build. Unset, every
+#            row of the scope runs, as before.
 places	P1	main	journey	PlacesJourney	480	PlacesReviewTests/testWalkthroughRealJourney	required
 places	P2	main	places_main	PlacesMain	720	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
 places	P3	main	places_main	PlacesMain	720	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
@@ -264,3 +326,100 @@ regression_finish	B7	b	rf_guest_b	RemainingGuestB	960	GuestListReviewTests/testR
 regression_finish	B8	b	rf_guest_c	RemainingGuestC	960	GuestListReviewTests/testRepeatedTapsNeverDuplicateOrSkipARoute	required
 regression_finish	B9	b	rf_guest_c	RemainingGuestC	960	GuestListReviewTests/testWalkthroughEntryTypingChipsPreviewEditBackReentryEndpoint	required
 regression_repair	B2	main	rr_b2	RepairB2	900	GuestListReviewTests/testBlankInternationalAndLongNames	required
+room	R1	main	journey	RoomJourney	900	RoomReviewTests/testRealJourneyFromTheExplanationThroughTheRoomAndBack	required
+room	R2	main	room_capture	RoomCapture	720	RoomReviewTests/testCaptureApprovedStatesAndOverlays	required
+room	R3	main	room_main	RoomMain	1200	RoomReviewTests/testBackGesturesInTheRoom	required
+room	R4	main	room_main	RoomMain	1200	RoomReviewTests/testBusinessCompatibility	required
+room	R5	main	room_main	RoomMain	1200	RoomReviewTests/testEntryNeedsBothDeliberateGates	required
+room	R6	main	room_main	RoomMain	1200	RoomReviewTests/testIneligibleAndStaleEntryIsRefused	required
+room	R7	main	room_main	RoomMain	1200	RoomReviewTests/testLargestTextKeepsRoomReachable	required
+room	R8	main	room_main	RoomMain	1200	RoomReviewTests/testLeaveFromEveryContext	required
+room	R9	main	room_main	RoomMain	1200	RoomReviewTests/testNotesFilteringAndBothBlockOrders	required
+room	R10	main	room_main	RoomMain	1200	RoomReviewTests/testReduceMotionPreviewRoom	required
+room	R11	main	room_main	RoomMain	1200	RoomReviewTests/testReportPreviewIsLocalAndRestoresItsCaller	required
+room	R12	main	room_main	RoomMain	1200	RoomReviewTests/testSocialCompatibilityAndBothApproaches	required
+room	R13	main	room_main	RoomMain	1200	RoomReviewTests/testTerminalReentryResetsTheDemo	required
+room	R14	small	room_small	RoomSmall	600	RoomReviewTests/testLargestTextKeepsRoomReachable	required
+room_regression	C1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_regression	C2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_regression	C3	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_regression	P2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+room_regression	P4	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+room_regression	P1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testWalkthroughRealJourney	required
+room_regression	C4	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testBandSignalInteraction	required
+room_regression	C5	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+room_regression	C9	main	rr_signal_main	RoomRegressionSignalMain	600	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_regression	C6	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+room_regression	C7	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+room_regression	C8	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testWalkthroughRealJourney	required
+room_regression	C15	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required
+room_regression	P9	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required
+room_regression	P10	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testEveryIntentAtEveryVenue	required
+room_regression	P11	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+room_regression	P12	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required
+room_regression	P13	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_regression	C10	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required
+room_regression	C12	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_regression	C13	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_regression	C14	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_regression	C11	small	rr_correction_small_b	RoomRegressionCorrectionSmallB	240	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required
+room_all	R1	main	journey	RoomJourney	900	RoomReviewTests/testRealJourneyFromTheExplanationThroughTheRoomAndBack	required
+room_all	R2	main	room_capture	RoomCapture	720	RoomReviewTests/testCaptureApprovedStatesAndOverlays	required
+room_all	R3	main	room_main	RoomMain	1200	RoomReviewTests/testBackGesturesInTheRoom	required
+room_all	R4	main	room_main	RoomMain	1200	RoomReviewTests/testBusinessCompatibility	required
+room_all	R5	main	room_main	RoomMain	1200	RoomReviewTests/testEntryNeedsBothDeliberateGates	required
+room_all	R6	main	room_main	RoomMain	1200	RoomReviewTests/testIneligibleAndStaleEntryIsRefused	required
+room_all	R7	main	room_main	RoomMain	1200	RoomReviewTests/testLargestTextKeepsRoomReachable	required
+room_all	R8	main	room_main	RoomMain	1200	RoomReviewTests/testLeaveFromEveryContext	required
+room_all	R9	main	room_main	RoomMain	1200	RoomReviewTests/testNotesFilteringAndBothBlockOrders	required
+room_all	R10	main	room_main	RoomMain	1200	RoomReviewTests/testReduceMotionPreviewRoom	required
+room_all	R11	main	room_main	RoomMain	1200	RoomReviewTests/testReportPreviewIsLocalAndRestoresItsCaller	required
+room_all	R12	main	room_main	RoomMain	1200	RoomReviewTests/testSocialCompatibilityAndBothApproaches	required
+room_all	R13	main	room_main	RoomMain	1200	RoomReviewTests/testTerminalReentryResetsTheDemo	required
+room_all	R14	small	room_small	RoomSmall	600	RoomReviewTests/testLargestTextKeepsRoomReachable	required
+room_all	C1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_all	C2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_all	C3	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_all	P2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+room_all	P4	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+room_all	P1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testWalkthroughRealJourney	required
+room_all	C4	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testBandSignalInteraction	required
+room_all	C5	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+room_all	C9	main	rr_signal_main	RoomRegressionSignalMain	600	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_all	C6	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+room_all	C7	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+room_all	C8	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testWalkthroughRealJourney	required
+room_all	C15	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required
+room_all	P9	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required
+room_all	P10	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testEveryIntentAtEveryVenue	required
+room_all	P11	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+room_all	P12	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required
+room_all	P13	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_all	C10	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required
+room_all	C12	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_all	C13	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_all	C14	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_all	C11	small	rr_correction_small_b	RoomRegressionCorrectionSmallB	240	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required
+room_regression_main	C1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_regression_main	C2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_regression_main	C3	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_regression_main	P2	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testAgeGateOnTheWayBackBlocksPlaces	required
+room_regression_main	P4	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testRapidTapsAndInterruptedMotionReconcile	required
+room_regression_main	P1	main	rr_places_main	RoomRegressionPlacesMain	1080	PlacesReviewTests/testWalkthroughRealJourney	required
+room_regression_main	C4	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testBandSignalInteraction	required
+room_regression_main	C5	main	rr_signal_main	RoomRegressionSignalMain	600	BandSignalInteractionTests/testReducedMotionStillUpdatesImmediately	required
+room_regression_main	C9	main	rr_signal_main	RoomRegressionSignalMain	600	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_regression_main	C6	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testEndpointDuplicateTapsAndBack	required
+room_regression_main	C7	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testRapidChangesAndInterruptionsStayConsistent	required
+room_regression_main	C8	main	rr_signal_main	RoomRegressionSignalMain	600	SignalReviewTests/testWalkthroughRealJourney	required
+room_regression_small	C15	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testBackRoutesKeepTheCategoryAndTheDraft	required
+room_regression_small	P9	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testChangingTheBandRecomputesEveryVenue	required
+room_regression_small	P10	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testEveryIntentAtEveryVenue	required
+room_regression_small	P11	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testLargestTextKeepsEveryStageReachable	required
+room_regression_small	P12	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testMissingChoicesAndIneligibleIntentsNeverOpenIt	required
+room_regression_small	P13	small	rr_places_small	RoomRegressionPlacesSmall	900	PlacesReviewTests/testSevenScreensOnThisPhone	required
+room_regression_small	C10	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testCorrectionWalkthroughScrollingAndBackGestures	required
+room_regression_small	C12	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testDetailAndExplanationStartAtTheirBeginning	required
+room_regression_small	C13	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtLargestTextStackAndStayReadable	required
+room_regression_small	C14	small	rr_correction_small	RoomRegressionCorrectionSmall	600	PlacesCorrectionTests/testFootersAtNormalTextFitOrStack	required
+room_regression_small	C11	small	rr_correction_small_b	RoomRegressionCorrectionSmallB	240	PlacesCorrectionTests/testBackGesturesMatchTheBackControls	required

@@ -20,6 +20,20 @@ import ProximeetDomain
 /// category, Now unless given, through its tab; the detail through View place; the explanation
 /// through Preview check-in, which only an eligible intent at Common Ground opens: otherwise the
 /// fixture stays on the detail, as the app would). They need an explicit band and approach too.
+///     -ProximeetFixture room-entry | room-waiting | room-populated | room-ended
+///     -ProximeetRoomBlocked maya | jules | maya-jules | jules-maya   (the order the blocks are applied)
+///     -ProximeetRoomTab people | notes
+///     -ProximeetRoomProfile maya | jules
+///     -ProximeetRoomPanel global-safety | actor-safety | report | wave-info
+///     -ProximeetRoomReason unwantedAttention | harassment | somethingElse
+///
+/// The Room fixtures (chapter 08) continue from `place-explanation` (so they need an explicit Social or
+/// Business band and an approach) through the app's own transitions: Preview room demo, then, for every
+/// stage after the entry, the deliberate Enter room demo, and, for `room-populated`, the labelled Show
+/// populated example. Blocks are applied through each actor's profile safety, in the order given; the tab,
+/// the profile and the panel are opened as a guest would open them. A step the app would refuse is
+/// refused here too (for example an ineligible intent stays on the detail). They are direct launches for
+/// captures, never a real journey.
 ///     -ProximeetReduceMotionPreview YES
 ///     -ProximeetPlacesKeepContentPop YES
 ///
@@ -45,6 +59,12 @@ enum DebugLaunch {
             guard let band, let signal else { return nil }
             return PreviewFixtures.session(at: stage, band: band, signal: signal, category: category ?? .now)
         }
+        if PreviewFixtures.Stage.roomStages.contains(stage) {
+            guard let band, let signal else { return nil }
+            let session = PreviewFixtures.session(at: .placeExplanation, band: band, signal: signal)
+            RoomFixture.apply(stage, to: session, arguments: arguments)
+            return session
+        }
         return PreviewFixtures.session(at: stage, band: band ?? .social, signal: signal ?? .chatFirst)
     }
 
@@ -59,7 +79,7 @@ enum DebugLaunch {
     /// `-ProximeetPlacesKeepContentPop YES` in this process's launch arguments, read once.
     static let launchKeepsPlacesContentPop = keepsPlacesContentPop(arguments: ProcessInfo.processInfo.arguments)
 
-    private static func value(after flag: String, in arguments: [String]) -> String? {
+    static func value(after flag: String, in arguments: [String]) -> String? {
         guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else {
             return nil
         }
@@ -107,6 +127,12 @@ enum PreviewFixtures {
         case placeDetail = "place-detail"
         /// Common Ground's check-in explanation (through Preview check-in; eligible intents only).
         case placeExplanation = "place-explanation"
+        /// The Room (chapter 08) above Common Ground's explanation: its entry, a new run in waiting, the
+        /// populated example, and the ended run (see `RoomFixture`).
+        case roomEntry = "room-entry"
+        case roomWaiting = "room-waiting"
+        case roomPopulated = "room-populated"
+        case roomEnded = "room-ended"
         /// Legacy, unapproved later scenes, reached through the legacy route for their captures.
         case band
         case bandSelected = "band-selected"
@@ -114,6 +140,8 @@ enum PreviewFixtures {
 
         /// The approved Places stages.
         static let placesStages: Set<Stage> = [.places, .placeDetail, .placeExplanation]
+        /// The Room stages.
+        static let roomStages: Set<Stage> = [.roomEntry, .roomWaiting, .roomPopulated, .roomEnded]
     }
 
     static let firstName = "Alex"
@@ -238,6 +266,62 @@ enum PreviewFixtures {
         flow.selectSignal(signal)
         flow.confirmSignal()
         return flow
+    }
+}
+/// The Room fixtures: every step through the session's own Room transitions, in the order a guest takes.
+enum RoomFixture {
+    static func apply(_ stage: PreviewFixtures.Stage, to session: DemoSession, arguments: [String]) {
+        guard session.previewRoomDemo(), stage != .roomEntry, let id = session.enterRoomDemo() else { return }
+        let panel = DebugLaunch.value(after: "-ProximeetRoomPanel", in: arguments)
+        switch stage {
+        case .roomWaiting:
+            if panel == "global-safety" {
+                session.updateRoomRun(id) { $0.openGlobalSafety() }
+            }
+        case .roomEnded:
+            session.updateRoomRun(id) { $0.leave() }
+        case .roomPopulated:
+            session.updateRoomRun(id) { $0.showPopulatedExample() }
+            let blocked: [RoomActor]
+            switch DebugLaunch.value(after: "-ProximeetRoomBlocked", in: arguments) {
+            case "maya": blocked = [.maya]
+            case "jules": blocked = [.jules]
+            case "maya-jules": blocked = [.maya, .jules]
+            case "jules-maya": blocked = [.jules, .maya]
+            default: blocked = []
+            }
+            for actor in blocked {
+                session.updateRoomRun(id) { $0.openProfile(actor) && $0.openActorSafety(actor) && $0.block(actor) }
+            }
+            let tab = DebugLaunch.value(after: "-ProximeetRoomTab", in: arguments).flatMap(RoomTab.init(rawValue:))
+            if let tab {
+                session.updateRoomRun(id) { $0.selectTab(tab) }
+            }
+            let profile = DebugLaunch.value(after: "-ProximeetRoomProfile", in: arguments).flatMap(RoomActor.init(rawValue:))
+            if let profile {
+                session.updateRoomRun(id) { $0.openProfile(profile) }
+            }
+            // The actor a panel concerns: the open profile's, or Jules's public note on Room notes.
+            let actor = profile ?? .jules
+            switch panel {
+            case "global-safety":
+                session.updateRoomRun(id) { $0.openGlobalSafety() }
+            case "actor-safety":
+                session.updateRoomRun(id) { $0.openActorSafety(actor) }
+            case "report":
+                session.updateRoomRun(id) { $0.openActorSafety(actor) && $0.previewReport() }
+                if let reason = DebugLaunch.value(after: "-ProximeetRoomReason", in: arguments)
+                    .flatMap(RoomReportReason.init(rawValue:)) {
+                    session.updateRoomRun(id) { $0.selectReportReason(reason) }
+                }
+            case "wave-info":
+                session.updateRoomRun(id) { $0.openWaveInfo() }
+            default:
+                break
+            }
+        default:
+            break
+        }
     }
 }
 #endif

@@ -212,6 +212,94 @@ final class DemoSession {
     /// Wristband, a missing approach to Signal). A valid route is left alone.
     func reconcileRoute() {
         flow.reconcileRoute()
+        reconcileRoom()
+    }
+
+    // MARK: - Approved Room (chapter 08)
+
+    /// The Room preview above Common Ground's explanation: its entry screen, then (only after Enter room
+    /// demo) one local run. Kept apart from the demo flow and its draft, which it never changes; memory
+    /// only, so a relaunch shows no Room.
+    private(set) var room: RoomPreview?
+
+    /// How many runs this process has started. Each run's identity is new and never reused, not even
+    /// after a reset, so a late callback captured for an earlier run changes nothing.
+    private var roomRunCount = 0
+
+    /// Preview room demo on the explanation: the Room entry, and only above an eligible explanation
+    /// (Social or Business at Common Ground, with the actual approach). Opening it starts no run.
+    @discardableResult
+    func previewRoomDemo() -> Bool {
+        guard room == nil, let preview = RoomPreview.open(after: flow) else { return false }
+        room = preview
+        return true
+    }
+
+    /// Back on the Room entry: the explanation, still below it. Only from the entry screen.
+    @discardableResult
+    func leaveRoomEntry() -> Bool {
+        guard room?.stage == .entry else { return false }
+        room = nil
+        return true
+    }
+
+    /// Enter room demo: a new local run in waiting, with no blocks. Returns its identity, or `nil` when
+    /// nothing started (not on the entry screen, or the explanation is no longer eligible).
+    @discardableResult
+    func enterRoomDemo() -> RoomRunID? {
+        guard reconcileRoom(), var preview = room, preview.stage == .entry else { return nil }
+        roomRunCount += 1
+        let id = RoomRunID(roomRunCount)
+        guard preview.enter(as: id) else { return nil }
+        room = preview
+        return id
+    }
+
+    /// One run transition, applied only to the run it was made for.
+    @discardableResult
+    func updateRoomRun(_ id: RoomRunID, _ change: (inout RoomRun) -> Bool) -> Bool {
+        guard reconcileRoom(), var preview = room else { return false }
+        let changed = preview.updateRun(id, change)
+        room = preview
+        return changed
+    }
+
+    /// Return to Places on the ended screen: actual Places browsing at Now, with the draft intact. A new
+    /// run needs the whole explicit sequence again.
+    @discardableResult
+    func returnToPlacesFromRoom() -> Bool {
+        guard room?.run?.phase == .ended else { return false }
+        room = nil
+        return flow.exploreOtherPlaces()
+    }
+
+    /// The Room's outer Back (a completed back swipe or VoiceOver's escape): the entry's Back to the
+    /// explanation; in a run, one level of its callers, the terminal Leave at an active root, and, once
+    /// ended, Places (its only way out).
+    @discardableResult
+    func roomOuterBack() -> RoomOuterBack {
+        guard reconcileRoom(), var preview = room else { return .none }
+        if preview.stage == .entry {
+            return leaveRoomEntry() ? .closedLevel : .none
+        }
+        let outcome = preview.outerBack()
+        room = preview
+        if outcome == .alreadyEnded {
+            returnToPlacesFromRoom()
+        }
+        return outcome
+    }
+
+    /// Drops a Room preview whose explanation is gone or no longer eligible, so no sample stays
+    /// reachable. Returns whether a preview remains.
+    @discardableResult
+    func reconcileRoom() -> Bool {
+        guard let preview = room else { return false }
+        guard preview.isStillValid(for: flow) else {
+            room = nil
+            return false
+        }
+        return true
     }
 
     #if DEBUG
@@ -243,6 +331,7 @@ final class DemoSession {
 
     func reset() {
         flow.reset()
+        room = nil
         resetGeneration += 1
     }
 

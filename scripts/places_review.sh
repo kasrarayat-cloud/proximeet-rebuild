@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 # Proximeet — runtime review of the approved Places (chapter 07) and of every earlier chapter's
 # checks, in the iOS Simulator. Manual and unsigned. Codemagic workflows: proximeet-places-review,
-# its 24-minute twin proximeet-places-review-short, its 35-minute twin proximeet-places-review-35 and
-# the recovery's 40- and 30-minute proximeet-places-review-40 and proximeet-places-review-30
-# (codemagic.yaml). See docs/verification/places-mac-review.md.
+# its 24-minute twin proximeet-places-review-short, its 35-minute twin proximeet-places-review-35,
+# the recovery's 40- and 30-minute proximeet-places-review-40 and proximeet-places-review-30, and
+# the Room's (chapter 08) proximeet-room-review-45 and its shorter twins proximeet-room-review-35, -30
+# and -25 (codemagic.yaml). See docs/verification/places-mac-review.md and
+# docs/verification/room-mac-review.md.
 #
-#   PLACES_REVIEW_SCOPE=regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
-#       bash scripts/places_review.sh <stage>
+#   PLACES_REVIEW_SCOPE=room|room_regression|room_regression_main|room_regression_small|room_all|regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal \
+#   [PLACES_ROW_FILTER=R3,R9,R14] bash scripts/places_review.sh <stage>
+#
+# PLACES_ROW_FILTER (optional, any scope): comma-separated row IDs of the chosen scope. The source gate
+# accepts it only if every ID matches ^[A-Z][0-9]{1,2}$, belongs to the scope and appears once, and
+# records it (row_filter= in source-checkpoint.txt; metadata/places-row-filter.txt, which every later
+# stage reads). Only the selected rows then run, each in its own run, order and device; a run with no
+# selected row is skipped whole (the recorded journey too, unless its row is selected); the results,
+# the verdict and the package count only the selected rows as required, name them, and say that the
+# others were not part of the build (never that they passed). Unset, every row runs, as before.
 #
 # Scopes (the run input PLACES_REVIEW_SCOPE; each runs as its own build, and every result says which
 # build and which commit supplied it). What each scope runs, on which device, in which order and
@@ -68,6 +78,26 @@
 #                interruptions, the Reduce Motion preview flag and the largest text size on two widths
 #   signal       the 16 Signal executions of build 6ab7e942, with Continue preview now opening
 #                Places (the intentional endpoint change)
+#   room         the Room (chapter 08) candidate: RoomReviewTests' 13 methods on the iPhone 17 Pro
+#                Max, the real journey first and recorded with full holds (from launch, delivered
+#                unedited: any trim is made on the VPS from its ROOM_WALKTHROUGH_START marker), then
+#                the largest text again on the smaller iPhone. 14 rows, all required
+#   room_regression  the Places rows Room's integration touches (entry and return, category,
+#                eligibility, the age gate, the footers, the Signal boundary): 23 earlier rows under
+#                their own IDs, tests and devices (P1, P2, P4, P9-P13, C1-C15), short holds, nothing
+#                recorded. 23 rows, all required
+#   room_regression_main  room_regression's 12 iPhone 17 Pro Max rows (C1, C2, C3, P2, P4, P1, then
+#                C4, C5, C9, C6, C7, C8), under the same IDs, tests, devices and runs. 12 rows, all required
+#   room_regression_small  room_regression's 11 smaller-iPhone rows (C15, P9-P13, then C10, C12, C13,
+#                C14, then C11 alone), the same way. 11 rows, all required. No main row: the iPhone 17
+#                Pro Max is not booted (shut down if it is booting) and nothing waits for it
+#   room_all     both, for one build if the time allows (it does not fit a 45-minute build at the
+#                measured durations; docs/verification/room-mac-review.md). 37 rows, all required.
+#                The five room scopes run ONE SIMULATOR AT A TIME (sequential_scope): the smaller
+#                iPhone is not booted beside the selected one; its runs follow the selected
+#                simulator's, after that simulator is shut down. With no selected row on the selected
+#                simulator (room_regression_small, or a row filter) the smaller iPhone boots at once,
+#                in destinations, and the selected simulator is never booted
 # Automatic retries are off in every scope: a test that fails, even once, is a failure; a skipped,
 # interrupted or missing required execution is a failure. A run that started no test because its
 # simulator was not found, or because its test runner failed to initialize for UI testing, is run
@@ -82,16 +112,22 @@
 #                 (which excludes only itself); no other file may exist; earlier deletions stay
 #                 absent; the Signal guard still holds for the approved route's sources, the Places
 #                 guard for Places' own (no clock, location, camera, scanning, network, persistence,
-#                 logging, timer or visibility API), and the approved screens never use the legacy
-#                 intent tint. Run inputs PLACES_EXPECTED_COMMIT (full 40-hex SHA) pins HEAD and
-#                 PLACES_REVIEW_SCOPE names the scope; both required on Codemagic (CM_BUILD_ID set).
+#                 logging, timer or visibility API), the Room guard for the Room's own (the Places
+#                 guard's tokens, and verified, presence and checkIn; every Room*.swift of the app
+#                 and the domain), the Room handoff copy matches its SHA256SUMS.txt, and the approved
+#                 screens never use the legacy intent tint. Run inputs PLACES_EXPECTED_COMMIT (full
+#                 40-hex SHA) pins HEAD and PLACES_REVIEW_SCOPE names the scope; both required on
+#                 Codemagic (CM_BUILD_ID set). The optional PLACES_ROW_FILTER must name rows of that
+#                 scope, each once; it is recorded (row_filter=, rows_selected=, rows_not_selected=).
 #                 Also records the time budget's start. Runs anywhere.
 #   destinations  list installed simulators; report whether iPhone 17 Pro Max was selected; start
 #                 the first boots of the selected simulator and the scope's other device (device B,
 #                 cloned from it before either boots, or a smaller iPhone) behind the compilation
 #   ui-review     compile the UI test harness; give the other device its own copy of the build
 #                 products; run the scope's main and other-device runs in parallel (device B is
-#                 deleted after the run). The places scope records its full journey first on main
+#                 deleted after the run; the room scopes run the smaller iPhone after the selected
+#                 simulator instead, one simulator at a time, and record the Room journey first on
+#                 main, unedited). The places scope records its full journey first on main
 #                 and gets a compact video, made in the background once the recording ends; the
 #                 correction records its walkthrough first on the smaller iPhone, delivered
 #                 unedited; the sweep, gate_finish and sweep_finish record nothing (their P1, where
@@ -107,8 +143,8 @@
 #                 verification is pending). Never fails the build; a problem is a note. Run after
 #                 'codemagic_verify.sh package' and before ui-review
 #   compact-video half-size re-encode of the recording, trimmed to the app (places only; the
-#                 correction delivers its recording unedited; the sweep, gate_finish and
-#                 sweep_finish record nothing: NOT APPLICABLE)
+#                 correction, room and room_all deliver their recordings unedited; the sweep,
+#                 gate_finish, sweep_finish and room_regression record nothing: NOT APPLICABLE)
 #   verdict       automated results, kept apart from outstanding manual review
 #   package-review  scripts/places_review_package.py: <title>.zip, <prefix>-Screens.zip,
 #                 <prefix>-walkthrough-compact.zip (and the loose .mp4 when re-encoded) and
@@ -117,6 +153,11 @@
 #                 nothing); Places-Gate-Review.zip and Places-Gate-Screens.zip for gate_finish;
 #                 Places-Finish-Review.zip and Places-Finish-Screens.zip for sweep_finish;
 #                 Places-Correction-Review.zip with its Screens and walkthrough zips (correction);
+#                 Room-Review.zip, Room-Screens.zip and Room-walkthrough-original.zip (room);
+#                 Room-All-Review.zip, Room-All-Screens.zip and Room-All-walkthrough-original.zip
+#                 (room_all); Room-Regression-Review.zip (room_regression);
+#                 Room-Regression-Main-Review.zip (room_regression_main);
+#                 Room-Regression-Small-Review.zip (room_regression_small);
 #                 Places-Signal-Review.zip or Places-Regressions-Review.zip otherwise; each with an
 #                 offline index.html and its SHA-256
 #   enforce       fail the build unless the verdict says PASS (run last)
@@ -139,6 +180,7 @@ DEVICE_B_ENV="$META/places-device-b.env"
 SMALL_ENV="$META/places-smaller.env"
 T0_FILE="$META/places-t0.txt"
 SCOPE_FILE="$META/places-scope.txt"
+ROW_FILTER_FILE="$META/places-row-filter.txt"
 DERIVED_DATA="$ROOT/build/DerivedData"
 DERIVED_DATA_B="$ROOT/build/DerivedDataB"
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Proximeet.app"
@@ -166,11 +208,16 @@ UI_DEADLINE_SECONDS=1380
 # only to the 30-, 35- and 40-minute workflows: proximeet-places-review-30 sets 1440 and
 # proximeet-places-review-40 sets 2040 (at the worst 72 + 2040 + 75 + 100 + about 45 for publishing +
 # at most 60 for the result bundles' zip, whose bound is what is left of that plan = 2392 s, inside
-# its 2400 s). The source gate rejects any value outside 600 to 2040.
+# its 2400 s). The Room's proximeet-room-review-45, 45 minutes, sets 2340 (at the worst 72 + 2340 + 75
+# + 100 + 45 + about 20 for the Room zips, which store images and the movie uncompressed = 2652 s,
+# inside its 2700 s); its twins, identical but for the limit and the deadline, keep the same 48-s
+# margin: proximeet-room-review-35 sets 1740 (72 + 1740 + 75 + 100 + 45 + 20 = 2052 s of 2100),
+# proximeet-room-review-30 sets 1440 (1752 s of 1800) and proximeet-room-review-25 sets 1140 (1452 s
+# of 1500). The source gate rejects any value outside 600 to 2340.
 case "${PLACES_UI_DEADLINE_SECONDS:-}" in
     ''|*[!0-9]*|0*) ;;
     *)
-        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 2040 ]; then
+        if [ "$PLACES_UI_DEADLINE_SECONDS" -ge 600 ] && [ "$PLACES_UI_DEADLINE_SECONDS" -le 2340 ]; then
             UI_DEADLINE_SECONDS="$PLACES_UI_DEADLINE_SECONDS"
         fi
         ;;
@@ -208,7 +255,7 @@ STAGE="${1:-}"
 case "$STAGE" in
     checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce) ;;
     *)
-        echo "usage: PLACES_REVIEW_SCOPE=regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
+        echo "usage: PLACES_REVIEW_SCOPE=room|room_regression|room_regression_main|room_regression_small|room_all|regression_repair|regression_finish|gate_finish|sweep_finish|correction|sweep|regressions|places|signal [PLACES_ROW_FILTER=<row>,<row>...] $0 checkpoint|destinations|preview-app|ui-review|compact-video|verdict|package-review|enforce" >&2
         exit 2
         ;;
 esac
@@ -219,14 +266,35 @@ LOG="$LOGS/places-$STAGE${PLACES_LOG_SUFFIX:-}.log"
 # The scope recorded by the checkpoint (the checkpoint itself reads the run input).
 SCOPE="$(cat "$SCOPE_FILE" 2>/dev/null || true)"
 [ -n "$SCOPE" ] || SCOPE="${PLACES_REVIEW_SCOPE:-places}"
+# The row filter the checkpoint validated and recorded (empty: every row of the scope). Without the
+# checkpoint's record the run input is read, as for the scope; ui-review still requires the gate's MATCH.
+if [ -f "$ROW_FILTER_FILE" ]; then
+    ROW_FILTER="$(cat "$ROW_FILTER_FILE" 2>/dev/null || true)"
+else
+    ROW_FILTER="${PLACES_ROW_FILTER:-}"
+fi
+# For awk: ",R3,R14," (",," selects every row). A row is selected when its ID sits between two commas.
+ROWS_SELECTED=",$ROW_FILTER,"
 # regression_finish: build 4's P3 was progressing (it reached its last stage) when XCTest's 300-s
 # allowance ended it on a main simulator running about 2.7-7x slower per step; B2's healthy time (190 s) has
 # only 1.6x headroom under 300 s. The allowance is a hang guard, not a check, so this scope gives
 # every test 600 s (maximum 660 s); the run bounds and the UI deadline still apply.
+# room and room_all: RoomReviewTests has never run on a Mac, and its capture test makes about 27 direct
+# launches; at the seven screens' measured pace (73.7-107.2 s for 7 launches) that is 280-410 s, too
+# near 300 s for a hang guard. room_regression and its halves, room_regression_main and
+# room_regression_small, get the same 600 s: their rows were measured under 200 s, but P1 now takes two
+# Room detours (about 10-20 s more, near 200 s), and build 4 once ended a test of about 145 s at the
+# 300-s allowance while the host was slow. The allowance is a hang guard; each run's bound still caps it.
 case "$SCOPE" in
-    regression_finish|regression_repair)
+    regression_finish|regression_repair|room|room_regression|room_regression_main|room_regression_small|room_all)
         TEST_TIMEOUTS="-test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 660"
         ;;
+esac
+# The smaller iPhone's boot bound in smaller_segment. Where it follows the selected simulator (the room
+# scopes) its first boot happens there, alone, so it gets the selected simulator's 420 s.
+SMALL_BOOT_SECONDS=240
+case "$SCOPE" in
+    room|room_regression|room_regression_main|room_regression_small|room_all) SMALL_BOOT_SECONDS=420 ;;
 esac
 # The shared run queue (regression_finish) and the host-load sampler.
 QUEUE_DIR="$OUT/queue"
@@ -422,28 +490,42 @@ require_checkpoint_match() {
 # The run manifest
 # ---------------------------------------------------------------------------------------
 
+# Every function below reads only the scope's SELECTED rows: all of them, or, with PLACES_ROW_FILTER,
+# those whose ID (column 2) the filter names (rows = ",R3,R14,"). A run none of whose rows is selected
+# is therefore never listed, started or recorded; a selected row keeps its run, order and device.
+
 # The scope's runs on <device> (main, b or small), in manifest order.
 manifest_runs() {
-    awk -F '\t' -v scope="$SCOPE" -v device="$1" '!/^#/ && $1 == scope && $3 == device && !seen[$4]++ { print $4 }' \
+    awk -F '\t' -v scope="$SCOPE" -v device="$1" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && $3 == device && !seen[$4]++ { print $4 }' \
         "$RUN_MANIFEST"
 }
 
-# manifest_field <run> <column>: the column (5 bundle, 6 seconds) of the run's first row.
+# manifest_field <run> <column>: the column (5 bundle, 6 seconds) of the run's first selected row.
 manifest_field() {
-    awk -F '\t' -v scope="$SCOPE" -v run="$1" -v col="$2" '!/^#/ && $1 == scope && $4 == run { print $col; exit }' \
+    awk -F '\t' -v scope="$SCOPE" -v run="$1" -v col="$2" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && $4 == run { print $col; exit }' \
         "$RUN_MANIFEST"
 }
 
-# The run's -only-testing arguments.
+# The run's -only-testing arguments (its selected rows' tests only).
 manifest_tests() {
-    awk -F '\t' -v scope="$SCOPE" -v run="$1" \
-        '!/^#/ && $1 == scope && $4 == run { printf "-only-testing:ProximeetUITests/%s ", $7 }' "$RUN_MANIFEST"
+    awk -F '\t' -v scope="$SCOPE" -v run="$1" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && $4 == run { printf "-only-testing:ProximeetUITests/%s ", $7 }' \
+        "$RUN_MANIFEST"
 }
 
 # The run's kinds, one word each ("required", "repeat", "extra", "diagnostic").
 manifest_kinds() {
-    awk -F '\t' -v scope="$SCOPE" -v run="$1" '!/^#/ && $1 == scope && $4 == run && !seen[$8]++ { printf "%s ", $8 }' \
+    awk -F '\t' -v scope="$SCOPE" -v run="$1" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && $4 == run && !seen[$8]++ { printf "%s ", $8 }' \
         "$RUN_MANIFEST"
+}
+
+# The scope's selected rows, whole (manifest-rows.tsv).
+manifest_rows() {
+    awk -F '\t' -v scope="$SCOPE" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ","))' "$RUN_MANIFEST"
 }
 
 # run_gate <run> <natural seconds>: the time that must be left before an optional run starts (or is
@@ -457,10 +539,19 @@ run_gate() {
     esac
 }
 
-# Whether the scope has rows for <device>.
+# Whether the scope has selected rows for <device>.
 scope_uses() {
-    awk -F '\t' -v scope="$SCOPE" -v device="$1" '!/^#/ && $1 == scope && $3 == device { found = 1 } END { exit found ? 0 : 1 }' \
+    awk -F '\t' -v scope="$SCOPE" -v device="$1" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && $3 == device { found = 1 } END { exit found ? 0 : 1 }' \
         "$RUN_MANIFEST"
+}
+
+# Whether the selected simulator has nothing to run: no selected row on main or on device B (whose runs
+# fall back to main), and no shared queue (whose lanes take each other's runs). room_regression_small,
+# or a row filter without main rows. It is then never booted (and is shut down if it is booting), no
+# stage waits for it, and its lane is empty.
+main_idle() {
+    ! scope_uses main && ! scope_uses b && ! queue_scope
 }
 
 # Whether the scope's recording gets a compact re-encode on the Mac: only the original places
@@ -471,6 +562,31 @@ compacts_recording() {
     case "$SCOPE" in
         places) return 0 ;;
         *) return 1 ;;
+    esac
+}
+
+# Whether the scope is one of the Room's (chapter 08).
+room_scope() {
+    case "$SCOPE" in
+        room|room_regression|room_regression_main|room_regression_small|room_all) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Whether the scope runs one simulator at a time: its smaller iPhone is neither booted beside the
+# selected simulator in destinations nor run as a parallel lane; smaller_segment boots it after the
+# selected simulator's runs, once that simulator is shut down. The room scopes: their budget has no
+# room for the slowdown two simulators on three CPUs caused (builds 4 and 5), and one lane needs no
+# second copy of the build products.
+sequential_scope() {
+    room_scope
+}
+
+# The scope's recording: the Room's journey is its own file, never a Places one.
+walkthrough_movie() {
+    case "$SCOPE" in
+        room|room_all) echo "$OUT/room-walkthrough-original.mp4" ;;
+        *) echo "$OUT/places-walkthrough-original.mp4" ;;
     esac
 }
 
@@ -637,6 +753,65 @@ for path in places_sources:
         if token in text:
             problems.append("Places guard: %s contains %r" % (path, token))
 
+# The Room's own sources (chapter 08): a fictional demo held in memory. Its sentences say what a real
+# session would ask; no source may read a clock, a calendar or a locale's time, ask for location, the
+# camera or a scanner, reach the network, persist, log, schedule, or mark anyone checked in, present,
+# visible, a member or verified. The Places guard's tokens (URLSession, print( and Timer among them,
+# named here too because the Room assignment names them), plus the Signal guard's verified, presence
+# and checkIn, which the Room's view was written against: the Places list has only isVerified and
+# checkedIn, so "verified" or "presence" in a Room source would otherwise pass. The view and the
+# domain file must exist; any other Room*.swift of the app or the domain (RoomComponents.swift, or
+# a later split) is guarded too, so moving code out of RoomView.swift cannot move it out of the guard.
+room_sources = ["Proximeet/Scenes/RoomView.swift", "ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift"]
+for top in ("Proximeet", "ProximeetDomain/Sources"):
+    for folder, _, names in sorted(os.walk(top)):
+        for name in sorted(names):
+            path = os.path.join(folder, name).replace(os.sep, "/")
+            if name.startswith("Room") and name.endswith(".swift") and path not in room_sources:
+                room_sources.append(path)
+room_forbidden = places_forbidden + [t for t in ("URLSession", "print(", "Timer", "verified", "Verified", "presence",
+                                                 "Presence", "checkIn") if t not in places_forbidden]
+for path in room_sources:
+    if not os.path.isfile(path):
+        problems.append("guarded Room source missing  " + path)
+        continue
+    text = open(path, encoding="utf-8").read()
+    for token in room_forbidden:
+        if token in text:
+            problems.append("Room guard: %s contains %r" % (path, token))
+
+# The approved Room handoff copy (docs/design/room-approved): the approved board, the Common Ground
+# delivery, README.md, DESIGN_NOTES.md, CLAUDE_PROMPT.md and fixtures/ROOM_DEMO_CONTRACT.json, each
+# equal to the handoff's own SHA256SUMS.txt, which is copied beside them. Its other entries (the
+# layout spec, the asset map, validation, fonts, art) are not copied: the art is Places' Common Ground
+# scene and the fonts are the bundled Manrope faces, so those records must agree with the Places record
+# (and so with the bundled files checked above). Nothing else may sit in the folder.
+room_dir = "docs/design/room-approved/"
+room_copied = ("reference/room-review.png", "reference/common-ground-delivery.png", "README.md", "DESIGN_NOTES.md",
+               "CLAUDE_PROMPT.md", "fixtures/ROOM_DEMO_CONTRACT.json")
+try:
+    room = sums(room_dir + "SHA256SUMS.txt")
+    for key in room_copied:
+        path = room_dir + key
+        if key not in room:
+            problems.append("approved Room handoff file not in its record  " + path)
+        elif not os.path.isfile(path):
+            problems.append("approved Room handoff file missing  " + path)
+        elif sha256(path) != room[key]:
+            problems.append("differs from the Room handoff record  " + path)
+    for folder, _, names in os.walk(room_dir):
+        for name in names:
+            key = os.path.relpath(os.path.join(folder, name), room_dir).replace(os.sep, "/")
+            if key != "SHA256SUMS.txt" and key not in room_copied:
+                problems.append("not part of the approved Room copy  " + room_dir + key)
+    places_record = sums("docs/design/places-approved/SHA256SUMS.txt")
+    shared = ["assets/common-ground.png", "fonts/OFL.txt"] + ["fonts/Manrope-%s.ttf" % face for face in bundled]
+    for key in shared:
+        if room.get(key) != places_record.get(key):
+            problems.append("Room and Places handoff records disagree  " + key)
+except (OSError, ValueError, KeyError) as error:
+    problems.append("Room handoff record unreadable: %r" % (error,))
+
 # One intent mapping: the approved screens use the canonical Wristband colours and art, never the
 # legacy tint (whose Social is cyan) that only the legacy, DEBUG-only later scenes still use.
 for path in ("Proximeet/Scenes/SignalView.swift", "Proximeet/Scenes/WristbandView.swift",
@@ -673,8 +848,32 @@ if scope not in scopes:
     scope = scope or "places"
 
 deadline = os.environ.get("PLACES_UI_DEADLINE_SECONDS", "")
-if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 2040):
-    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 2040 seconds (got %r)" % deadline)
+if deadline and not (re.fullmatch(r"[1-9][0-9]{2,3}", deadline) and 600 <= int(deadline) <= 2340):
+    problems.append("PLACES_UI_DEADLINE_SECONDS must be 600 to 2340 seconds (got %r)" % deadline)
+
+# The optional row filter (PLACES_ROW_FILTER): comma-separated row IDs of the chosen scope, each matching
+# ^[A-Z][0-9]{1,2}$ and named once, with nothing else (no spaces, no empty item). Any other value fails the
+# gate. Only the selected rows run, and the build is judged on them alone, so the gate records the
+# selection and the rows left out: the build proves what it ran.
+scope_rows = [cells[1] for cells in (line.rstrip("\n").split("\t") for line in open(run_manifest, encoding="utf-8")
+                                     if line.strip() and not line.startswith("#")) if cells[0] == scope]
+row_filter = os.environ.get("PLACES_ROW_FILTER", "")
+selected = []
+if row_filter:
+    ids = row_filter.split(",")
+    if not all(re.fullmatch(r"[A-Z][0-9]{1,2}", i) for i in ids):
+        problems.append("PLACES_ROW_FILTER must be comma-separated row IDs such as R3,R9,R14, each matching "
+                        "^[A-Z][0-9]{1,2}$, with no spaces or empty items (got %r)" % row_filter)
+    else:
+        unknown = [i for i in ids if i not in scope_rows]
+        repeated = sorted({i for i in ids if ids.count(i) > 1}, key=ids.index)
+        if unknown:
+            problems.append("PLACES_ROW_FILTER names rows that are not in scope %r: %s (the scope's rows: %s)"
+                            % (scope, ", ".join(unknown), ", ".join(scope_rows) or "none"))
+        if repeated:
+            problems.append("PLACES_ROW_FILTER names rows more than once: %s" % ", ".join(repeated))
+        if not unknown and not repeated:
+            selected = ids
 
 head = git("rev-parse", "HEAD") or "unavailable"
 pin = os.environ.get("PLACES_EXPECTED_COMMIT", "").strip()
@@ -694,6 +893,7 @@ lines = [
     "commit_pin=" + (("PLACES_EXPECTED_COMMIT=" + pin) if pin else "none (compare git_head with the reviewed SHA)"),
     "scope=" + scope,
     "ui_deadline_seconds=" + (deadline or "1380 (default)"),
+    "row_filter=" + (row_filter if selected else "none" if not row_filter else "REJECTED %r" % row_filter),
     "frozen_manifest_sha256=" + sha256(frozen_path),
     "review_manifest_sha256=" + sha256(review_path),
     "run_manifest_sha256=" + sha256(run_manifest),
@@ -704,6 +904,11 @@ lines = [
     "deletions_confirmed=%d" % absent,
     "result=" + ("MATCH" if not problems else "MISMATCH"),
 ]
+if selected:
+    lines += ["rows_selected=%s (%d of the %d rows of scope %s: only these run and are judged)"
+              % (",".join(selected), len(selected), len(scope_rows), scope),
+              "rows_not_selected=%s (not part of this build: not run, not judged, never reported as passed)"
+              % (",".join(r for r in scope_rows if r not in selected) or "none")]
 lines += ["problem=" + p for p in problems]
 with open(out_path, "w") as out:
     out.write("\n".join(lines) + "\n")
@@ -713,7 +918,12 @@ if problems:
     sys.exit(1)
 PY
     sed -n 's/^scope=//p' "$CHECKPOINT_RESULT" > "$SCOPE_FILE"
+    # The validated row filter for every later stage: the IDs, or an empty file without a filter.
+    sed -n 's/^row_filter=\([A-Z][0-9A-Z,]*\)$/\1/p' "$CHECKPOINT_RESULT" > "$ROW_FILTER_FILE"
     summary_line "places-source" "$(grep '^result=' "$CHECKPOINT_RESULT") $(grep '^scope=' "$CHECKPOINT_RESULT") $(grep '^git_head=' "$CHECKPOINT_RESULT") $(grep '^commit_pin=' "$CHECKPOINT_RESULT" | cut -c1-60)"
+    if [ -s "$ROW_FILTER_FILE" ]; then
+        summary_line "places-row-filter" "PLACES_ROW_FILTER=$(cat "$ROW_FILTER_FILE"): only rows $(sed -n 's/^rows_selected=//p' "$CHECKPOINT_RESULT"); rows $(sed -n 's/^rows_not_selected=//p' "$CHECKPOINT_RESULT")"
+    fi
 }
 
 # ---------------------------------------------------------------------------------------
@@ -763,7 +973,12 @@ PY
     # compilation costs it about two minutes instead. So both devices boot now, behind the
     # compilation and the domain tests, and neither is ever restarted: the selected simulator and the
     # scope's other device (device B, cloned from it now before either boots, or the smaller
-    # iPhone). Nothing is deleted here; ui-review deletes device B when it ends.
+    # iPhone). Nothing is deleted here; ui-review deletes device B when it ends. The room scopes
+    # (sequential_scope) boot only the selected simulator here: their smaller iPhone is recorded in
+    # places-smaller.env and first boots after the selected simulator's runs, once it is shut down.
+    # A build whose selected simulator has nothing to run (main_idle: room_regression_small, or a row
+    # filter without main rows) never boots it: it is shut down in case it is booting, and the smaller
+    # iPhone, the only device with runs, boots now, alone, behind the compilation.
     printf 'memory_bytes=%s\ncpus=%s\n' "$(sysctl -n hw.memsize 2>/dev/null || echo unknown)" \
         "$(sysctl -n hw.ncpu 2>/dev/null || echo unknown)" > "$META/places-host.txt"
     run cat "$META/places-host.txt" || true
@@ -788,9 +1003,22 @@ PY
             note "No smaller iPhone from '$SMALLER_IPHONES' is installed on $SIM_RUNTIME_NAME."
         fi
     fi
+    if main_idle; then
+        note "Scope $SCOPE${ROW_FILTER:+ (rows $ROW_FILTER)} has no selected row on $SIM_NAME: it is not booted (shut down in case it is booting), and nothing waits for it."
+        run xcrun simctl shutdown "$SIM_UDID" || true
+        summary_line "places-main-boot" "not booted: scope $SCOPE${ROW_FILTER:+ (PLACES_ROW_FILTER=$ROW_FILTER)} has no selected row on $SIM_NAME $SIM_UDID"
+        if [ -f "$SMALL_ENV" ]; then
+            run xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" || true
+            summary_line "places-smaller-boot" "started now, alone: the only device with runs (the selected simulator is not booted; one simulator at a time)"
+        fi
+        return "$status"
+    fi
     run xcrun simctl boot "$SIM_UDID" || true
     if [ -f "$DEVICE_B_ENV" ]; then
         run xcrun simctl boot "$b_udid" || true
+    elif [ -f "$SMALL_ENV" ] && sequential_scope; then
+        note "Scope $SCOPE runs one simulator at a time: the smaller iPhone boots after the selected simulator's runs."
+        summary_line "places-smaller-boot" "deferred: scope $SCOPE boots it after the selected simulator's runs (one simulator at a time)"
     elif [ -f "$SMALL_ENV" ]; then
         run xcrun simctl boot "$(printf '%s' "$smaller" | cut -f1)" || true
     fi
@@ -848,7 +1076,8 @@ xctest() {
     run "$TEST_BOUND" "$seconds" env TEST_RUNNER_PROXIMEET_PLACES_REVIEW=1 TEST_RUNNER_PROXIMEET_SIGNAL_REVIEW=1 \
         TEST_RUNNER_PROXIMEET_WRISTBAND_REVIEW=1 TEST_RUNNER_PROXIMEET_GUEST_LIST_REVIEW=1 \
         TEST_RUNNER_PROXIMEET_PASS_REVIEW=1 TEST_RUNNER_PROXIMEET_BIRTHDAY_REVIEW=1 \
-        TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1 TEST_RUNNER_PROXIMEET_SHORT_HOLDS=1 xcodebuild \
+        TEST_RUNNER_PROXIMEET_WELCOME_REVIEW=1 TEST_RUNNER_PROXIMEET_ROOM_REVIEW=1 \
+        TEST_RUNNER_PROXIMEET_SHORT_HOLDS=1 xcodebuild \
         -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
         -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived" \
         "$@" -parallel-testing-enabled NO $TEST_TIMEOUTS -resultBundlePath "$result" \
@@ -926,7 +1155,8 @@ results_zip_name() {
 queue_init() {
     rm -rf "${QUEUE_DIR:?}"
     mkdir -p "$QUEUE_DIR"
-    awk -F '\t' -v scope="$SCOPE" '!/^#/ && $1 == scope && !seen[$4]++ { print $4 "\t" $3 }' "$RUN_MANIFEST" \
+    awk -F '\t' -v scope="$SCOPE" -v rows="$ROWS_SELECTED" \
+        '!/^#/ && $1 == scope && (rows == ",," || index(rows, "," $2 ",")) && !seen[$4]++ { print $4 "\t" $3 }' "$RUN_MANIFEST" \
         > "$QUEUE_DIR/pending.tsv"
     : > "$QUEUE_DIR/claims.tsv"
 }
@@ -1091,10 +1321,17 @@ lane_run() {
 # (simulator not found, or the test runner failed to initialize) is recorded again, once, as an
 # infrastructure rerun. For places (only) the compact video is
 # made in the background from the journey's own start marker; the correction delivers its
-# recording unedited.
+# recording unedited. room and room_all: the Room journey (RoomReviewTests, gated by its own flag)
+# is recorded from before the app's launch to room-walkthrough-original.mp4 and delivered unedited;
+# its ROOM_WALKTHROUGH_START marker (printed as Common Ground's explanation shows, before Preview
+# room demo) goes to room-walkthrough-started.txt, so the VPS can trim from there.
 journey_run() {
-    local udid="$1" derived="$2" bundle="$3" seconds="$4" movie="$OUT/places-walkthrough-original.mp4"
-    local waited=0 status=0 recording_started mark attempt=1
+    local udid="$1" derived="$2" bundle="$3" seconds="$4" movie
+    local waited=0 status=0 recording_started mark attempt=1 flags="TEST_RUNNER_PROXIMEET_PLACES_REVIEW=1"
+    movie="$(walkthrough_movie)"
+    if room_scope; then
+        flags="$flags TEST_RUNNER_PROXIMEET_ROOM_REVIEW=1"
+    fi
     while :; do
         run xcrun simctl terminate "$udid" "$BUNDLE_ID" || true
         rm -f "$movie" "$movie.log"
@@ -1119,8 +1356,9 @@ journey_run() {
         rm -rf "${OUT:?}/${bundle:?}.xcresult"
         mark="$(wc -l < "$LOG" | tr -d ' ')"
         status=0
-        # shellcheck disable=SC2046
-        run "$TEST_BOUND" "$(budget "$seconds")" env TEST_RUNNER_PROXIMEET_PLACES_REVIEW=1 xcodebuild \
+        # The flags are plain NAME=1 words, so they split safely.
+        # shellcheck disable=SC2046,SC2086
+        run "$TEST_BOUND" "$(budget "$seconds")" env $flags xcodebuild \
             -project Proximeet.xcodeproj -scheme Proximeet -configuration Debug \
             -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$derived" \
             $(manifest_tests journey) -parallel-testing-enabled NO \
@@ -1150,6 +1388,15 @@ journey_run() {
     method="${method##*/}"
     sed -n 's/.*PLACES_WALKTHROUGH_START \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/walkthrough-started.txt"
     sed -n 's/.*PLACES_WALKTHROUGH_APP_READY \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/walkthrough-app-ready.txt"
+    if room_scope; then
+        sed -n 's/.*ROOM_WALKTHROUGH_START \([0-9][0-9.]*\).*/\1/p' "$LOG" | tail -n 1 > "$OUT/room-walkthrough-started.txt"
+        if [ -s "$OUT/room-walkthrough-started.txt" ]; then
+            summary_line "places-room-marker" "ROOM_WALKTHROUGH_START $(cat "$OUT/room-walkthrough-started.txt") (recording started $(cat "$OUT/recording-started.txt" 2>/dev/null || echo unknown))"
+        else
+            note "WARNING: the Room journey printed no ROOM_WALKTHROUGH_START marker; the recording is kept whole."
+            summary_line "places-room-marker" "NOT FOUND in the journey's log"
+        fi
+    fi
     sed -n "s/.*${method}]' [a-z]* (\([0-9][0-9.]*\) seconds).*/\1/p" "$LOG" | tail -n 1 \
         > "$OUT/walkthrough-duration.txt"
     if [ -s "$movie" ] && compacts_recording; then
@@ -1212,7 +1459,7 @@ smaller_segment() {
     printf 'device=%s (%s)\n' "$name" "$udid" > "$OUT/smaller.txt"
     run xcrun simctl boot "$udid" || true
     BOOTED_BY_US="$BOOTED_BY_US $udid"
-    run bounded "$(budget 240)" xcrun simctl bootstatus "$udid" -b || return 1
+    run bounded "$(budget "$SMALL_BOOT_SECONDS")" xcrun simctl bootstatus "$udid" -b || return 1
     status_bar "$udid"
     run_lane small "$udid" "$DERIVED_DATA"
     printf 'tests_xcodebuild_exit=%s (see the per-test results)\n' "$LAST_RUN_STATUS" >> "$OUT/smaller.txt"
@@ -1227,13 +1474,24 @@ stage_ui_review() {
     local build_status b_udid="" b_log="$LOGS/places-ui-review-device-b.log" waited=0 small_udid=""
     local second="" second_udid="" second_derived="$DERIVED_DATA" main_boot=0 second_boot=0
     rm -rf "${OUT:?}"/*.xcresult "${OUT:?}"/attachments-* "${OUT:?}"/places-walkthrough-* \
-        "${OUT:?}"/*-summary.json "${OUT:?}"/*-tests.json
+        "${OUT:?}"/room-walkthrough-* "${OUT:?}"/*-summary.json "${OUT:?}"/*-tests.json
     rm -f "$OUT/recording-started.txt" "$OUT/runs.txt" "$OUT/smaller.txt" "$b_log" "$OUT/walkthrough-started.txt" \
         "$OUT/walkthrough-duration.txt" "$OUT/compact-video.txt"
     : > "$OUT/runs.txt"
     export NSUnbufferedIO=YES
     note "Scope: $SCOPE. UI deadline: $(remaining)s left of the ${UI_DEADLINE_SECONDS}s budget."
-    awk -F '\t' -v scope="$SCOPE" '!/^#/ && $1 == scope' "$RUN_MANIFEST" > "$OUT/manifest-rows.tsv"
+    if [ -n "$ROW_FILTER" ]; then
+        note "Row filter (PLACES_ROW_FILTER, recorded by the source gate): only rows $ROW_FILTER of scope $SCOPE run; a run with no selected row is skipped whole."
+    fi
+    # The selected rows (every row of the scope without a filter): what this build runs and is judged by.
+    manifest_rows > "$OUT/manifest-rows.tsv"
+    # Nothing to run on the selected simulator (main_idle): shut it down now, in case it is booting, so
+    # the smaller iPhone never shares the host with it; nothing below waits for it or runs its lane.
+    if main_idle; then
+        note "No selected row runs on the selected simulator ($SIM_UDID): shutting it down now; only the smaller iPhone runs."
+        run xcrun simctl shutdown "$SIM_UDID" || true
+        summary_line "places-main-lane" "none: scope $SCOPE${ROW_FILTER:+ (PLACES_ROW_FILTER=$ROW_FILTER)} has no selected row on $SIM_UDID; shut down, not awaited"
+    fi
 
     # 1. The second device (device B, cloned in destinations, or the smaller iPhone) has been booting
     #    since destinations, like the selected simulator.
@@ -1249,7 +1507,9 @@ stage_ui_review() {
         # shellcheck source=/dev/null
         . "$SMALL_ENV"
         small_udid="$SMALL_UDID"
-        if [ -z "$second" ]; then
+        # One simulator at a time (the room scopes): the smaller iPhone is never a parallel lane; its
+        # runs follow the selected simulator's in step 5, after that simulator is shut down.
+        if [ -z "$second" ] && ! sequential_scope; then
             second="small"
             second_udid="$small_udid"
             printf 'device=%s (%s)\n' "$SMALL_NAME" "$small_udid" > "$OUT/smaller.txt"
@@ -1287,7 +1547,9 @@ stage_ui_review() {
         fi
     fi
     main_boot=0
-    run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || main_boot=$?
+    if ! main_idle; then
+        run bounded "$(budget 420)" xcrun simctl bootstatus "$SIM_UDID" -b || main_boot=$?
+    fi
     if queue_scope; then
         # Readiness barrier: in all 7 builds examined (recovery builds 1-4, 6ab88011, 6ab8639c and
         # 6ab81e22; a pattern fitted to those same builds) the main device's first runner started late
@@ -1315,7 +1577,9 @@ stage_ui_review() {
         ) > /dev/null 2>&1 &
         SAMPLER_PID=$!
     fi
-    status_bar "$SIM_UDID"
+    if ! main_idle; then
+        status_bar "$SIM_UDID"
+    fi
     if [ -n "$second" ]; then
         (
             trap - EXIT INT TERM
@@ -1338,18 +1602,23 @@ stage_ui_review() {
     #    queue, which also takes device B's runs when device B could not be cloned or copied).
     if queue_scope; then
         run_queue_lane main "$SIM_UDID" "$DERIVED_DATA"
+    elif main_idle; then
+        note "The selected simulator has no run in this build."
     else
         run_lane main "$SIM_UDID" "$DERIVED_DATA"
     fi
 
     # 5. Without its device, device B's runs happen here, after the selected simulator's; the smaller
     #    iPhone's runs follow the selected simulator's when device B took the parallel lane (no scope
-    #    uses both today), or are recorded as having no device.
+    #    uses both today) or the scope runs one simulator at a time (the room scopes), or are recorded
+    #    as having no device.
     if scope_uses b && [ "$second" != "b" ] && ! queue_scope; then
         run_lane b "$SIM_UDID" "$DERIVED_DATA"
     fi
     if scope_uses small && [ "$second" != "small" ]; then
-        run xcrun simctl shutdown "$SIM_UDID" || true
+        if ! main_idle; then
+            run xcrun simctl shutdown "$SIM_UDID" || true
+        fi
         if smaller_segment; then
             summary_line "places-smaller" "ran: $(tr '\n' ' ' < "$OUT/smaller.txt")"
         else
@@ -1388,7 +1657,8 @@ stage_ui_review() {
     run cat "$OUT/runs.txt"
 
     # 7. What actually ran, judged against the manifest, execution by execution.
-    python3 scripts/places_review_results.py "$RUN_MANIFEST" "$SCOPE" "$OUT/runs.txt" "$OUT/ui-review-tests.txt" \
+    # With a row filter the results judge only the selected rows (--rows=, the gate's record).
+    python3 scripts/places_review_results.py ${ROW_FILTER:+"--rows=$ROW_FILTER"} "$RUN_MANIFEST" "$SCOPE" "$OUT/runs.txt" "$OUT/ui-review-tests.txt" \
         "$OUT/executions.tsv" "$SIM_UDID" "${second:+$b_udid}" "$small_udid" "$LOG" ${second:+"$b_log"} \
         > "$OUT/ui-review-counts.txt" 2>>"$LOG" || note "ERROR: scripts/places_review_results.py failed; the results are incomplete."
     # The second device's log joins this one only now, after the parse, so no result is read twice.
@@ -1469,6 +1739,12 @@ stage_compact_video() {
     if [ "$SCOPE" = "correction" ]; then
         note "Scope $SCOPE: its recording is delivered unedited; no re-encode is made on the Mac."
         printf 'result=NOT APPLICABLE (scope %s delivers its recording unedited)\n' "$SCOPE" > "$OUT/compact-video.txt"
+        return 0
+    fi
+    if [ "$SCOPE" = "room" ] || [ "$SCOPE" = "room_all" ]; then
+        note "Scope $SCOPE: the Room recording is delivered unedited; any trim is made on the VPS from ROOM_WALKTHROUGH_START."
+        printf 'result=NOT APPLICABLE (scope %s delivers its recording unedited; trimmed on the VPS, not on the Mac)\n' \
+            "$SCOPE" > "$OUT/compact-video.txt"
         return 0
     fi
     if ! compacts_recording; then
@@ -1553,13 +1829,13 @@ stage_compact_video() {
 # ---------------------------------------------------------------------------------------
 
 stage_verdict() {
-    run python3 - "$SUMMARY" "$META" "$OUT" "$SCOPE" <<'PY'
+    run python3 - "$SUMMARY" "$META" "$OUT" "$SCOPE" "$RUN_MANIFEST" "$ROW_FILTER" <<'PY'
 import json
 import os
 import re
 import sys
 
-summary_path, meta, out, scope = sys.argv[1:5]
+summary_path, meta, out, scope, run_manifest, row_filter = sys.argv[1:7]
 last = {}
 if os.path.isfile(summary_path):
     for line in open(summary_path, encoding="utf-8", errors="replace"):
@@ -1590,8 +1866,48 @@ tools, source = kv(os.path.join(meta, "tools.txt")), kv(os.path.join(out, "sourc
 destination, tests = kv(os.path.join(out, "destination.txt")), kv(os.path.join(out, "ui-review-tests.txt"))
 compact, smaller = kv(os.path.join(out, "compact-video.txt")), kv(os.path.join(out, "smaller.txt"))
 simulator = json.load(open(os.path.join(meta, "simulator.json"))) if os.path.isfile(os.path.join(meta, "simulator.json")) else {}
-movie = os.path.join(out, "places-walkthrough-original.mp4")
+room = scope in ("room", "room_regression", "room_regression_main", "room_regression_small", "room_all")
+# The scope's rows, and the ones this build selected: every row, or only PLACES_ROW_FILTER's (validated and
+# recorded by the source gate). An unselected row is not part of this build: it is never run, judged or
+# reported as passed.
+scope_rows = [cells for cells in (line.rstrip("\n").split("\t") for line in open(run_manifest, encoding="utf-8")
+                                  if line.strip() and not line.startswith("#")) if cells[0] == scope]
+wanted = row_filter.split(",") if row_filter else []
+selected_rows = [cells for cells in scope_rows if not wanted or cells[1] in wanted]
+unselected = [cells[1] for cells in scope_rows if wanted and cells[1] not in wanted]
+journey_rows = [cells[1] for cells in selected_rows if cells[3] == "journey"]
+recorded_room = scope in ("room", "room_all") and bool(journey_rows)
+movie = os.path.join(out, "room-walkthrough-original.mp4" if scope in ("room", "room_all") else "places-walkthrough-original.mp4")
+devices_used = {cells[2] for cells in selected_rows}
+where = {"main": "iPhone 17 Pro Max", "b": "device B", "small": "smaller iPhone"}
+room_rows = ("RoomReviewTests' 13 methods on the iPhone 17 Pro Max: the real journey from Common Ground's "
+             "explanation through the Room and back to Places (recorded from launch with full holds, delivered "
+             "unedited), both deliberate entry gates, Social and Business compatibility with both approaches, note "
+             "filtering and both block orders, the report preview's isolation and its caller, Leave from every "
+             "context, back gestures, terminal re-entry, the ineligible and stale entry, the 15 states, 8 overlays "
+             "and 4 report variants captured at the default text, the largest text and the Reduce Motion preview; "
+             "and the largest text again on the smaller iPhone, after the selected simulator (one simulator at a time)")
+regression_rows = ("the 23 Places rows Room's integration touches, under their earlier IDs, tests and devices (short "
+                   "holds, nothing recorded): entry and return (P1, C15, C1, C12, C11, C10), category (P9, P4, C9, P13), "
+                   "eligibility (P10, P12), the age gate (P2), the footers (C3, C14, C2, C13, P11) and the Signal boundary "
+                   "(C4-C8); the smaller iPhone's after the selected simulator's (one simulator at a time)")
 covered = {
+    "room": "the 14 required room executions of docs/verification/places-review-manifest.tsv: " + room_rows,
+    "room_regression": "the 23 required room_regression executions of docs/verification/places-review-manifest.tsv: "
+                       + regression_rows,
+    "room_regression_main": "the 12 required room_regression_main executions of "
+                            "docs/verification/places-review-manifest.tsv: room_regression's 12 iPhone 17 Pro Max rows, "
+                            "under their earlier IDs, tests and devices (short holds, nothing recorded): C1, C2, C3, P2, "
+                            "P4 and P1 (rr_places_main), then C4, C5, C9, C6, C7 and C8 (rr_signal_main); its 11 "
+                            "smaller-iPhone rows are room_regression_small, a build of their own",
+    "room_regression_small": "the 11 required room_regression_small executions of "
+                             "docs/verification/places-review-manifest.tsv: room_regression's 11 smaller-iPhone rows, "
+                             "under their earlier IDs, tests and devices (short holds, nothing recorded): C15, P9, P10, "
+                             "P11, P12 and P13 (rr_places_small), then C10, C12, C13 and C14 (rr_correction_small), then "
+                             "C11 alone (rr_correction_small_b), on the smaller iPhone only (the iPhone 17 Pro Max is not "
+                             "booted); its 12 iPhone 17 Pro Max rows are room_regression_main, a build of their own",
+    "room_all": "the 37 required room_all executions of docs/verification/places-review-manifest.tsv: " + room_rows
+                + "; then " + regression_rows,
     "places": "the 13 Places executions of docs/verification/places-review-manifest.tsv: the recorded journey, the "
               "seven screens on two widths, all twelve intent-venue combinations, Back routes with the retained "
               "category and draft, the band change, missing choices and the guarded explanation, the Birthday gate "
@@ -1632,6 +1948,15 @@ covered = {
                     "and M1-M3; on device B, its clone, M4-M13, B1, B10-B13 and B15 (B2-B9 and the optional B14 run in "
                     "no recovery build)",
 }.get(scope, "unknown scope %r" % scope)
+if wanted:
+    # A filtered build covers exactly its selected rows, named one by one; nothing is said of the others
+    # but that they were not part of it.
+    covered = ("only the %d of %d %s rows selected by PLACES_ROW_FILTER=%s in docs/verification/places-review-manifest.tsv: "
+               "%s; the other %d (%s) were not part of this build" % (
+                   len(selected_rows), len(scope_rows), scope, row_filter,
+                   "; ".join("%s %s on the %s (%s run %s)" % (c[1], c[6].replace("/", "."), where.get(c[2], c[2]), c[7],
+                                                              c[3]) for c in selected_rows),
+                   len(unselected), ", ".join(unselected) or "none"))
 # The recovery after the Places correction, and how a verdict names each of its builds. Build 1 (the
 # first correction build, 6ab8adb4 on 907d7401) counts toward none of it; build 2 (6ab8c585, scope
 # correction, on 808950f) passed C10-C15 on the smaller iPhone, and on the main device the test runner
@@ -1641,7 +1966,7 @@ recovery = {"correction": "correction gate, build 2", "gate_finish": "gate finis
             "sweep_finish": "sweep finish, build 4", "regression_finish": "remaining rows, build 5",
             "regression_repair": "B2 repair, build 6"}
 required = {
-    "source gate (exact reviewed revision, approved assets, Signal and Places guards, intent colour guard)":
+    "source gate (exact reviewed revision, approved assets, Signal, Places and Room guards, intent colour guard)":
         source.get("result") == "MATCH",
     "scope recorded by the source gate matches this run (%s)" % scope: source.get("scope") == scope,
     "primary target iPhone 17 Pro Max selected": destination.get("primary_target") == "iPhone 17 Pro Max"
@@ -1650,16 +1975,27 @@ required = {
     "domain tests on the Mac (swift test)": passed("domain-tests"),
     "test-harness compilation (build-for-testing)": passed("places-ui-build"),
     "UI tests executed and passed (%s; no retries; none skipped, interrupted or missing; every run exited 0)" % covered:
-        tests.get("result") == "PASS" and tests.get("scope") == scope,
+        tests.get("result") == "PASS" and tests.get("scope") == scope
+        and tests.get("row_filter", "none") == (row_filter or "none"),
 }
-if scope in ("places", "correction"):
+gate_filter = source.get("row_filter", "none")
+if wanted or gate_filter != "none" or tests.get("row_filter", "none") != "none":
+    # The rows this verdict judges are the rows the gate validated: the same filter in the gate's record,
+    # this stage's input and the results.
+    required["rows selected by the source gate (PLACES_ROW_FILTER=%s) are the rows run and judged" % (row_filter or "none")] = \
+        gate_filter == (row_filter or "none") and tests.get("row_filter", "none") == (row_filter or "none")
+if scope in ("places", "correction") or (scope in ("room", "room_all") and journey_rows):
     required["journey recording confirmed and saved"] = last.get("places-recording", "").startswith("confirmed") \
         and os.path.isfile(movie) and os.path.getsize(movie) > 0
+rows_note = (" rows %s only" % ", ".join(c[1] for c in selected_rows)) if wanted else ""
 lines = [
-    "Places review verdict, scope '%s' (automated results only; manual review is listed separately)" % scope,
+    "%s verdict, scope '%s'%s (automated results only; manual review is listed separately)"
+    % ("Room review (the Places harness)" if room else "Places review", scope, rows_note),
     "",
-    "Build       Codemagic %s; this verdict covers only the '%s' scope, at the source below. The other scopes "
-    "run as their own builds; each names its commit." % (os.environ.get("CM_BUILD_ID", "(not on Codemagic)"), scope),
+    "Build       Codemagic %s; this verdict covers only the '%s' scope%s, at the source below. The other scopes "
+    "run as their own builds; each names its commit." % (os.environ.get("CM_BUILD_ID", "(not on Codemagic)"), scope,
+                                                        (", and of it only the rows PLACES_ROW_FILTER selected" if wanted
+                                                         else "")),
     "Source      git_head=%s  commit_pin=%s" % (source.get("git_head", "?"), source.get("commit_pin", "?")),
     "Toolchain   %s, %s; iphonesimulator SDK %s" % (tools.get("xcode", "?"), tools.get("xcode_build", "?"), tools.get("iphonesimulator_sdk", "?")),
     "Simulator   %s, %s (%s)" % (simulator.get("device_name", "?"), simulator.get("runtime_name", "?"), simulator.get("runtime_build", "?")),
@@ -1668,6 +2004,16 @@ lines = [
     "Devices     %s" % tests.get("devices", "?"),
     "Device B    %s" % status("places-device-b"),
     "Smaller     %s" % (smaller.get("device", "not run") if smaller else "not used in this scope"),
+]
+if wanted:
+    lines += [
+        "Row filter  PLACES_ROW_FILTER=%s (validated and recorded by the source gate: %s). This build ran and judges "
+        "only these rows, %d of the scope's %d:" % (row_filter, gate_filter, len(selected_rows), len(scope_rows))]
+    lines += ["              %s  %s  (%s, run %s, %s)" % (c[1], c[6].replace("/", "."), where.get(c[2], c[2]), c[3], c[7])
+              for c in selected_rows]
+    lines += ["            NOT PART OF THIS BUILD (not run, not judged, not reported as passed): %s (%d rows)"
+              % (", ".join(unselected) or "none", len(unselected))]
+lines += [
     "",
     "Required automated results:",
 ]
@@ -1691,20 +2037,57 @@ if os.path.isfile(path):
 lines += ["", "Supplementary (reported, not required):"]
 if scope in ("places", "correction"):
     lines += ["  compact walkthrough video: " + compact.get("result", "NOT RUN")]
-lines += [
-    "  unsigned simulator app zip (simulator only; not installable on a device): " + status("package"),
-    "  runnable preview copy of the app (build/preview; not evidence that any check passed): " + status("places-preview"),
-    "",
-    "OUTSTANDING manual review (automation cannot establish these):",
-    "  visual approval against docs/design/places-approved/reference (the founder decides)",
-    "  VoiceOver: the ticket's parts and its View place button, the tabs' selection, the disabled action's reason (its "
-    "hint), focus after each stage change and after Back, and the escape gesture (each Places stage's container, "
-    "places.screen, goes back one stage; VoiceOver does not run in the Simulator)",
-    "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a device",
-    "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
-    "  composing keyboards (Japanese, Chinese, Korean) and the software keyboard on a device",
-    "  motion smoothness on a device (simulator recordings drop frames and have variable frame timing)",
-]
+if scope in ("room", "room_all") and not journey_rows:
+    lines += ["  the recorded Room journey: NOT PART OF THIS BUILD (its row was not selected by PLACES_ROW_FILTER; "
+              "nothing was recorded)"]
+if recorded_room:
+    # The VPS trims the unedited recording from the marker; the offset is the marker minus the moment
+    # simctl confirmed the recording (both host clock, epoch seconds).
+    marker = open(os.path.join(out, "room-walkthrough-started.txt")).read().strip() \
+        if os.path.isfile(os.path.join(out, "room-walkthrough-started.txt")) else ""
+    started = open(os.path.join(out, "recording-started.txt")).read().strip() \
+        if os.path.isfile(os.path.join(out, "recording-started.txt")) else ""
+    try:
+        offset = "%.2f s into the recording" % (float(marker) - float(started))
+    except ValueError:
+        offset = "offset unknown"
+    lines += ["  compact walkthrough video: NOT APPLICABLE (the Room recording is delivered unedited; any trim is made "
+              "on the VPS, not on the Mac)",
+              "  ROOM_WALKTHROUGH_START (Common Ground's explanation showing, before Preview room demo): "
+              + ("%s, %s" % (marker, offset) if marker else "NOT FOUND in the journey's log (the recording is whole)")]
+lines += ["  unsigned simulator app zip (simulator only; not installable on a device): " + status("package")]
+if room:
+    lines += ["  runnable preview copy of the app: not made by the Room workflow (the app zip above is the build's app)"]
+else:
+    lines += ["  runnable preview copy of the app (build/preview; not evidence that any check passed): "
+              + status("places-preview")]
+lines += ["", "OUTSTANDING manual review (automation cannot establish these):"]
+# room_regression and its halves rerun Places rows, so Places' own list applies to them.
+if scope in ("room", "room_all"):
+    lines += [
+        "  visual approval against docs/design/room-approved/reference/room-review.png and the Room briefs (the founder "
+        "decides); the report, Wave and profile-safety overlays are not on the board",
+        "  VoiceOver: the Room's escape (one level; Leave from an active root), the modal panels, a card read once, "
+        "headlines as one header each, focus after every stage and panel change (VoiceOver does not run in the "
+        "Simulator)",
+        "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a "
+        "device",
+        "  the 500 ms ticket-to-header move and the 240 ms dissolves on a device (simulator recordings drop frames and "
+        "have variable frame timing); the VPS trim is an edit of the unedited recording, not new evidence",
+        "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
+    ]
+else:
+    lines += [
+        "  visual approval against docs/design/places-approved/reference (the founder decides)",
+        "  VoiceOver: the ticket's parts and its View place button, the tabs' selection, the disabled action's reason "
+        "(its hint), focus after each stage change and after Back, and the escape gesture (each Places stage's "
+        "container, places.screen, goes back one stage; VoiceOver does not run in the Simulator)",
+        "  system Settings > Accessibility > Reduce Motion (only the app's preview flag was tested) and larger text on a "
+        "device",
+        "  landscape and iPad (the app is portrait-only on iPhone; other orientations are untested)",
+        "  composing keyboards (Japanese, Chinese, Korean) and the software keyboard on a device",
+        "  motion smoothness on a device (simulator recordings drop frames and have variable frame timing)",
+    ]
 ok = all(required.values())
 if scope in recovery:
     role = "recovery build (%s)" % recovery[scope]
@@ -1721,8 +2104,27 @@ if scope in recovery:
               "separate verdicts."]
     verdict = ("PASS (scope %s, %s; the row-level reconciliation is separate; manual review still outstanding)"
                % (scope, role)) if ok else "FAIL (scope %s, %s)" % (scope, role)
+elif room:
+    # The Places recovery is frozen at 808950f; a Room commit changes product files, so no Room build
+    # counts toward it (scripts/places_recovery_reconcile.py would refuse it). Its rows stand on their own.
+    lines += ["", "A Room build: every row is judged at this build's commit only. None counts toward the Places recovery",
+              "(frozen at 808950f, whose product files the Room changes). room_regression's rows keep their earlier IDs,",
+              "tests and devices, so they compare row by row with the earlier builds'. The room scopes run one simulator",
+              "at a time: the smaller iPhone's runs follow the selected simulator's."]
+    if "main" not in devices_used:
+        lines += ["This build has no selected row on the iPhone 17 Pro Max: it was not booted, and only the smaller iPhone",
+                  "ran."]
+    elif "small" not in devices_used:
+        lines += ["This build has no selected row on the smaller iPhone: it was not booted, and only the iPhone 17 Pro Max",
+                  "ran."]
+    verdict = "PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope
 else:
     verdict = "PASS (scope %s; manual review still outstanding)" % scope if ok else "FAIL (scope %s)" % scope
+if wanted:
+    # PASS here means every SELECTED row passed; the verdict names them and the rows left out.
+    verdict = verdict.replace("(scope %s" % scope, "(scope %s, rows %s only (PLACES_ROW_FILTER); the other %d rows of the "
+                              "scope (%s) were not part of this build" % (scope, ", ".join(c[1] for c in selected_rows),
+                                                                          len(unselected), ", ".join(unselected) or "none"), 1)
 lines += ["", "AUTOMATED VERDICT: " + verdict]
 open(os.path.join(out, "verdict.txt"), "w").write("\n".join(lines) + "\n")
 print("\n".join(lines))
@@ -1748,6 +2150,11 @@ stage_package_review() {
         sweep_finish) title="Places-Finish-Review" ;;
         regression_finish) title="Places-Remaining-Review" ;;
         regression_repair) title="Places-Repair-Review" ;;
+        room) title="Room-Review" ;;
+        room_regression) title="Room-Regression-Review" ;;
+        room_regression_main) title="Room-Regression-Main-Review" ;;
+        room_regression_small) title="Room-Regression-Small-Review" ;;
+        room_all) title="Room-All-Review" ;;
         *)
             summary_line "places-package" "NOT MADE: unknown scope '$SCOPE' (no archive carries another scope's name)"
             return "$status"

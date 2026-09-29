@@ -1,7 +1,7 @@
 # Places approved assets: the Welcome poses, the Manrope faces and licence, the Birthday housing, the
 # Pass artwork, the Guest List card art, the four Wristband artworks, the blank Signal tag, the three
-# Places scenes, and the approved Welcome, Birthday, Pass, Guest List, Wristband, Signal and Places
-# handoff copies. Checked by scripts/places_review.sh checkpoint; written by
+# Places scenes, and the approved Welcome, Birthday, Pass, Guest List, Wristband, Signal, Places and
+# Room handoff copies. Checked by scripts/places_review.sh checkpoint; written by
 # scripts/places_source_manifests.py.
 62c88a822cb48945f1a429b47e4f8e13fec3186520e4b252bc6f8c665bbe12df  Proximeet/Resources/Assets.xcassets/BirthdayHousing.imageset/Contents.json
 d626481ecdff016fc304b06cc29f0f4a9e926bae31f26a444c2ee23ff426f6e0  Proximeet/Resources/Assets.xcassets/BirthdayHousing.imageset/birthday-housing.png
@@ -77,6 +77,13 @@ d798c554ab9530b6facc7f09412cc675528a2bbd48e5ebba2bfbc1b58eb0c443  docs/design/pl
 eb549347dd03390611d42dcb2e15e7b4d38f6ffe3bf9d643d983ed3c80d6330b  docs/design/places-approved/reference/common-ground-delivery.png
 1f6d0071a8255be8d47c71addac610f534f06c6f1c349e9b46498d464753171d  docs/design/places-approved/reference/fieldwork-delivery.png
 f9482636227e18fe32568cd3df4452df1427d692722d6cb7bfb2d3bd4bebf347  docs/design/places-approved/reference/places-review.png
+3250ba6666b4c01a08e72a24a0ebf3a795ba02ba17317a090058206c9b2b9136  docs/design/room-approved/CLAUDE_PROMPT.md
+ccabf263b9ce0cd89fbfda050d4b4cf9f335033bae4c42a69eba49f55c1c6f1c  docs/design/room-approved/DESIGN_NOTES.md
+4c563080bf18459924b989bc42d666e8b000f4f65c631624281cf4e84adc2d55  docs/design/room-approved/README.md
+e8e9d567550ea444bd4abe3243b20977327849a0bea037d463c29eb024aa5d05  docs/design/room-approved/SHA256SUMS.txt
+e0b90cbf643a1b6a171eb61eca1d8af2504cab21a93eb6665a8b55b081b963f7  docs/design/room-approved/fixtures/ROOM_DEMO_CONTRACT.json
+eb549347dd03390611d42dcb2e15e7b4d38f6ffe3bf9d643d983ed3c80d6330b  docs/design/room-approved/reference/common-ground-delivery.png
+bc5cdbda885e398631b7e31887287a4cb2ce74283599f415145cc323ccf9c206  docs/design/room-approved/reference/room-review.png
 7428f11a8f8b17188fe8adc7a3b35dd536595473e04503bcc23af11ae2a4cc84  docs/design/signal-approved/ART_PROMPT.json
 56595cd4595ede832d58e007c545b63c7d7cd75c9192ee2ece123cd0bf963ace  docs/design/signal-approved/CLAUDE_PROMPT.md
 3d1ef414fa77aa9c5f3ec237848b18fc62afed969f3733a62fa42534dd21c126  docs/design/signal-approved/DESIGN_NOTES.md

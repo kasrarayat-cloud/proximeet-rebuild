@@ -1,0 +1,275 @@
+{
+  "scope": "Bounded local Room demo; no production authorization or service",
+  "snapshot": "Fictional Thursday, 8 PM, unchanged from Places; no device clock/timer",
+  "venue": "Common Ground",
+  "permittedActualIntents": [
+    "Social",
+    "Business"
+  ],
+  "approachChoices": [
+    "Chat first",
+    "Okay to say hello"
+  ],
+  "actualDraftRequired": true,
+  "noDefaultIntentOrApproach": true,
+  "phaseOrder": [
+    "entry",
+    "waiting",
+    "populated",
+    "ended"
+  ],
+  "entry": {
+    "placesIntegration": "Eligible Common Ground explanation primary becomes Preview room demo; preserve actual Places detail/category navigation",
+    "startNewRun": "Only Enter room demo starts a run/reset in waiting",
+    "populate": "Only the labeled DEMO CONTROL / Show populated example selects populated fixture",
+    "incompatibleOrMissingDraft": "No Room entry; return through existing choice/discovery flow",
+    "productionFlags": "Never set or satisfy verification/check-in/membership/presence/entitlement/discoverability guards"
+  },
+  "waiting": {
+    "visibleActorIds": [],
+    "allowedSafety": "Global generic safety",
+    "excludes": [
+      "participant names",
+      "initials",
+      "messages",
+      "counts",
+      "profile links",
+      "hidden accessibility announcements"
+    ],
+    "noAutomaticReveal": true
+  },
+  "actors": [
+    {
+      "id": "maya",
+      "name": "Maya",
+      "initials": "ML",
+      "intent": "Social",
+      "approach": "Chat first",
+      "introduction": "Coffee, bookshops, and a good detour.",
+      "quote": "Tell me about a place you’d go back to.",
+      "interests": [
+        "Coffee",
+        "Bookshops",
+        "Detours"
+      ],
+      "blockBit": 1
+    },
+    {
+      "id": "jules",
+      "name": "Jules",
+      "initials": "JR",
+      "intent": "Business",
+      "approach": "Okay to say hello",
+      "introduction": "Design, ideas, and small businesses.",
+      "quote": "Always curious about what people are building.",
+      "interests": [
+        "Design",
+        "Ideas",
+        "Small business"
+      ],
+      "blockBit": 2
+    }
+  ],
+  "sampleCountIsNotPopulationOrThreshold": true,
+  "notes": {
+    "readOnly": true,
+    "hostLabel": "HOST NOTE · COMMON GROUND",
+    "hostMessage": "Keep it kind. A hello is always optional.",
+    "icebreakerLabel": "A SMALL ICEBREAKER",
+    "icebreaker": "What’s a small place that feels like home?",
+    "publicSample": {
+      "actorId": "jules",
+      "label": "Jules · public sample note",
+      "message": "One good question can change an evening."
+    },
+    "noComposerOrSubmission": true
+  },
+  "blockFixtures": [
+    {
+      "mask": 0,
+      "blockedActorIds": [],
+      "visiblePeopleIds": [
+        "maya",
+        "jules"
+      ],
+      "availableProfileIds": [
+        "maya",
+        "jules"
+      ],
+      "visiblePublicNoteActorIds": [
+        "jules"
+      ],
+      "peopleFrame": "66:115",
+      "notesFrame": "66:116",
+      "hostContentRemains": true
+    },
+    {
+      "mask": 1,
+      "blockedActorIds": [
+        "maya"
+      ],
+      "visiblePeopleIds": [
+        "jules"
+      ],
+      "availableProfileIds": [
+        "jules"
+      ],
+      "visiblePublicNoteActorIds": [
+        "jules"
+      ],
+      "peopleFrame": "66:119",
+      "notesFrame": "66:120",
+      "hostContentRemains": true
+    },
+    {
+      "mask": 2,
+      "blockedActorIds": [
+        "jules"
+      ],
+      "visiblePeopleIds": [
+        "maya"
+      ],
+      "availableProfileIds": [
+        "maya"
+      ],
+      "visiblePublicNoteActorIds": [],
+      "peopleFrame": "66:122",
+      "notesFrame": "66:123",
+      "hostContentRemains": true
+    },
+    {
+      "mask": 3,
+      "blockedActorIds": [
+        "maya",
+        "jules"
+      ],
+      "visiblePeopleIds": [],
+      "availableProfileIds": [],
+      "visiblePublicNoteActorIds": [],
+      "peopleFrame": "66:125",
+      "notesFrame": "66:126",
+      "hostContentRemains": true
+    }
+  ],
+  "blockRules": {
+    "centralState": "One typed blocked-actor set for current demo run; bitmask only identifies design fixtures",
+    "operation": "Union current blocked set with actor ID; never replace/reset existing blocks",
+    "onBlock": "Close relevant overlays/profile and return to filtered People",
+    "callerClose": "Preserve current caller/tab/block set; nested report closes to actor safety, then original caller",
+    "staleRoutes": "Recheck current run, phase and block set before render/action",
+    "reset": "Only new explicit Enter room demo after termination resets fictional blocks",
+    "noUnblock": true,
+    "noProductionRetentionClaim": true
+  },
+  "actualIntentInformationActionMatrix": [
+    {
+      "actualIntent": "Social",
+      "actorId": "maya",
+      "sameIntent": true,
+      "actionIfVisible": "How Waves work",
+      "informationOnly": true,
+      "additionalGuards": [
+        "current populated demo run",
+        "actor not blocked",
+        "valid current profile route"
+      ]
+    },
+    {
+      "actualIntent": "Social",
+      "actorId": "jules",
+      "sameIntent": false,
+      "actionIfVisible": "Back to people",
+      "informationOnly": true,
+      "additionalGuards": [
+        "current populated demo run",
+        "actor not blocked",
+        "valid current profile route"
+      ]
+    },
+    {
+      "actualIntent": "Business",
+      "actorId": "maya",
+      "sameIntent": false,
+      "actionIfVisible": "Back to people",
+      "informationOnly": true,
+      "additionalGuards": [
+        "current populated demo run",
+        "actor not blocked",
+        "valid current profile route"
+      ]
+    },
+    {
+      "actualIntent": "Business",
+      "actorId": "jules",
+      "sameIntent": true,
+      "actionIfVisible": "How Waves work",
+      "informationOnly": true,
+      "additionalGuards": [
+        "current populated demo run",
+        "actor not blocked",
+        "valid current profile route"
+      ]
+    }
+  ],
+  "waveBoundary": {
+    "canSend": false,
+    "canAccept": false,
+    "canCreatePending": false,
+    "canMatch": false,
+    "canOpenChat": false,
+    "text": "A Wave is an invitation. Chat opens only after the other person accepts. Sending Waves comes in the next preview.",
+    "separateApprovalRequired": true
+  },
+  "report": {
+    "reasons": [
+      "Unwanted attention",
+      "Harassment or harmful content",
+      "Something else"
+    ],
+    "initialSelection": null,
+    "singleChoice": true,
+    "selectedTap": "No-op",
+    "scope": "Current presentation and actor only; closing discards unsent selection",
+    "submits": false,
+    "receiptOrModerationQueue": false,
+    "persistenceOrLogging": false
+  },
+  "leave": {
+    "confirmation": false,
+    "reasonRequired": false,
+    "immediate": true,
+    "endsCurrentRun": true,
+    "clearsActorAndOverlayRoutes": true,
+    "stateBeforeAnimation": true,
+    "endedFrame": "66:114",
+    "endedBackToActiveForbidden": true,
+    "returnToPlaces": "Actual Places Now; preserve onboarding draft",
+    "newRunSequence": [
+      "eligible explanation",
+      "Room entry",
+      "explicit Enter room demo",
+      "waiting",
+      "explicit populated-example control"
+    ],
+    "staleCallbackOrGestureCannotRestore": true
+  },
+  "memory": "Demo and existing draft in memory only; no active room restored across relaunch",
+  "excludes": [
+    "real verification",
+    "location/camera permissions",
+    "QR scanning",
+    "production membership",
+    "network requests",
+    "account writes",
+    "disk persistence",
+    "logs/analytics",
+    "public posting",
+    "real reporting",
+    "notifications",
+    "hardware",
+    "Wave sending",
+    "chat",
+    "production session expiry/renewal"
+  ],
+  "fixtureGraphScope": "Reviewed Figma graph is Social/Chat first. Native Business adaptation and runtime guards require implementation checks."
+}

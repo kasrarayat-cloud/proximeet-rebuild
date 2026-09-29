@@ -6,7 +6,8 @@
 docs/verification/places-approved-files.sha256 lists the approved assets: the Welcome poses, the
 Manrope faces and licence, the Birthday housing, the Pass artwork, the Guest List card art, the four
 Wristband artworks, the blank Signal tag, the three Places scenes, and the approved handoff copies of
-every chapter. docs/verification/places-review-files.sha256 lists every other file of the checkout
+every chapter (the Room's, docs/design/room-approved, included).
+docs/verification/places-review-files.sha256 lists every other file of the checkout
 (tracked or untracked, not ignored) except itself. scripts/places_review.sh checkpoint checks both.
 With --check nothing is written; the exit is 1 when either manifest is out of date.
 """
@@ -27,7 +28,7 @@ APPROVED = [ASSETS + d + "/" for d in (
     "SignalTag.imageset", "PlaceCommonGround.imageset", "PlaceAfterglow.imageset", "PlaceFieldwork.imageset")] + [
     "docs/design/welcome-approved/", "docs/design/birthday-approved/", "docs/design/pass-approved/",
     "docs/design/guest-list-approved/", "docs/design/wristband-approved/", "docs/design/signal-approved/",
-    "docs/design/places-approved/"]
+    "docs/design/places-approved/", "docs/design/room-approved/"]
 
 
 def sha(path):
@@ -49,8 +50,8 @@ def main(argv):
     review = sorted(set(f for f in files if f not in frozen and f != REVIEW) | {FROZEN})
     frozen_text = ("# Places approved assets: the Welcome poses, the Manrope faces and licence, the Birthday housing, the\n"
                    "# Pass artwork, the Guest List card art, the four Wristband artworks, the blank Signal tag, the three\n"
-                   "# Places scenes, and the approved Welcome, Birthday, Pass, Guest List, Wristband, Signal and Places\n"
-                   "# handoff copies. Checked by scripts/places_review.sh checkpoint; written by\n"
+                   "# Places scenes, and the approved Welcome, Birthday, Pass, Guest List, Wristband, Signal, Places and\n"
+                   "# Room handoff copies. Checked by scripts/places_review.sh checkpoint; written by\n"
                    "# scripts/places_source_manifests.py.\n") + "".join("%s  %s\n" % (sha(f), f) for f in frozen)
     if check:
         current = open(FROZEN).read() if os.path.isfile(FROZEN) else ""

@@ -97,7 +97,8 @@ final class PlacesReviewTests: XCTestCase {
     /// Full journey, recorded: the real route with a typed introduction, Social and Chat first;
     /// Signal's Continue preview opens Places at Now; Later and Upcoming; Common Ground's detail
     /// (Preview check-in enabled), the explanation, Back to place, the explanation again and
-    /// Explore other places (Now); Afterglow's detail (Opens at 9 pm, disabled; a tap does
+    /// Preview room demo, then the Room's approved way back (Enter room demo, Leave and disappear,
+    /// Return to Places: Now); Afterglow's detail (Opens at 9 pm, disabled; a tap does
     /// nothing) and Back to places (Later kept); Fieldwork's (Not available for Social) and the
     /// header Back (Upcoming kept); Back to Signal (both values kept) and Continue preview again
     /// (Upcoming kept); back to the Wristband for Business, forward through Signal (Chat first
@@ -153,7 +154,9 @@ final class PlacesReviewTests: XCTestCase {
             capture("places-journey-\(category)-social", app)
         }
 
-        // Now → Common Ground's detail → the explanation → Back to place → the explanation → Explore.
+        // Now → Common Ground's detail → the explanation → Back to place → the explanation → Preview
+        // room demo → the Room → Return to Places (chapter 08: the explanation's primary no longer
+        // returns to browsing itself).
         choose("now", places)
         hold(0.8)
         openDetail(places, category: "now")
@@ -175,7 +178,7 @@ final class PlacesReviewTests: XCTestCase {
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
         hold(0.8)
-        places.explore.tap()
+        returnToNowThroughRoom(places)
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.8)
         assertBrowse(places, category: "now", intent: "social")
@@ -257,7 +260,7 @@ final class PlacesReviewTests: XCTestCase {
         hold(1.2)
         assertExplanation(places)
         capture("places-journey-explanation-business", app)
-        places.explore.tap()
+        returnToNowThroughRoom(places)
         waitForLabel(places.headline, "Find your kind of place.")
         assertBrowse(places, category: "now", intent: "business")
         assertNothingConferred(app)
@@ -361,8 +364,10 @@ final class PlacesReviewTests: XCTestCase {
     /// (Later kept); "Back to places" (Later kept); the bottom Back to Signal (both kept);
     /// Continue preview (Later kept); Back through the Wristband to the Guest List card (the
     /// introduction kept) and forward again (the intent, the approach and Later kept); the
-    /// explanation's header Back and "Back to place" (Common Ground's detail) and Explore other
-    /// places (Now, explicitly). A double tap on either Back stops one stage up.
+    /// explanation's header Back and "Back to place" (Common Ground's detail). A double tap on either
+    /// Back stops one stage up. Chapter 08: a double tap on Preview room demo opens the Room entry
+    /// once and nothing further (no run), the entry's Back returns to the actual explanation, and
+    /// Back to place and Back to places return to Now.
     func testBackRoutesKeepTheCategoryAndTheDraft() throws {
         let app = launch(fixture: "signal-selected", band: "social", approach: "chatFirst")
         let signal = SignalScreen(app: app)
@@ -425,7 +430,7 @@ final class PlacesReviewTests: XCTestCase {
         assertBrowse(places, category: "later", intent: "social")
         capture("places-reentry-after-card-later-fixture", app)
 
-        // The explanation's two ways back, and Explore other places.
+        // The explanation's two ways back, and Preview room demo.
         choose("now", places)
         openDetail(places, category: "now")
         places.primary.tap()
@@ -442,10 +447,28 @@ final class PlacesReviewTests: XCTestCase {
         assertDetail(places, category: "now", intent: "social")
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
+        // The second tap lands where the entry's Enter room demo now is; it must not start a run.
         places.explore.doubleTap()
+        waitForLabel(places.roomEnter, "Enter room demo")
+        hold(0.8)
+        XCTAssertTrue(places.roomEnter.exists, "A double tap on Preview room demo stops at the Room entry.")
+        XCTAssertEqual(app.buttons.matching(identifier: "roomEntry.enter").count, 1, "The Room entry opened once.")
+        let waiting = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "roomWaiting."))
+        XCTAssertEqual(waiting.count, 0, "A double tap on Preview room demo starts no run: no waiting screen.")
+        XCTAssertFalse(places.roomLeave.exists, "A double tap on Preview room demo starts no run: no Leave and disappear.")
+        // Under the entry the explanation is hidden from accessibility, so its headline showing again
+        // below is the entry's Back returning to it, not a headline that never went away.
+        XCTAssertFalse(places.explanationHeadline.exists, "Under the Room entry the explanation is hidden from accessibility.")
+        places.roomEntryBack.tap()
+        waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
+        waitForAbsence(places.roomEnter)
+        XCTAssertFalse(places.roomEnter.exists, "The entry's Back leaves the Room entry.")
+        assertExplanation(places)
+        places.backToPlace.tap()
+        waitForLabel(places.name, "Common Ground")
+        places.detailSecondary.tap()
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.8)
-        XCTAssertTrue(places.headline.exists, "A double tap on Explore other places stops at browsing.")
         assertBrowse(places, category: "now", intent: "social")
         assertNothingConferred(app)
     }
@@ -489,7 +512,7 @@ final class PlacesReviewTests: XCTestCase {
             places.primary.tap()
             if Self.expected("now", intent).enabled {
                 waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
-                places.explore.tap()
+                returnToNowThroughRoom(places)
             } else {
                 hold(0.5)
                 XCTAssertFalse(places.explanationHeadline.exists)
@@ -712,7 +735,7 @@ final class PlacesReviewTests: XCTestCase {
         hold(0.8)
         assertExplanation(places)
         softlyDrawn(app, "Preview check-in straight after View place", stage: .explanation, category: "now", intent: "social")
-        places.explore.tap()
+        returnToNowThroughRoom(places)
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.5)
 
@@ -886,6 +909,30 @@ final class PlacesReviewTests: XCTestCase {
         waitForLabel(places.name, Self.venue(category).name)
     }
 
+    /// From Common Ground's explanation back to browsing at Now. Chapter 08 made the explanation's
+    /// primary "Preview room demo", which opens the Room entry above the explanation instead of
+    /// browsing; the approved way on to Places is the Room's whole explicit sequence: Preview room
+    /// demo → Enter room demo → Leave and disappear → Return to Places, which is actual browsing at
+    /// Now, from the top, with the draft intact (the route Explore other places took). The caller
+    /// waits for browsing, as it did after Explore other places.
+    private func returnToNowThroughRoom(_ places: PlacesScreen) {
+        places.explore.tap()
+        waitForLabel(places.roomEnter, "Enter room demo")
+        hold(0.6)
+        places.roomEnter.tap()
+        waitForLabel(places.roomLeave, "Leave and disappear")
+        // Entering moves the entry's ticket into the header (500 ms); Leave is tapped once it rests.
+        hold(0.6)
+        places.roomLeave.tap()
+        waitForLabel(places.roomReturnToPlaces, "Return to Places")
+        // Return to Places sits 10 pt from where Leave was; a pause keeps the two taps from counting
+        // as one double tap, which the repeat-tap guard would swallow.
+        hold(0.6)
+        places.roomReturnToPlaces.tap()
+        // The Room dissolves away above Places; nothing that follows should tap into its fade.
+        waitForAbsence(places.roomReturnToPlaces)
+    }
+
     // MARK: - Assertions
 
     /// Browsing a category: the fixed copy, exactly its tab selected, its venue's ticket as one
@@ -953,7 +1000,7 @@ final class PlacesReviewTests: XCTestCase {
                       "Step 2: “\(second)”.")
         XCTAssertEqual(places.presence.label, "You stay private until both checks pass.")
         XCTAssertEqual(places.demoLine.label, "Demo · no location or camera used.")
-        XCTAssertEqual(places.explore.label, "Explore other places")
+        XCTAssertEqual(places.explore.label, "Preview room demo")
         XCTAssertTrue(places.explore.isEnabled)
         XCTAssertGreaterThanOrEqual(places.explore.frame.height, 60)
         XCTAssertEqual(places.backToPlace.label, "Back to place")
@@ -1074,7 +1121,7 @@ final class PlacesReviewTests: XCTestCase {
                 box(places.step(2), "Step 2", CGRect(x: 32, y: 573, width: 376, height: 112))
                 top(places.presence, "Presence line", x: nil, y: 711)
                 top(places.demoLine, "Demo line", x: nil, y: 751)
-                box(places.explore, "Explore other places", CGRect(x: 32, y: 812, width: 376, height: 60))
+                box(places.explore, "Preview room demo", CGRect(x: 32, y: 812, width: 376, height: 60))
                 box(places.backToPlace, "Back to place", CGRect(x: 32, y: 883, width: 376, height: 44))
             }
             attachNote("\(state): frames (points, 440 × 956): " + lines.joined(separator: "; ") + ".")
@@ -1759,10 +1806,20 @@ private struct PlacesScreen {
     var explanationVenue: XCUIElement { element("explanation.venue") }
     var presence: XCUIElement { element("explanation.presence") }
     var demoLine: XCUIElement { element("explanation.demo") }
+    /// The explanation's primary. Since chapter 08 it is "Preview room demo" (Figma 67:286, the same
+    /// 376 × 60 frame), opening the Room entry above the explanation; the name is kept from when it
+    /// was Explore other places.
     var explore: XCUIElement { app.buttons["explanation.primary"] }
     var backToPlace: XCUIElement { app.buttons["explanation.secondary"] }
 
     func step(_ number: Int) -> XCUIElement { element("explanation.step.\(number)") }
+
+    // Chapter 08: the Room drawn above the explanation, only as far as these checks go through it
+    // (the Room contract's identifiers; the Room itself is RoomReviewTests').
+    var roomEnter: XCUIElement { app.buttons["roomEntry.enter"] }
+    var roomEntryBack: XCUIElement { app.buttons["roomEntry.back"] }
+    var roomLeave: XCUIElement { app.buttons["room.leave"] }
+    var roomReturnToPlaces: XCUIElement { app.buttons["roomEnded.returnToPlaces"] }
 }
 
 @MainActor

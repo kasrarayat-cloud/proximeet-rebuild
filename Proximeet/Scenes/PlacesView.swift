@@ -123,10 +123,19 @@ struct PlacesView: View {
             // A back swipe in progress moves the whole screen with the finger; the ground stays.
             .offset(x: backDrag)
         }
+        // While the Room shows above the explanation, the explanation is not an accessibility element.
+        .accessibilityHidden(session.room != nil)
         .background(WristbandStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
         .background(PlacesEdgeBack(innerStage: stage != .browse, changed: swipeChanged, ended: swipeEnded,
                                    cancelled: swipeCancelled))
+        // Chapter 08: the Room, above Common Ground's explanation (the flow stays on the explanation).
+        .overlay {
+            if session.room != nil {
+                RoomView()
+                    .transition(.opacity)
+            }
+        }
         .onChange(of: session.flow.currentScene) { _, scene in
             // Whatever changed the stage, no swipe offset outlives it. Leaving Places (a completed
             // swipe from browsing), the native pop carries the screen on from where the finger left it.
@@ -180,7 +189,7 @@ struct PlacesView: View {
     // MARK: - Actions
 
     /// Browsing: Back (376 × 44 at y 883). A detail: its primary action (376 × 60 at y 812) and
-    /// "Back to places". The explanation: "Explore other places" and "Back to place". Kept on
+    /// "Back to places". The explanation: "Preview room demo" and "Back to place". Kept on
     /// screen above the home indicator, as on the earlier chapters.
     private func actions(_ stage: PlacesStage, _ eligibility: PlaceEligibility, width: CGFloat,
                          bottomInset: CGFloat) -> some View {
@@ -211,10 +220,13 @@ struct PlacesView: View {
                     }
                 case .explanation:
                     VStack(spacing: 11) {
-                        Button("Explore other places") {
-                            dissolve { session.exploreOtherPlaces() }
+                        // Chapter 08: the explanation's primary opens the Room entry (the approved integration change:
+                        // its label and destination only).
+                        Button("Preview room demo") {
+                            openRoom()
                         }
                         .buttonStyle(WristbandPrimaryStyle())
+                        .accessibilityHint("Opens a fictional Room demo.")
                         .accessibilityIdentifier("explanation.primary")
                         Button("Back to place") {
                             back(from: .explanation)
@@ -262,6 +274,13 @@ struct PlacesView: View {
             withAnimation(.easeOut(duration: 0.5)) {
                 _ = session.openPlaceDetail()
             }
+        }
+    }
+
+    /// Preview room demo: the Room entry dissolves in above the explanation (240 ms; none for VoiceOver).
+    private func openRoom() {
+        withAnimation(dissolveAnimation) {
+            _ = session.previewRoomDemo()
         }
     }
 
@@ -320,6 +339,10 @@ struct PlacesView: View {
     /// VoiceOver's escape: exactly the one stage the Back controls go. Ignored while a completed
     /// swipe is still finishing, as a second swipe is; any swipe offset is dropped first.
     private func escape(from stage: PlacesStage) {
+        if session.room != nil {
+            RoomView.outerBack(session, animation: dissolveAnimation)
+            return
+        }
         guard !backCompleting else { return }
         backDrag = 0
         back(from: stage)
@@ -365,7 +388,8 @@ struct PlacesView: View {
 
     /// The screen follows the finger. Nothing changes in the model until the swipe is completed.
     private func swipeChanged(_ translation: CGFloat) {
-        guard !backCompleting else { return }
+        // Above the explanation the Room decides what a finished swipe does; the screen stays put.
+        guard !backCompleting, session.room == nil else { return }
         backDrag = translation
     }
 
@@ -375,6 +399,14 @@ struct PlacesView: View {
     private func swipeEnded(_ translation: CGFloat, _ velocity: CGFloat, _ width: CGFloat) {
         guard !backCompleting else { return }
         let completes = translation > width * 0.4 || (velocity > 700 && translation > 24)
+        if session.room != nil {
+            // The Room's outer Back: the entry to the explanation, one level of its callers, or, at an
+            // active run's root, the terminal Leave. A swipe that is not completed changes nothing.
+            if completes {
+                RoomView.outerBack(session, animation: dissolveAnimation)
+            }
+            return
+        }
         guard completes else {
             swipeCancelled()
             return

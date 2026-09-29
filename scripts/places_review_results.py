@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """Proximeet Places review: what actually ran in one scope, judged against the manifest.
 
-    python3 scripts/places_review_results.py MANIFEST SCOPE RUNS OUT_TXT OUT_TSV MAIN_UDID B_UDID SMALL_UDID LOG [LOG ...]
+    python3 scripts/places_review_results.py [--rows=R3,R14] MANIFEST SCOPE RUNS OUT_TXT OUT_TSV MAIN_UDID B_UDID SMALL_UDID LOG [LOG ...]
 
-MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (gate_finish,
-sweep_finish, correction, sweep, regressions, places or signal) are judged; a scope with no rows is a
-FAIL. RUNS is the stage's runs.txt ("<run> <bundle> <exit> <kind>", kind no | infra | time | device;
-an infra line names a first attempt that started no test, "<run>_destination_unavailable" when the
-simulator was not found or "<run>_runner_not_ready" when the test runner failed to initialize for UI
-testing, after which the same tests ran once more under <run>). The LOGs are the lanes' xcodebuild
+MANIFEST is docs/verification/places-review-manifest.tsv; only the rows of SCOPE (room,
+room_regression, room_regression_main, room_regression_small, room_all, regression_repair,
+regression_finish, gate_finish, sweep_finish, correction, sweep, regressions, places or signal) are
+judged; a scope with no rows is a FAIL. --rows (the row filter PLACES_ROW_FILTER, as the source gate
+recorded it) narrows them to the named rows: only those are required, counted and listed; the others
+are named as not part of the build, never as passed, and any execution of their tests is unexpected
+(a FAIL). A --rows that names a row outside the scope, or one twice, is a FAIL. RUNS is the stage's
+runs.txt ("<run> <bundle> <exit> <kind>", kind no | infra | time | device; an infra line names a
+first attempt that started no test, "<run>_destination_unavailable" when the simulator was not found
+or "<run>_runner_not_ready" when the test runner failed to initialize for UI testing, after which the
+same tests ran once more under <run>). The LOGs are the lanes' xcodebuild
 logs, in which every run starts with a "$ ..." line naming its destination and result bundle. B_UDID
 or SMALL_UDID may be "" when that device was not used (device B's rows then run on the selected
 simulator). Writes the key=value results that scripts/places_review.sh's verdict reads (OUT_TXT) and
@@ -38,7 +43,7 @@ CASE = re.compile(r"Test [Cc]ase '(?:-\[)?(?:\w+\.)?(\w+Tests)[ ./](test\w+)(?:\
 ERROR = re.compile(r": error: -\[(?:\w+\.)?(\w+Tests) (test\w+)\] : (.*)$")
 COMMAND = re.compile(r"^\$ .*-destination platform=iOS Simulator,id=([0-9A-Fa-f-]{36})")
 BUNDLE = re.compile(r"-resultBundlePath \S*?(\w+)\.xcresult")
-FLAGS = ("PLACES", "SIGNAL", "WRISTBAND", "GUEST_LIST", "PASS", "BIRTHDAY", "WELCOME")
+FLAGS = ("PLACES", "SIGNAL", "WRISTBAND", "GUEST_LIST", "PASS", "BIRTHDAY", "WELCOME", "ROOM")
 LANE_LABEL = {"main": "main", "b": "deviceB", "small": "smaller"}
 # An infrastructure rerun's reason, by the suffix scripts/places_review.sh gives its first attempt.
 INFRA_REASONS = (("_destination_unavailable", "simulator not found, no test ran"),
@@ -86,8 +91,11 @@ def load_runs(path):
 
 
 def parse_logs(paths):
-    """Every test event, in order, keyed by result bundle: {bundle: [(device, test, event, seconds)]}."""
-    events, errors, markers, walk_start = {}, {}, set(), None
+    """Every test event, in order, keyed by result bundle: {bundle: [(device, test, event, seconds)]}.
+
+    The walkthrough start markers, the first of each: PLACES_WALKTHROUGH_START (the Places journeys) and
+    ROOM_WALKTHROUGH_START (the Room journey, printed as Common Ground's explanation shows)."""
+    events, errors, markers, walk_start, room_start = {}, {}, set(), None, None
     for path in paths:
         if not os.path.isfile(path):
             continue
@@ -113,7 +121,10 @@ def parse_logs(paths):
             begun = re.search(r"PLACES_WALKTHROUGH_START (\d+(?:\.\d+)?)", line)
             if begun and walk_start is None:
                 walk_start = begun.group(1)
-    return events, errors, markers, walk_start
+            begun = re.search(r"ROOM_WALKTHROUGH_START (\d+(?:\.\d+)?)", line)
+            if begun and room_start is None:
+                room_start = begun.group(1)
+    return events, errors, markers, walk_start, room_start
 
 
 def executions(bundle_events):
@@ -133,21 +144,44 @@ def executions(bundle_events):
 
 
 def main(argv):
+    argv = list(argv)
+    row_filter = ""
+    if len(argv) > 1 and argv[1].startswith("--rows="):
+        row_filter = argv.pop(1)[len("--rows="):]
     if len(argv) < 10:
         sys.stderr.write(__doc__)
         return 2
     manifest_path, scope, runs_path, out_txt, out_tsv, main_udid, b_udid, small_udid = argv[1:9]
     logs = argv[9:]
     rows = load_manifest(manifest_path, scope)
+    # The row filter: only the selected rows are judged. The gate validated it; it is checked again here,
+    # so a filter that names no row of this scope can never pass as "nothing to judge".
+    scope_orders = [r["order"] for r in rows]
+    wanted = row_filter.split(",") if row_filter else []
+    filter_problems = []
+    if wanted:
+        bad = [o for o in wanted if not re.fullmatch(r"[A-Z][0-9]{1,2}", o) or o not in scope_orders]
+        twice = sorted({o for o in wanted if wanted.count(o) > 1})
+        if bad:
+            filter_problems.append("row filter %s: %s not rows of scope %s" % (row_filter, ", ".join(bad), scope))
+        if twice:
+            filter_problems.append("row filter %s: %s named more than once" % (row_filter, ", ".join(twice)))
+        rows = [r for r in rows if r["order"] in wanted]
+    not_selected = [o for o in scope_orders if wanted and o not in wanted]
     runs = load_runs(runs_path)
-    events, errors, markers, walk_start = parse_logs(logs)
+    events, errors, markers, walk_start, room_start = parse_logs(logs)
+    # The recorded journey's own marker: the Room journey prints ROOM_WALKTHROUGH_START; in room_all the
+    # Places rows' unrecorded journeys may print PLACES_WALKTHROUGH_START too, which is not the recording's.
+    journey_rows = [r for r in rows if r["run"] == "journey"]
+    if journey_rows and journey_rows[0]["test"].startswith("RoomReviewTests."):
+        walk_start = room_start
     main_udid = main_udid.upper()
     b_used = bool(b_udid)
     lane_udid = {"main": main_udid, "b": (b_udid or main_udid).upper(), "small": small_udid.upper()}
 
     by_bundle = {bundle: executions(evts) for bundle, evts in events.items()}
     manifest_keys = {(r["bundle"], r["test"]) for r in rows}
-    problems, table, result_lines, repeats = [], [], [], []
+    problems, table, result_lines, repeats = list(filter_problems), [], [], []
     run_exit = {r["run"]: r for r in runs if r["kind"] != "infra"}
 
     if not rows:
@@ -251,10 +285,23 @@ def main(argv):
     required_ok = [r for r, t in zip(rows, table) if r["kind"] == "required" and t[7] == "passed"]
     ok = not problems and executed > 0
 
+    selection = []
+    if wanted:
+        selection = [
+            "row_filter=" + row_filter,
+            "rows_selected=%s (%d of the %d rows of scope %s: only these ran and are judged)" % (
+                ",".join(r["order"] for r in rows), len(rows), len(scope_orders), scope),
+            "rows_not_selected=%s (not part of this build: not run, not judged, never reported as passed)" % (
+                ",".join(not_selected) or "none"),
+        ]
     lines = sorted(result_lines) + [
         "scope=" + scope,
-        "manifest=%s (%d rows for this scope: %d required, %d optional)" % (
-            os.path.basename(manifest_path), len(rows), len(required), len(rows) - len(required)),
+        ("manifest=%s (%d of the %d rows for this scope, selected by PLACES_ROW_FILTER=%s: %d required, %d optional)"
+         % (os.path.basename(manifest_path), len(rows), len(scope_orders), row_filter, len(required),
+            len(rows) - len(required)) if wanted else
+         "manifest=%s (%d rows for this scope: %d required, %d optional)" % (
+             os.path.basename(manifest_path), len(rows), len(required), len(rows) - len(required))),
+    ] + selection + [
         "unique_test_cases=%d" % len(unique),
         "executions=%d" % executed,
         "passed=%(passed)d" % counts, "failed=%(failed)d" % counts, "skipped=%(skipped)d" % counts,
@@ -287,9 +334,11 @@ def main(argv):
         out.write("order\tdevice\tudid\trun\tbundle\ttest\tkind\toutcome\tseconds\tfailure\n")
         for row in table:
             out.write("\t".join(str(c).replace("\t", " ").replace("\n", " ") for c in row) + "\n")
-    print("scope %s: %d unique cases, %d executions (passed %d, failed %d, skipped %d, interrupted %d); "
+    print("scope %s%s: %d unique cases, %d executions (passed %d, failed %d, skipped %d, interrupted %d); "
           "required first-attempt passes %d/%d; repeats: %s; %s"
-          % (scope, len(unique), executed, counts["passed"], counts["failed"], counts["skipped"], counts["interrupted"],
+          % (scope, (", rows %s only (PLACES_ROW_FILTER; not part of this build: %s)"
+                     % (",".join(r["order"] for r in rows), ",".join(not_selected) or "none")) if wanted else "",
+             len(unique), executed, counts["passed"], counts["failed"], counts["skipped"], counts["interrupted"],
              len(required_ok), len(required), "; ".join(repeats) or "none", "PASS" if ok else "FAIL"))
     return 0
 

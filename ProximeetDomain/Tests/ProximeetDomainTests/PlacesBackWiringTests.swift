@@ -55,8 +55,10 @@ final class PlacesBackWiringTests: XCTestCase {
                                    in: code), 1, "the container is the whole screen's, identified places.screen")
         XCTAssertEqual(try matches(#"\.accessibilityAction\(\.escape\)"#, in: code), 1, "no second escape owner")
         XCTAssertEqual(try matches(#""places\.screen""#, in: code), 1, "one places.screen")
-        XCTAssertEqual(try matches(#"private func escape\(from stage: PlacesStage\) \{\s*guard !backCompleting else \{ return \}\s*backDrag = 0\s*back\(from: stage\)\s*\}"#,
-                                   in: code), 1, "escape is the controls' own one-stage Back, ignored while a swipe completes")
+        // Chapter 8: while the Room is shown above the explanation, escape is the Room's outer Back
+        // (it closes the Room's top level, or leaves); otherwise it is unchanged.
+        XCTAssertEqual(try matches(#"private func escape\(from stage: PlacesStage\) \{\s*if session\.room != nil \{\s*RoomView\.outerBack\(session, animation: dissolveAnimation\)\s*return\s*\}\s*guard !backCompleting else \{ return \}\s*backDrag = 0\s*back\(from: stage\)\s*\}"#,
+                                   in: code), 1, "escape is the Room's outer Back while it is shown, else the controls' own one-stage Back, ignored while a swipe completes")
     }
 
     func testNoControlGoesBackAroundTheSharedRoute() throws {

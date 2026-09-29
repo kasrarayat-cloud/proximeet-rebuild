@@ -205,7 +205,8 @@ final class PlacesCorrectionTests: XCTestCase {
     /// detail it opens starts at its beginning (the header and the venue), not at browsing's
     /// offset; its last line is reachable. Preview check-in: the explanation starts at its heading;
     /// its privacy and demo lines are reachable. Back to place: the detail from its beginning. Back
-    /// to places: Now, with View place in view. Explore other places: Now from the top.
+    /// to places: Now, with View place in view. Preview room demo, then the Room's Enter room demo,
+    /// Leave and disappear and Return to Places (chapter 08): Now from the top.
     func testDetailAndExplanationStartAtTheirBeginning() throws {
         let app = launch(fixture: "places", extra: Self.largestText)
         let places = CorrectionPlaces(app: app)
@@ -252,11 +253,11 @@ final class PlacesCorrectionTests: XCTestCase {
         waitForLabel(places.name, "Common Ground")
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
-        places.explore.tap()
+        returnToNowThroughRoom(places)
         waitForLabel(places.headline, "Find your kind of place.")
         hold(0.6)
         XCTAssertTrue(places.tab("now").isSelected)
-        XCTAssertEqual(places.back.frame.minY, restingHeader, accuracy: 1.5, "Explore other places shows Now from the top.")
+        XCTAssertEqual(places.back.frame.minY, restingHeader, accuracy: 1.5, "Return to Places shows Now from the top.")
     }
 
     // MARK: - Back, by control and by gesture
@@ -312,7 +313,7 @@ final class PlacesCorrectionTests: XCTestCase {
         XCTAssertTrue(places.tab("later").isSelected, "Back to places: Later.")
 
         // The explanation: a cancelled swipe, then a completed one; then the header Back and Back
-        // to place; then Explore other places.
+        // to place; then Preview room demo and the Room's way back to Places.
         choose("now", places)
         openDetail(places, app, "Common Ground")
         places.primary.tap()
@@ -343,9 +344,9 @@ final class PlacesCorrectionTests: XCTestCase {
         waitForLabel(places.name, "Common Ground")
         places.primary.tap()
         waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
-        places.explore.tap()
+        returnToNowThroughRoom(places)
         waitForLabel(places.headline, "Find your kind of place.")
-        XCTAssertTrue(places.tab("now").isSelected, "Explore other places: Now.")
+        XCTAssertTrue(places.tab("now").isSelected, "Return to Places from the Room: Now.")
 
         // Browsing: a cancelled swipe, then a completed one to the actual Signal; the category
         // left is the one Continue preview reopens.
@@ -545,6 +546,31 @@ final class PlacesCorrectionTests: XCTestCase {
         XCTAssertTrue(scrollIntoView(places.viewPlace, bar: places.secondary, app))
         places.viewPlace.tap()
         waitForLabel(places.name, name)
+    }
+
+    /// From Common Ground's explanation back to browsing at Now. Chapter 08 made the explanation's
+    /// primary "Preview room demo", which opens the Room entry above the explanation instead of
+    /// browsing; the approved way on to Places is the Room's whole explicit sequence: Preview room
+    /// demo → Enter room demo → Leave and disappear → Return to Places, which is actual browsing at
+    /// Now, from the top, with the draft intact (the route Explore other places took). The caller
+    /// waits for browsing, as it did after Explore other places.
+    private func returnToNowThroughRoom(_ places: CorrectionPlaces) {
+        places.explore.tap()
+        waitForLabel(places.roomEnter, "Enter room demo")
+        hold(0.6)
+        places.roomEnter.tap()
+        waitForLabel(places.roomLeave, "Leave and disappear")
+        // Entering moves the entry's ticket into the header (500 ms); Leave is tapped once it rests.
+        hold(0.6)
+        places.roomLeave.tap()
+        waitForLabel(places.roomReturnToPlaces, "Return to Places")
+        // Return to Places sits 10 pt from where Leave was; a pause keeps the two taps from counting
+        // as one double tap, which the repeat-tap guard would swallow.
+        hold(0.6)
+        places.roomReturnToPlaces.tap()
+        // The Room dissolves away above Places; nothing that follows should tap into its fade.
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: places.roomReturnToPlaces)
+        _ = XCTWaiter.wait(for: [gone], timeout: 10)
     }
 
     /// A swipe in from the leading edge, 45 % of the way down: completed (three quarters of the
@@ -1167,8 +1193,17 @@ private struct CorrectionPlaces {
     var explanationHeadline: XCUIElement { element("explanation.headline") }
     var presence: XCUIElement { element("explanation.presence") }
     var demoLine: XCUIElement { element("explanation.demo") }
+    /// The explanation's primary. Since chapter 08 it is "Preview room demo" (Figma 67:286, the same
+    /// 376 × 60 frame), opening the Room entry above the explanation; the name is kept from when it
+    /// was Explore other places.
     var explore: XCUIElement { app.buttons["explanation.primary"] }
     var backToPlace: XCUIElement { app.buttons["explanation.secondary"] }
+
+    // Chapter 08: the Room drawn above the explanation, only as far as these checks go through it
+    // (the Room contract's identifiers; the Room itself is RoomReviewTests').
+    var roomEnter: XCUIElement { app.buttons["roomEntry.enter"] }
+    var roomLeave: XCUIElement { app.buttons["room.leave"] }
+    var roomReturnToPlaces: XCUIElement { app.buttons["roomEnded.returnToPlaces"] }
 }
 
 @MainActor
