@@ -34,6 +34,9 @@ struct RoomView: View {
     /// draws this instead and fades the actual entry or ended screen rather than a bare ground. Neither
     /// screen shows a sample, and every action still goes through the session's guards.
     @State private var lastShown: RoomPreview?
+    /// The bar's last measured height, so the spacer that stands in for it under a panel keeps the page
+    /// exactly where it was.
+    @State private var barHeight: CGFloat = 0
 
     var body: some View {
         GeometryReader { proxy in
@@ -102,10 +105,8 @@ struct RoomView: View {
     /// home indicator (as on Places), so Leave, Enter and Return to Places are never covered or
     /// scrolled away at any text size.
     ///
-    /// `covered`: a panel is open above the page. The whole page is hidden from accessibility, and so
-    /// are its scrolling content and its bar themselves: build 6abc1b80 showed the bar's Leave still
-    /// reachable under a panel with only the page's own `accessibilityHidden` (the `.safeAreaInset`
-    /// content did not inherit it), so each part carries its own.
+    /// `covered`: a panel is open above the page. The page and its scrolling content are hidden from
+    /// accessibility, and the bar below them is replaced by an empty spacer of its height (see there).
     private func page(_ room: RoomPreview, screen: RoomScreen, width: CGFloat, bottomInset: CGFloat,
                       covered: Bool) -> some View {
         ScrollViewReader { reader in
@@ -128,8 +129,22 @@ struct RoomView: View {
                     .background(RoomStyle.ground.ignoresSafeArea(edges: .top))
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                actionBar(room, screen: screen, width: width, bottomInset: bottomInset)
-                    .accessibilityHidden(covered)
+                if covered {
+                    // Under a panel the bar is not built at all: builds 6abc1b80 and 6abc2ae1 found its
+                    // Leave still in the accessibility tree with `accessibilityHidden` on the page and on
+                    // the bar itself. An empty spacer of the bar's height keeps the dimmed page still.
+                    Color.clear
+                        .frame(height: barHeight)
+                } else {
+                    actionBar(room, screen: screen, width: width, bottomInset: bottomInset)
+                        .background {
+                            GeometryReader { bar in
+                                Color.clear
+                                    .onAppear { barHeight = bar.size.height }
+                                    .onChange(of: bar.size.height) { _, height in barHeight = height }
+                            }
+                        }
+                }
             }
             .onChange(of: screen) { previous, current in
                 reveal(from: previous, to: current, with: reader)

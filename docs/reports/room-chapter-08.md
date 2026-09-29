@@ -126,6 +126,12 @@ cover the Room, which awaits its own founder visual review.
     lines beside the art than across the ticket, the name, session line and preference run the ticket's
     full width below the art. The art keeps its approved place. At every other size, on any phone
     width, including 375-pt phones that no build here tests, the approved arrangement is kept.
+15. **Under an open panel, the dimmed screen shows no bottom bar** (its Leave, or People's boundary
+    line). An empty spacer of the bar's height takes its place. Figma exports the panels alone and does
+    not show what lies under them; each panel carries its own Leave.
+    - **Captures launched straight into a panel:** the bar was never measured there, so the spacer is
+      empty and the dimmed page underneath sits slightly differently from the real journey. This is
+      cosmetic only.
 
 ## 6. Mac verification plan
 
@@ -158,6 +164,22 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   Before build 2, the unexecuted steps of the nine stopped tests were traced against the code and
   build 1's log. No further failure was found, and the full durations were estimated at about 1,300 s
   of tests for build 2.
+- **Revised again after build 2 (deviation, reported at once):** 71 of 150 minutes are used, and 79
+  minutes and two builds are left. That cannot hold every Room row plus both regression halves.
+  - **Build 3 (45 min):** the ten rows build 2 failed (R1–R5, R8, R10–R12 on the iPhone 17 Pro Max,
+    then R14 on the smaller iPhone).
+  - **Build 4:** R6 and R13 again on the final commit, plus the 12 main-phone regression rows. It
+    takes the 35-minute workflow only if build 3 bills 44 rounded minutes or fewer; otherwise the
+    30-minute one, dropping rows if they cannot fit.
+  - **R9** (notes filtering and both block orders) passed on `82eef53` in build 2. On the final commit it
+    stays unverified: every block goes through an actor-safety panel, and after each panel closes it
+    waits on People's boundary line, which is in the bar that the final commit replaces under a panel.
+    No remaining build has room for its 365 s beside the regression rows.
+  - **Not run in this chapter:**
+    - **The 11 smaller-iPhone regression rows** (`room_regression_small`). The Places regression on the
+      smaller iPhone stays unverified after the Room's Places changes, so `room_regression` cannot be
+      reported as PASS.
+    - **R7**, as above.
 
   **R7** (the largest-text test on the iPhone 17 Pro Max) failed in build 1 and is not rerun: the budget
   does not fit it. The largest-text check on the iPhone 17 Pro Max therefore stays unverified. R7 is
@@ -178,9 +200,9 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   `.safeAreaInset`, was still in the accessibility tree under the panel, although the page carried
   `.accessibilityHidden`. The Places explanation's headline, inside Places' scroll content, was hidden
   under the Room, as the journey confirmed.
-  - **Change in source (`f68cc30` and later, not yet run on a Mac; build 2 decides):** the page's
-    scrolling content and its bar each carry the hidden flag themselves, and Places' own bar does the
-    same under the Room.
+  - **Change in source for build 2:** the page's scrolling content and its bar each carried the hidden
+    flag themselves, and Places' own bar did the same under the Room. Build 2 showed that this did not
+    work (see there); it was replaced after build 2.
 - **Failure 2, R7 and R14 (largest text).** The test's scroll helper failed on both phones.
   - **Four causes:**
     - it measured each panel against the hidden screen's bar (the cause above);
@@ -188,13 +210,38 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
     - it gave up after 15 looks of at most 150 pt, when a target is about 2,000 pt away;
     - it asked 4 pt of clearance above the bar. At the page's end, "How Waves work" sits fully visible
       about 25 pt above Leave; the capture shows it.
-  - **Change in source (not yet run on a Mac; build 2 decides):** the helper's top is 62 or 47 pt by
-    phone, it takes up to 40 looks and drags of up to 360 pt, and it keeps no margin above the bar.
+  - **Change in source for build 2:** the helper's top is 62 or 47 pt by phone, it takes up to 40 looks
+    and drags of up to 360 pt, and it keeps no margin above the bar. Build 2 showed these fixes were only
+    partial (see there).
 - **Captures showed a product defect.** At the largest size on the 390-pt phone, the compact ticket
   broke "Common" mid-word beside the art.
-  - **Change in source (not yet run on a Mac; build 2's captures decide):** only at the accessibility
-    text sizes, and only when the name would need more lines beside the art than across the ticket, the
-    ticket puts its text below the art at full width (§5 item 14).
+  - **Change in source for build 2:** only at the accessibility text sizes, and only when the name would
+    need more lines beside the art than across the ticket, the ticket puts its text below the art at full
+    width (§5 item 14). Build 2's captures confirm it (see there).
+
+### Build 2: `6abc2ae1e51bc7fc79c09cd4`, scope `room` with rows R1–R6 and R8–R14, commit `82eef53`
+
+- **Timing:** the build ran from 21:17:29Z to 21:53:46Z, 36.3 minutes (37 rounded).
+- **Verdict: AUTOMATED VERDICT FAIL.** R6, R9 and R13 passed; the other 10 selected rows failed. The
+  app compiled and the Mac domain tests passed.
+- **The first change did not work.** Hiding the bar directly did not remove it: the screen's Leave was
+  still in the accessibility tree under every panel. The same eight rows failed at the same line.
+- **The change also moved a frame.** The flag on the bar made its single control report the whole
+  440-pt bar as its frame:
+  - `room.leave` on waiting, notes and profiles, and "Return to Places" on the ended screen;
+  - this broke R2's frame checks and R14's bar check;
+  - the same modifier had also been added to Places' bar, and it is reverted.
+- **R14's other failure was the helper.** At the largest text the stacked People and Room notes tabs
+  filled the helper's drag band on the smaller iPhone, and it would not touch down on a button.
+- **The captures confirm the stacked ticket.** At the largest text on the smaller iPhone the ticket
+  reads "Common / Ground" with no mid-word break: `room-notes-0-largest-390pt-fixture.png`, build
+  `6abc2ae1`.
+- **Changes in source after build 2 (not yet run on a Mac):**
+  - **Room view:** under a panel, the page's bar is not built at all. An empty spacer of its last
+    measured height stands in for it, so the dimmed page does not move. Nothing under the dim can be
+    tapped: the dim takes every touch.
+  - **Places view:** identical to `51fe52a` again.
+  - **Scroll helper:** it shortens the drag when no touch-down point is free.
 
 ## 8. Minutes and cost
 
@@ -204,4 +251,5 @@ The September free minutes were already used up, so every minute is billed at US
 | Build | Rounded minutes | Cost |
 | --- | --- | --- |
 | 1 (`6abc1b80`) | 34 | USD 3.23 |
-| **Total so far** | **34 of 150** | **USD 3.23 of 15** |
+| 2 (`6abc2ae1`) | 37 | USD 3.52 |
+| **Total so far** | **71 of 150** | **USD 6.75 of 15** |

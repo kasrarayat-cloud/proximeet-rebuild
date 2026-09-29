@@ -1892,9 +1892,18 @@ final class RoomReviewTests: XCTestCase {
                     distance = min(distance, bottom - frame.maxY - 1)
                 }
             }
-            let travel = min(max(distance, 24), room, 360)
-            guard let start = revealTouch(look, scroller: scroller, travel: travel, fingerUp: low, bandTop: bandTop,
-                                          bandBottom: bandBottom, awayFrom: lastTouch) else {
+            // A shorter drag when no touch-down point is free for the full one: at the largest text the
+            // stacked tabs fill the band's lower half on the smaller iPhone (build 6abc2ae1), and a
+            // shorter drag may start higher, on the ticket.
+            var travel = min(max(distance, 24), room, 360)
+            var found = revealTouch(look, scroller: scroller, travel: travel, fingerUp: low, bandTop: bandTop,
+                                    bandBottom: bandBottom, awayFrom: lastTouch)
+            while found == nil && travel > 24 {
+                travel = max(24, (travel / 2).rounded())
+                found = revealTouch(look, scroller: scroller, travel: travel, fingerUp: low, bandTop: bandTop,
+                                    bandBottom: bandBottom, awayFrom: lastTouch)
+            }
+            guard let start = found else {
                 return revealFailed("HARNESS", identifier, "no touch-down point in the scroll view keeps 10 pt from every control",
                                     trace, app, file: file, line: line)
             }
