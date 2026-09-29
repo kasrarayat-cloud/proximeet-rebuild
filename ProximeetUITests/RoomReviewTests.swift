@@ -1972,8 +1972,12 @@ final class RoomReviewTests: XCTestCase {
         }
         if let scroller = look.scroller {
             let screenBottom = look.screen.maxY
+            // Two scroll views with the same frame to within a point are the same place: under a panel the
+            // dimmed page's full-screen scroll view and the panel's differ only by rounding (844 against
+            // 843.99999 on the smaller iPhone, build 6abc3654), and the page's content is not a fixed bar.
             let fixed = placed.filter { item in
-                let barred = item.scroller != scroller || Self.barIdentifiers.contains(item.identifier)
+                let sameScroller = item.scroller.map { Self.sameFrame($0, scroller) } ?? false
+                let barred = !sameScroller || Self.barIdentifiers.contains(item.identifier)
                 let below = item.frame.minY >= scroller.midY && item.frame.minY < screenBottom && item.frame.height > 0
                 let across = item.frame.maxX > scroller.minX && item.frame.minX < scroller.maxX
                 return barred && below && across && item.identifier != identifier
@@ -1981,6 +1985,11 @@ final class RoomReviewTests: XCTestCase {
             look.barTop = fixed.map { $0.frame.minY }.min()
         }
         return look
+    }
+
+    private static func sameFrame(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) <= 1 && abs(a.minY - b.minY) <= 1 && abs(a.width - b.width) <= 1
+            && abs(a.height - b.height) <= 1
     }
 
     /// What the Room keeps in the bar below its scrolling content (`RoomView.actionBar`): never scrolled.

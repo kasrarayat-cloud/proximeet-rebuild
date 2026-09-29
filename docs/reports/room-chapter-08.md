@@ -171,6 +171,10 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   - **Build 4:** R6 and R13 again on the final commit, plus the 12 main-phone regression rows. It
     takes the 35-minute workflow only if build 3 bills 44 rounded minutes or fewer; otherwise the
     30-minute one, dropping rows if they cannot fit.
+  - **As now planned, after build 3 billed 30 minutes:** build 4 takes the 45-minute workflow (at most min(45, 49)).
+    It uses scope `room_all` with rows R6, R13, the 12 main-phone regression rows, and R14 last on the
+    smaller iPhone, on the final commit. Product files are identical to `b5ee804`; only the test helper
+    differs.
   - **R9** (notes filtering and both block orders) passed on `82eef53` in build 2. On the final commit it
     stays unverified: every block goes through an actor-safety panel, and after each panel closes it
     waits on People's boundary line, which is in the bar that the final commit replaces under a panel.
@@ -243,6 +247,41 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
   - **Places view:** identical to `51fe52a` again.
   - **Scroll helper:** it shortens the drag when no touch-down point is free.
 
+### Build 3: `6abc3654613b43be72355452`, scope `room` with rows R1–R5, R8, R10–R12 and R14, commit `b5ee804`
+
+- **Timing:** the build ran from 22:06:21Z to 22:36:05Z, 29.7 minutes (30 rounded).
+- **Verdict:** 9 of its 10 selected rows passed on the iPhone 17 Pro Max, first attempt, no retries:
+  - R1, the recorded real journey from Common Ground's explanation through the Room and back to Places;
+  - R2, the capture of every state and overlay;
+  - R3 back gestures, R4 Business compatibility, R5 both entry gates, R8 Leave from every context;
+  - R10 the Reduce Motion preview, R11 report isolation, R12 Social compatibility with both approaches.
+- **R14 failed,** on the smaller iPhone at the largest text, only in the scroll helper.
+  - **Cause:** under a panel, the dimmed page's full-screen scroll view and the panel's differ by a
+    rounding fraction (844 against 843.99999). The helper compared them exactly, so it treated a page
+    element at y 592.3 as a fixed bar and refused panel buttons below it.
+  - **The captures show those three panels hold:** Jules's safety, Maya's report and the Wave
+    information. Each panel's actions, including its Leave, are on screen after scrolling:
+    `room-jules-safety-0-largest-end-390pt-fixture.png`,
+    `room-report-maya-harassment-largest-end-390pt-fixture.png` and
+    `room-wave-info-largest-end-390pt-fixture.png`, build `6abc3654`. The global Safety panel's Leave at
+    the largest text is not tested by any build.
+  - **Change in source (not yet run on a Mac):** the helper compares scroll-view frames to within a
+    point. This is a test-only change; the product files are identical to `b5ee804`.
+- **The screen's bar is gone from the tree under a panel**, since the Leave checks passed. But the tests
+  still see the dimmed page's other elements there: `accessibilityHidden` did not remove them from
+  XCUITest's tree. Whether VoiceOver ignores them (the panel carries `isModal`, the page
+  `accessibilityHidden`) is unverified.
+- **Known defect, left unfixed** to keep the product frozen at `b5ee804`: at the largest text a scrolled
+  panel's text passes under the status bar, which has no ground strip behind it. In
+  `room-jules-safety-0-largest-end-390pt-fixture.png` (build `6abc3654`), "notes from" runs under the
+  09:41 clock.
+- **A stale code comment, also left for the next product change:** the comment above `layers` in
+  `RoomView.swift` says the screen below a panel "is not an accessibility element"; build 3 found the
+  dimmed page's elements still in XCUITest's tree.
+- **Evidence:** `/home/proximeet/proximeet-room-review-6abc3654` holds Room-Review.zip, Room-Screens.zip,
+  the unedited walkthrough, the unsigned simulator app and the small artifacts bundle. All four
+  published `.sha256` files match.
+
 ## 8. Minutes and cost
 
 The September free minutes were already used up, so every minute is billed at USD 0.095
@@ -252,4 +291,5 @@ The September free minutes were already used up, so every minute is billed at US
 | --- | --- | --- |
 | 1 (`6abc1b80`) | 34 | USD 3.23 |
 | 2 (`6abc2ae1`) | 37 | USD 3.52 |
-| **Total so far** | **71 of 150** | **USD 6.75 of 15** |
+| 3 (`6abc3654`) | 30 | USD 2.85 |
+| **Total so far** | **101 of 150** | **USD 9.60 of 15** |
