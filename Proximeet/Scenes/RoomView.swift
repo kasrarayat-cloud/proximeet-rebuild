@@ -89,7 +89,7 @@ struct RoomView: View {
         let screen = RoomScreen(room)
         let panel = room.run?.panel
         return ZStack {
-            page(room, screen: screen, width: width, bottomInset: proxy.safeAreaInsets.bottom)
+            page(room, screen: screen, width: width, bottomInset: proxy.safeAreaInsets.bottom, covered: panel != nil)
                 .accessibilityHidden(panel != nil)
             if let run = room.run, let panel {
                 panelLayer(run, panel: panel, width: width, height: proxy.size.height)
@@ -101,7 +101,13 @@ struct RoomView: View {
     /// The chrome and the screen's content scroll; the screen's last actions stay in a bar above the
     /// home indicator (as on Places), so Leave, Enter and Return to Places are never covered or
     /// scrolled away at any text size.
-    private func page(_ room: RoomPreview, screen: RoomScreen, width: CGFloat, bottomInset: CGFloat) -> some View {
+    ///
+    /// `covered`: a panel is open above the page. The whole page is hidden from accessibility, and so
+    /// are its scrolling content and its bar themselves: build 6abc1b80 showed the bar's Leave still
+    /// reachable under a panel with only the page's own `accessibilityHidden` (the `.safeAreaInset`
+    /// content did not inherit it), so each part carries its own.
+    private func page(_ room: RoomPreview, screen: RoomScreen, width: CGFloat, bottomInset: CGFloat,
+                      covered: Bool) -> some View {
         ScrollViewReader { reader in
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -112,6 +118,7 @@ struct RoomView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.bottom, 11)
+                .accessibilityHidden(covered)
             }
             .scrollBounceBehavior(.basedOnSize)
             // The ground behind the status bar, so scrolled text never runs under the clock.
@@ -122,6 +129,7 @@ struct RoomView: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 actionBar(room, screen: screen, width: width, bottomInset: bottomInset)
+                    .accessibilityHidden(covered)
             }
             .onChange(of: screen) { previous, current in
                 reveal(from: previous, to: current, with: reader)
@@ -1024,6 +1032,7 @@ private struct RoomVenueTicket: View {
     let preference: String
     let width: CGFloat
     @ScaledMetric(relativeTo: .title) private var nameScale: CGFloat = 1
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         let name = CheckInExplanation.venue.name
@@ -1031,7 +1040,7 @@ private struct RoomVenueTicket: View {
         let design: CGFloat = compact ? 23 : 30
         let line: CGFloat = compact ? 30 : 40
         let radius: CGFloat = compact ? 22 : 26
-        RoomTicketLayout(compact: compact, width: width) {
+        RoomTicketLayout(compact: compact, width: width, stacks: typeSize.isAccessibilitySize) {
             RoundedRectangle(cornerRadius: radius, style: .circular)
                 .fill(RoomStyle.ivory)
                 .accessibilityHidden(true)
@@ -1063,6 +1072,9 @@ private struct RoomVenueTicket: View {
 private struct RoomTicketLayout: Layout {
     let compact: Bool
     let width: CGFloat
+    /// Only at the accessibility text sizes may the compact ticket stack its text below the art; at
+    /// every other size it keeps the approved arrangement, on any phone width.
+    let stacks: Bool
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         // The ticket is always framed to the column; any other proposal (ideal or unbounded) gets that
@@ -1096,11 +1108,17 @@ private struct RoomTicketLayout: Layout {
             let artWidth = 108 * k
             let artHeight = 110 * k
             let art = CGRect(x: width - 10 * k - artWidth, y: 10, width: artWidth, height: artHeight)
-            let column = max(0, art.minX - 6 - 20)
+            let side = max(0, art.minX - 6 - 20)
+            let full = max(0, width - 40)
+            // At the accessibility sizes, when the name needs more lines beside the art than across the
+            // ticket (a word as wide as "Common" broke mid-word there: build 6abc1b80, 390 pt, the
+            // largest size), the text runs the ticket's full width below the art, which stays in place.
+            let stacked = stacks && height(of: subviews[2], width: side) > height(of: subviews[2], width: full) + 1
+            let column = stacked ? full : side
             let nameHeight = height(of: subviews[2], width: column)
             let sessionHeight = height(of: subviews[3], width: column)
             let preferenceHeight = height(of: subviews[4], width: column)
-            let nameY: CGFloat = 19
+            let nameY: CGFloat = stacked ? art.maxY + 8 : 19
             let sessionY = nameY + nameHeight + 8
             let preferenceY = sessionY + sessionHeight + 16
             let total = max(preferenceY + preferenceHeight + 15, art.maxY + 12)

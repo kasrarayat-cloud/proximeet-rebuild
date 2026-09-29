@@ -121,6 +121,11 @@ cover the Room, which awaits its own founder visual review.
     each screen and panel carries the approved DEMO badge instead, as every earlier chapter does.
 13. **VoiceOver card label.** Each sample card reads as one button, for example "Maya. Social · Chat
     first. Coffee, bookshops, and a good detour. View card".
+14. **The compact ticket at accessibility text sizes** (a deviation from 67:134, which shows only
+    the default size). When the text size is one of the accessibility sizes and the name would need more
+    lines beside the art than across the ticket, the name, session line and preference run the ticket's
+    full width below the art. The art keeps its approved place. At every other size, on any phone
+    width, including 375-pt phones that no build here tests, the approved arrangement is kept.
 
 ## 6. Mac verification plan
 
@@ -137,16 +142,66 @@ The manifest (`docs/verification/places-review-manifest.tsv`) is committed befor
 - **Constraints:** one simulator at a time, no retries, and every build pinned to its exact commit by
   the source gate. A gate-validated row filter (`PLACES_ROW_FILTER`) can rerun only named rows; the
   verdict then names the rows it judged and never reports an unselected row as passed.
-- **Planned builds:** `room` on the 45-minute workflow. The fixes, if any, go into one frozen candidate
-  commit. `room_regression_main` and `room_regression_small` then run on the 35-minute workflow. At
-  most 45 + 35 + 35 + 35 = 150 minutes.
-- **Why the regression is split:** the 23 rows measured 1,964 s of test time in earlier builds, which
-  cannot fit one serial 45-minute build.
+- **Planned builds (as first committed):** `room` on the 45-minute workflow; the fixes, if any, into one
+  frozen candidate commit; then `room_regression_main` and `room_regression_small` on the 35-minute
+  workflow. The 23 regression rows measured 1,964 s of test time in earlier builds, which cannot fit one
+  serial 45-minute build.
+- **Revised after build 1 (deviation, reported at once):** with every Room test running to its end, the
+  Room rows alone are estimated at about 2,400 s of tests, more than one 45-minute build's UI deadline.
+  With 116 minutes and three builds left, the remaining builds run one candidate commit, each selecting
+  its rows with the gate-checked filter:
+  - **build 2 (45 min):** R1–R6 and R8–R13 on the iPhone 17 Pro Max, then R14 on the smaller iPhone
+    once that simulator is shut down;
+  - **build 3 (35 min):** the 12 main-phone regression rows (`room_regression_main`);
+  - **build 4 (35 min):** the 11 smaller-iPhone regression rows (`room_regression_small`).
+
+  Before build 2, the unexecuted steps of the nine stopped tests were traced against the code and
+  build 1's log. No further failure was found, and the full durations were estimated at about 1,300 s
+  of tests for build 2.
+
+  **R7** (the largest-text test on the iPhone 17 Pro Max) failed in build 1 and is not rerun: the budget
+  does not fit it. The largest-text check on the iPhone 17 Pro Max therefore stays unverified. R7 is
+  still a required row of the manifest, so the `room` scope as a whole cannot be reported as PASS; only
+  the rows a build selected can be.
 
 ## 7. Results
 
-Pending the first build.
+### Build 1: `6abc1b808e9286d412451950`, scope `room`, commit `51fe52a7`
+
+- **Timing:** the build ran from 20:11:54Z to 20:45:23Z, 33.5 minutes (34 rounded).
+- **Verdict: AUTOMATED VERDICT FAIL.** 3 of the 14 required executions passed: R6, R9 and R13.
+- **Build steps that passed:** app compilation on Xcode 26.6 (61 s), the Mac domain tests, and the
+  test-harness compilation. The recording was confirmed.
+- **Artifacts:** all four downloads match their `.sha256` files.
+- **Failure 1, eight rows (R1–R5, R8, R10–R12).** Each failed at its first panel, on
+  `XCTAssertFalse(room.leave.exists)`: the screen's own Leave, in its scroll view's bottom
+  `.safeAreaInset`, was still in the accessibility tree under the panel, although the page carried
+  `.accessibilityHidden`. The Places explanation's headline, inside Places' scroll content, was hidden
+  under the Room, as the journey confirmed.
+  - **Change in source (`f68cc30` and later, not yet run on a Mac; build 2 decides):** the page's
+    scrolling content and its bar each carry the hidden flag themselves, and Places' own bar does the
+    same under the Room.
+- **Failure 2, R7 and R14 (largest text).** The test's scroll helper failed on both phones.
+  - **Four causes:**
+    - it measured each panel against the hidden screen's bar (the cause above);
+    - it used a fixed 62-pt top, while the 390-pt phone's chrome rests at y 50;
+    - it gave up after 15 looks of at most 150 pt, when a target is about 2,000 pt away;
+    - it asked 4 pt of clearance above the bar. At the page's end, "How Waves work" sits fully visible
+      about 25 pt above Leave; the capture shows it.
+  - **Change in source (not yet run on a Mac; build 2 decides):** the helper's top is 62 or 47 pt by
+    phone, it takes up to 40 looks and drags of up to 360 pt, and it keeps no margin above the bar.
+- **Captures showed a product defect.** At the largest size on the 390-pt phone, the compact ticket
+  broke "Common" mid-word beside the art.
+  - **Change in source (not yet run on a Mac; build 2's captures decide):** only at the accessibility
+    text sizes, and only when the name would need more lines beside the art than across the ticket, the
+    ticket puts its text below the art at full width (§5 item 14).
 
 ## 8. Minutes and cost
 
-Pending.
+The September free minutes were already used up, so every minute is billed at USD 0.095
+(Mac mini M2), before tax.
+
+| Build | Rounded minutes | Cost |
+| --- | --- | --- |
+| 1 (`6abc1b80`) | 34 | USD 3.23 |
+| **Total so far** | **34 of 150** | **USD 3.23 of 15** |

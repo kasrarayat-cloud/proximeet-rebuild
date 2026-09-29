@@ -111,7 +111,10 @@ struct PlacesView: View {
                         .background(WristbandStyle.ground.ignoresSafeArea(edges: .top))
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
+                    // Hidden under the Room on its own too: an inset's content does not inherit the
+                    // hiding below (build 6abc1b80, the Room's own bar under a panel).
                     actions(stage, eligibility, width: width, bottomInset: proxy.safeAreaInsets.bottom)
+                        .accessibilityHidden(session.room != nil)
                 }
                 .onChange(of: session.flow.currentScene) { previous, scene in
                     revealStart(from: previous, to: scene, with: reader)

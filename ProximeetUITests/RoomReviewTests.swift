@@ -1806,10 +1806,11 @@ final class RoomReviewTests: XCTestCase {
         element.tap()
     }
 
-    /// Brings the element with `identifier` between the top of the screen (the status bar, 62) and the
-    /// top of any fixed bar below its scroll view (the buttons outside that scroll view in its lower
-    /// half: the Room's bottom actions), 4 pt clear; an element taller than that counts once its top is
-    /// in view. An element in no scroll view must already be there. Returns whether it did; when it did
+    /// Brings the element with `identifier` between the top of the screen (the status bar: 62 on the
+    /// 956-pt iPhone 17 Pro Max, 47 on the 844-pt smaller iPhone, where the chrome rests at y 50)
+    /// and the top of any fixed bar below its scroll view (the buttons outside that scroll view in
+    /// its lower half: the Room's bottom actions); an element taller than that counts once its top
+    /// is in view. An element in no scroll view must already be there. Returns whether it did; when it did
     /// not, it has already failed the test at the caller's line, with the screen, every drag and every
     /// look attached: "Scroll PRODUCT" when two drags in a row did not move the page (its end, with the
     /// element still out of view), "Scroll HARNESS" for everything else.
@@ -1826,7 +1827,9 @@ final class RoomReviewTests: XCTestCase {
         var lastTop: CGFloat?
         var direction: CGFloat = 0
         var stalls = 0
-        for attempt in 0..<15 {
+        // At the largest text a page runs to about 2,700 pt on the smaller iPhone (build 6abc1b80), so a
+        // target can be 2,000 pt away: up to 40 looks, and drags of up to 360 pt.
+        for attempt in 0..<40 {
             let look: RevealLook
             do {
                 look = try settledRevealLook(identifier, app, settle: attempt > 0)
@@ -1855,10 +1858,11 @@ final class RoomReviewTests: XCTestCase {
             // The bar's own elements (and anything in no scroll view) never move: they only have to be
             // on screen. Everything else has to come between the status bar and the bar.
             let fixed = look.scroller == nil || Self.barIdentifiers.contains(identifier)
-            let top: CGFloat = fixed ? 0 : max(62, look.scroller?.minY ?? 62)
+            let statusBar: CGFloat = screen.height >= 900 ? 62 : 47
+            let top: CGFloat = fixed ? 0 : max(statusBar, look.scroller?.minY ?? statusBar)
             var bottom: CGFloat = fixed ? screen.maxY - 8 : min(look.scroller?.maxY ?? screen.maxY, screen.maxY - 20)
             if !fixed, let bar = look.barTop {
-                bottom = min(bottom, bar - 4)
+                bottom = min(bottom, bar)
             }
             let fits = frame.height <= bottom - top - 2
             let low = fits ? frame.maxY > bottom + 1 : frame.minY > bottom - 44
@@ -1888,7 +1892,7 @@ final class RoomReviewTests: XCTestCase {
                     distance = min(distance, bottom - frame.maxY - 1)
                 }
             }
-            let travel = min(max(distance, 24), room, 150)
+            let travel = min(max(distance, 24), room, 360)
             guard let start = revealTouch(look, scroller: scroller, travel: travel, fingerUp: low, bandTop: bandTop,
                                           bandBottom: bandBottom, awayFrom: lastTouch) else {
                 return revealFailed("HARNESS", identifier, "no touch-down point in the scroll view keeps 10 pt from every control",
@@ -1911,7 +1915,7 @@ final class RoomReviewTests: XCTestCase {
             trace.append(entry)
             print("ROOM_SCROLL \(identifier) \(entry)")
         }
-        return revealFailed("HARNESS", identifier, "15 looks did not bring it into view", trace, app, file: file, line: line)
+        return revealFailed("HARNESS", identifier, "40 looks did not bring it into view", trace, app, file: file, line: line)
     }
 
     /// Reads the tree once the target has stopped moving (two reads 0.15 s apart within 0.5 pt, at most
