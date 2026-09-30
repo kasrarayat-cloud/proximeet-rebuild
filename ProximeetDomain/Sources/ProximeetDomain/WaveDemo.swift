@@ -20,6 +20,13 @@ public enum WaveCopy {
     public static let menuHeadline = ["Every hello", "needs a choice."]
     public static func roleExplanation(viewer: String) -> String { "You are \(viewer) in both examples." }
     public static let menuBoundary = "Choose a new, independent demo.\nNo invitation is sent to anyone."
+    /// Once the counterpart is blocked the three choices stay, with their own labels, disabled; this one
+    /// generic line takes the boundary's place. It names nobody (founder decision, 30 September 2026).
+    public static let menuBlocked = "Connection blocked.\nNew examples are unavailable in this demo."
+    /// VoiceOver's hint on each disabled choice.
+    public static let startBlockedHint = "Unavailable. Connection blocked."
+    /// The menu's visible Back (the 75:119 chrome pattern): to the Room that opened the Wave.
+    public static let menuBackHint = "Returns to the Room. Nothing is sent."
     public static let startOutgoing = "Start outgoing example"
     public static let startIncoming = "Start incoming example"
     public static let showNoAllowance = "Show no-allowance example"
@@ -36,21 +43,63 @@ public enum WaveCopy {
     public static func stateContext(_ direction: WaveDirection, viewer: String) -> String {
         "\(direction == .outgoing ? "OUTGOING" : "INCOMING") · YOU ARE \(viewer.uppercased())"
     }
-    /// Whether the guest typed the counterpart's own name ("Maya" meeting the sample Maya): the direction
-    /// line then says "YOU" in the guest's slot, so sender and recipient stay distinct ("you" is allowed in
-    /// role copy). The identity is unaffected: the guest is always `.viewer`.
-    public static func sharesCounterpartName(viewer: String, counterpart: RoomActor) -> Bool {
-        viewer.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(counterpart.name) == .orderedSame
+    /// The name a participant is written with: the actual Guest List name for `.viewer`, a sample's own
+    /// name otherwise. The viewer is recognised by participant identity alone, never by comparing names, so
+    /// a guest who typed "Maya" meeting the sample Maya keeps the name exactly as typed (founder decision,
+    /// 30 September 2026).
+    public static func name(of participant: WaveParticipant, viewer: String) -> String {
+        switch participant {
+        case .viewer: return viewer
+        case .sample(let actor): return actor.name
+        }
     }
-    public static func directionLine(_ screen: WaveScreen, viewer: String, counterpart: RoomActor) -> String? {
-        let you = sharesCounterpartName(viewer: viewer, counterpart: counterpart) ? "YOU" : viewer.uppercased()
-        let them = counterpart.name.uppercased()
+
+    /// "ALEX → MAYA · OUTGOING", "MAYA → ALEX · INCOMING" and "MAYA + ALEX · INCOMING DEMO": the sender,
+    /// then the recipient, from the invitation's own participants. Nil off the four active screens, and nil
+    /// when the participants are malformed or disagree with the screen's direction.
+    public static func directionLine(_ screen: WaveScreen, sender: WaveParticipant, recipient: WaveParticipant,
+                                     viewer: String) -> String? {
+        guard let outgoing = direction(screen, sender: sender, recipient: recipient) else { return nil }
+        let from = name(of: sender, viewer: viewer).uppercased()
+        let to = name(of: recipient, viewer: viewer).uppercased()
         switch screen {
-        case .outgoingConfirm, .outgoingPending: return "\(you) → \(them) · OUTGOING"
-        case .incomingReview: return "\(them) → \(you) · INCOMING"
-        case .incomingAccepted: return "\(them) + \(you) · INCOMING DEMO"
+        case .outgoingConfirm, .outgoingPending: return outgoing ? "\(from) → \(to) · OUTGOING" : nil
+        case .incomingReview: return outgoing ? nil : "\(from) → \(to) · INCOMING"
+        case .incomingAccepted: return outgoing ? nil : "\(from) + \(to) · INCOMING DEMO"
         default: return nil
         }
+    }
+
+    public static func directionLine(_ invitation: WaveInvitation, on screen: WaveScreen, viewer: String) -> String? {
+        directionLine(screen, sender: invitation.sender, recipient: invitation.recipient, viewer: viewer)
+    }
+
+    /// The direction line as VoiceOver reads it, in sentence case, sender before recipient. Whichever
+    /// participant is `.viewer` is read as "you", with the actual name after it ("From you (Maya) to Maya.
+    /// Outgoing."): "you" comes from the participant's identity, never from a name.
+    public static func directionSpoken(_ screen: WaveScreen, sender: WaveParticipant, recipient: WaveParticipant,
+                                       viewer: String) -> String? {
+        guard let outgoing = direction(screen, sender: sender, recipient: recipient) else { return nil }
+        func spoken(_ participant: WaveParticipant) -> String {
+            participant == .viewer ? "you (\(viewer))" : name(of: participant, viewer: viewer)
+        }
+        let from = spoken(sender), to = spoken(recipient)
+        switch screen {
+        case .outgoingConfirm, .outgoingPending: return outgoing ? "From \(from) to \(to). Outgoing." : nil
+        case .incomingReview: return outgoing ? nil : "From \(from) to \(to). Incoming."
+        case .incomingAccepted: return outgoing ? nil : "\(from) and \(to). Incoming demo."
+        default: return nil
+        }
+    }
+
+    public static func directionSpoken(_ invitation: WaveInvitation, on screen: WaveScreen, viewer: String) -> String? {
+        directionSpoken(screen, sender: invitation.sender, recipient: invitation.recipient, viewer: viewer)
+    }
+
+    /// Outgoing (true) or incoming (false) from who sent it, or nil for a malformed pair.
+    private static func direction(_ screen: WaveScreen, sender: WaveParticipant, recipient: WaveParticipant) -> Bool? {
+        guard sender != recipient, (sender == .viewer) != (recipient == .viewer) else { return nil }
+        return sender == .viewer
     }
     public static func invitationTitle(_ screen: WaveScreen, counterpart: RoomActor) -> String? {
         switch screen {
@@ -143,8 +192,11 @@ public enum WaveCopy {
     public static let showSenderWithdrawn = "Show sender withdrawn"
 }
 
-/// A participant of this demo. The viewer is one stable identity for the whole process, never derived
-/// from the display name (a guest may well be called "Maya"); the samples are the Room's fictional people.
+/// A participant of this demo, by identity. The viewer is one fixed identity for the whole process
+/// (`.viewer`): distinct from every sample's (`.sample(actor)`) by construction, and independent of any
+/// name (a guest may well be called "Maya"). The samples are the Room's fictional people. The founder
+/// accepted the fixed viewer identity for this bounded demo on 30 September 2026, on those conditions and
+/// on every invitation re-validating the current Room run (see `WaveDemo.apply`).
 public enum WaveParticipant: Hashable, Sendable {
     case viewer
     case sample(RoomActor)
@@ -230,14 +282,14 @@ public enum WaveAllowance: Hashable, Sendable {
     case unavailable
 }
 
-/// What the Wave shows below any overlay: the menu (no invitation), one invitation (active or closed),
-/// the no-allowance example (no invitation), or the generic blocked state a start reaches once the
-/// counterpart is blocked (no invitation, no identity).
+/// What the Wave shows below any overlay: the menu (no invitation), one invitation (active or closed), or
+/// the no-allowance example (no invitation). Once the counterpart is blocked no start runs: the menu's
+/// three choices are disabled with one generic explanation (founder decision, 30 September 2026), so the
+/// blocked screen (74:576) is reached only by blocking over an active invitation.
 public enum WaveExample: Equatable, Sendable {
     case menu
     case invitation(WaveInvitation)
     case noAllowance
-    case blockedStart
 }
 
 /// The Wave's modal layers, bottom to top. Closing one returns to its caller, which is always the level
@@ -275,7 +327,9 @@ public enum WaveRings: Hashable, Sendable {
 public enum WaveChrome: Hashable, Sendable {
     /// Brand, DEMO and Safety (75:111).
     case room
-    /// Back, "Wave", DEMO and Safety (75:119): only the unsent confirmation.
+    /// Back, "Wave", DEMO and Safety (75:119): the unsent confirmation (Back discards it) and, by the
+    /// existing Back pattern used to meet the founder's decision of 30 September 2026, the menu (Back
+    /// returns to the Room).
     case back
     /// Brand and DEMO only (75:130): the ended screen.
     case plain
@@ -340,7 +394,7 @@ public enum WaveScreen: String, CaseIterable, Hashable, Sendable {
 
     public var chrome: WaveChrome {
         switch self {
-        case .outgoingConfirm: return .back
+        case .menu, .outgoingConfirm: return .back
         case .sessionEnded: return .plain
         default: return .room
         }
@@ -389,8 +443,10 @@ public enum WaveAction: Hashable, Sendable {
     case selectReportReason(RoomReportReason)
     /// Close / Back / Close preview on the top overlay, which must still be `overlay`'s kind.
     case closeOverlay(WaveOverlay)
-    /// "Block [Name] in demo" on the counterpart's safety. Applied by `RoomRun`, which owns the blocks.
-    case blockCounterpart
+    /// "Block [Name] in demo" on the counterpart's safety, carrying the actor and the Room run it was drawn
+    /// for: a queued Block affects only that actor in that same, still valid run (founder decision,
+    /// 30 September 2026). Applied by `RoomRun`, which owns the blocks.
+    case blockCounterpart(RoomActor, run: RoomRunID)
 }
 
 /// The contract's acceptance guards, in order; the first one that fails is the refusal.
@@ -453,7 +509,6 @@ public struct WaveDemo: Equatable, Sendable {
         switch example {
         case .menu: return .menu
         case .noAllowance: return .allowanceUnavailable
-        case .blockedStart: return .blocked
         case .invitation(let invitation):
             switch (invitation.direction, invitation.status) {
             case (.outgoing, .compose): return .outgoingConfirm
@@ -485,11 +540,9 @@ public struct WaveDemo: Equatable, Sendable {
             && intent == central.intent && venue == central.venue
         switch action {
         case .startOutgoing, .startIncoming, .showNoAllowance:
-            guard example == .menu, overlays.isEmpty else { return false }
-            guard eligible else {
-                example = .blockedStart
-                return true
-            }
+            // Disabled once the counterpart is blocked (or otherwise ineligible): nothing starts, nothing is
+            // shown in its place, and no identity is issued.
+            guard example == .menu, overlays.isEmpty, eligible else { return false }
             switch action {
             case .showNoAllowance:
                 allowance = .unavailable
@@ -512,23 +565,22 @@ public struct WaveDemo: Equatable, Sendable {
             }
 
         case .discardCompose(let id):
-            guard overlays.isEmpty, let current = invitation, current.id == id, current.direction == .outgoing,
+            guard overlays.isEmpty, let current = current(id, central), current.direction == .outgoing,
                   current.status == .compose
             else { return false }
             example = .menu
             return true
 
         case .send(let id):
-            guard overlays.isEmpty, eligible, allowance == .available, var current = invitation, current.id == id,
-                  current.roomRunID == central.runID, current.direction == .outgoing, current.sender == .viewer,
-                  current.status == .compose
+            guard overlays.isEmpty, eligible, allowance == .available, var current = current(id, central),
+                  current.direction == .outgoing, current.sender == .viewer, current.status == .compose
             else { return false }
             current.status = .pending
             example = .invitation(current)
             return true
 
         case .withdraw(let id):
-            guard overlays.isEmpty, var current = invitation, current.id == id, current.direction == .outgoing,
+            guard overlays.isEmpty, var current = current(id, central), current.direction == .outgoing,
                   current.sender == .viewer, current.status == .pending
             else { return false }
             current.status = .withdrawn
@@ -543,7 +595,7 @@ public struct WaveDemo: Equatable, Sendable {
             return true
 
         case .decline(let id):
-            guard overlays.isEmpty, var current = invitation, current.id == id, current.direction == .incoming,
+            guard overlays.isEmpty, var current = current(id, central), current.direction == .incoming,
                   current.recipient == .viewer, current.status == .pending
             else { return false }
             current.status = .declined
@@ -551,13 +603,12 @@ public struct WaveDemo: Equatable, Sendable {
             return true
 
         case .openConditions(let id):
-            guard overlays.isEmpty, invitation?.id == id, eligible, !screen.conditions.isEmpty else { return false }
+            guard overlays.isEmpty, current(id, central) != nil, eligible, !screen.conditions.isEmpty else { return false }
             overlays = [.conditions]
             return true
 
         case .showExpired(let id):
-            guard overlays == [.conditions], var current = invitation, current.id == id,
-                  screen.conditions.contains(.expired)
+            guard overlays == [.conditions], var current = current(id, central), screen.conditions.contains(.expired)
             else { return false }
             current.status = .unavailable
             example = .invitation(current)
@@ -565,7 +616,7 @@ public struct WaveDemo: Equatable, Sendable {
             return true
 
         case .showSenderWithdrawn(let id):
-            guard overlays == [.conditions], var current = invitation, current.id == id,
+            guard overlays == [.conditions], var current = current(id, central),
                   screen.conditions.contains(.senderWithdrawn), current.direction == .incoming,
                   current.status == .pending
             else { return false }
@@ -575,7 +626,7 @@ public struct WaveDemo: Equatable, Sendable {
             return true
 
         case .openChatInformation(let id):
-            guard overlays.isEmpty, eligible, invitation?.id == id, screen == .incomingAccepted else { return false }
+            guard overlays.isEmpty, eligible, current(id, central) != nil, screen == .incomingAccepted else { return false }
             overlays = [.chatInformation]
             return true
 
@@ -609,6 +660,14 @@ public struct WaveDemo: Equatable, Sendable {
         case .blockCounterpart:
             return false   // `RoomRun.perform` applies it, with the central block set.
         }
+    }
+
+    /// The invitation on screen when it is `id` and belongs to the current Room run: every invitation
+    /// control re-validates both, so a handle from another invitation or another run changes nothing.
+    private func current(_ id: WaveInvitationID, _ central: WaveCentral) -> WaveInvitation? {
+        guard let shown = invitation, shown.id == id, shown.roomRunID == central.runID, shown.id.run == central.runID
+        else { return nil }
+        return shown
     }
 
     /// The first acceptance guard that fails for `id` right now, or `nil` when Accept may commit.

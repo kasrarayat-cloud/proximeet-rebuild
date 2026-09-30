@@ -573,12 +573,13 @@ struct RoomView: View {
     /// `standardPrimary` [32, 744, 376, 56] too): "Preview Wave demo" for a sample of the guest's own
     /// intent (chapter 09: it replaces "How Waves work" and its information panel 66:134), "Back to
     /// people" for another intent, with the matching last line on the card. Both come from the run for
-    /// the actual intent. The hint is new (the handoff gives none) and says what the button does.
+    /// the actual intent. The handoff gives no hint; "Preview Wave demo"'s is the founder's (30 September
+    /// 2026, `RoomCopy.previewWaveDemoHint`), and "Back to people"'s says what the button does.
     private func profileContent(_ run: RoomRun, actor: RoomActor) -> some View {
         let id = run.id
         let action = run.profileAction(for: actor)
         let hint = action == .previewWaveDemo
-            ? "Opens a fictional Wave demo. Nothing is sent."
+            ? RoomCopy.previewWaveDemoHint
             : "Returns to the sample introductions."
         return VStack(alignment: .leading, spacing: 0) {
             RoomProfileCard(actor: actor, boundary: run.profileBoundary(for: actor), focus: $focus)
@@ -959,7 +960,8 @@ struct RoomView: View {
     /// the focus where it is.
     ///
     /// Chapter 09: while the run has a Wave (and after a Leave made from it), `WaveView` owns VoiceOver's
-    /// focus, so nothing here. When the Wave closes from its menu (the outer Back), VoiceOver returns to
+    /// focus, so nothing here. When the Wave closes from its menu (its visible Back, 75:119, or the outer
+    /// Back), VoiceOver returns to
     /// "Preview Wave demo", the control that opened it, or, once the Wave blocked its counterpart and the
     /// profile below it is gone, to the filtered People's framing.
     private static func focusTarget(from previous: RoomPreview?, to current: RoomPreview?) -> RoomFocus? {

@@ -2,18 +2,22 @@
 
 Date: 2026-09-30. Not production-ready.
 
-**Status:** implemented in source on an isolated local branch and checked on Linux. **Native compilation,
-simulator runs, VoiceOver, system Reduce Motion, motion quality and device behaviour have not been run.**
-No push, CI, Codemagic, Apple configuration, upload or signing change was made. The Xcode Cloud run scope
-for Wave is a proposal awaiting the founder's authorization (§5). Nothing here is founder visual approval
-of the native Wave, and nothing here says the Wave's automated checks passed: they have never run.
+**Status:** implemented in source on an isolated local branch and checked on Linux, in two candidates: the
+first (`124c6a4`), and a second on top of it that builds the founder's decisions of 30 September 2026 (§3a).
+**Native compilation, simulator runs, VoiceOver, system Reduce Motion, motion quality and device behaviour
+have not been run.** The founder then authorized one bounded Xcode Cloud verification build (§5). It has not
+started: the founder asked for the App Store Connect start conditions to be inspected before the push, and
+this machine has no App Store Connect access (no API key, no Apple sign-in, no connector), so the push is
+held. No push, CI, Codemagic, Apple configuration, upload or signing change was made. Nothing here is
+founder visual approval of the native Wave, and nothing here says the Wave's automated checks passed: they
+have never run.
 
 ## 1. Baseline and provenance
 
 | | |
 | --- | --- |
 | Base | Verified Room commit `1a5f97e0fe73168e5f63e392182507e457209964` on `origin/room-repair/xcode-checks-20260930` (= the Room repair candidate `062ea35` + three commits: distinct journey inputs in three UI tests, and the local-package reference that lets Xcode discover `ProximeetDomainTests`) |
-| Wave branch | `wave/approved-20260930T173856Z`, worktree `/home/proximeet/proximeet-cloud-wave-20260930T173856Z`, created with `git worktree add` from `1a5f97e`; one local commit, not pushed |
+| Wave branch | `wave/approved-20260930T173856Z`, worktree `/home/proximeet/proximeet-cloud-wave-20260930T173856Z`, created with `git worktree add` from `1a5f97e`; two local commits (the first candidate `124c6a4`, then the second candidate), not pushed |
 | Not used as base | `testflight/internal-20260928` (still `67bf1a9`, per the current instructions); `redesign/social-objects`; `origin/verification/room-d2-1a5f97e-20260930` (a CI-only branch whose `.github/workflows` file would fail validator check 11) |
 | Verified Room outcome (read from GitHub check runs on `1a5f97e`, not from the repository, whose Room report still shows the earlier pending status) | RoomVerificationMain success 14:51–15:42 UTC; RoomVerificationSmall success 14:51–15:17 UTC; Proximeet TestFlight Archive success 16:16–16:22 UTC (all 30 September). The "247 checks" and the delivered 0.1.0 (7) are the founder's figures |
 | Handoff | The prompt's `Proximeet-Wave-Implementation-20260930.zip` is not on this machine. The complete approved handoff was taken from the master `PROXIMEET_ALL_TEN_APPROVED_HANDOFFS.zip` (SHA-256 `365df942…117f7`; its `SHA256SUMS.txt` 13 of 13 OK): `chapters/09-wave/PROXIMEET_WAVE_APPROVED_HANDOFF.zip`, SHA-256 `ecc5667d…6e106` (matches `HANDOFF_INDEX.json` order 9); inner `SHA256SUMS.txt` 23 of 23 OK, no unlisted files. A second extracted copy on the VPS is byte-identical |
@@ -26,8 +30,9 @@ injected civil date), Pass (intro → progress → complete), Guest List (real t
 introduction), Wristband (`chooseIntent`), Signal (`chooseApproach`; Places needs both), Places (fixed
 snapshot "Fictional venues · demo Thursday, 8 pm"; eligibility = intent match and open), and Room (entry and
 populated gates, one central blocked set, local unsent reports, terminal Leave, Return to Places at Now)
-all exist and are wired as approved. There is no stable viewer ID in the code; the Wave uses the single
-`WaveParticipant.viewer` identity and reads the actual Guest List name once when the Wave opens.
+all exist and are wired as approved. There is no stable viewer ID in the code; the Wave uses the single fixed
+`WaveParticipant.viewer` identity (accepted by the founder on 30 September 2026, §3a) and reads the actual
+Guest List name once when the Wave opens.
 
 **Assets and fonts.** No new art or fonts. The handoff's `assets/common-ground.png` (1254 × 1254 RGBA) is
 byte-identical to `Proximeet/Resources/Assets.xcassets/PlaceCommonGround.imageset/common-ground.png`, used
@@ -55,19 +60,22 @@ clasp concept, no ring-reflection experiment, no regenerated art, no font change
   - "Show no-allowance example" is an explicit demo condition with no Send action; there is no count, quota,
     refill, refund, cooldown or timer.
   - A Wave block writes the same central set: Maya loses her card and profile; Jules also loses his public
-    note; the other sample's note is unchanged. A new example after a block shows "Connection blocked." and
-    never unblocks, and no menu control can revive an ended run.
+    note; the other sample's note is unchanged. The Block carries its actor and its run, and acts only for
+    them. After a block the menu's three starts are disabled and nothing unblocks; no menu control can revive
+    an ended run.
 - **Session** (`DemoSession`): `openWaveDemo(_:)` (reads the actual Guest List name once, trimmed),
-  `performWave(_:_:)` and `wave`, all through the existing run-ID-guarded `updateRoomRun`.
-- **Room integration** (`RoomView.swift`): the same-intent profile action is now "Preview Wave demo" (hint "Opens
-  a fictional Wave demo. Nothing is sent.") and opens the Wave menu with that sample as the counterpart; the other
+  `performWave(_:_:)`, `closeWaveDemo(_:)` (the menu's Back) and `wave`, all through the existing
+  run-ID-guarded `updateRoomRun`.
+- **Room integration** (`RoomView.swift`): the same-intent profile action is now "Preview Wave demo" (the
+  founder's hint "Opens a fictional Wave demo. Nothing is sent.") and opens the Wave menu with that sample as the counterpart; the other
   intent keeps "Back to people" and the same-intent explanation. When the run carries a Wave, the Room page is
   replaced by `WaveView`. Room's former Wave-information panel (66:134) has no entry point any more and is
   removed with its fixture and tests (Room's reachable overlays go from 8 to 7).
 - **View** (`Proximeet/Scenes/WaveView.swift`, new): all 12 screens, 7 overlays and 4 report-reason variants,
   built from the live Room system (buttons, headline, labels, chrome, ticket layout, reason rows, tokens) with
   Wave's measured sizes where they differ; native ellipse rings; accessibility identifiers `wave.*` and
-  `wavePanel.*`. The join is the only 800-ms ease-out move and runs only after a valid recipient acceptance has
+  `wavePanel.*`. The menu wears the 75:119 Back chrome, and once the counterpart is blocked shows its three
+  choices disabled beside one generic line (§3a). The join is the only 800-ms ease-out move and runs only after a valid recipient acceptance has
   been committed; every other change is a 240-ms ease-out dissolve; with Reduce Motion the rings take their
   joined pose without the move.
 - **Fixtures** (DEBUG only): `-ProximeetFixture wave-*` for every screen, with `-ProximeetWavePanel`,
@@ -76,7 +84,8 @@ clasp concept, no ring-reflection experiment, no regenerated art, no font change
 
 **The 12 screens** (Figma key = `WaveScreen` raw value; the DEBUG fixture is `wave-<key>`, except the menu's,
 `wave-menu`): `demo-menu`, `out-confirm`, `out-pending`, `out-withdrawn`, `in-review`, `in-declined`,
-`in-accepted`, `in-withdrawn`, `unavailable`, `blocked`, `allowance-unavailable`, `session-ended`. **The 7 overlays:** global safety, counterpart safety,
+`in-accepted`, `in-withdrawn`, `unavailable`, `blocked`, `allowance-unavailable`, `session-ended`. The blocked screen
+(74:576) is reached by blocking over an active invitation. **The 7 overlays:** global safety, counterpart safety,
 the report preview (no reason, and the three reasons: 4 variants), private-chat information, demo conditions.
 
 **Integration behaviour, by contract clause, with the evidence that exists today:**
@@ -86,9 +95,9 @@ the report preview (no reason, and the three reasons: 4 variants), private-chat 
 | Entry only from an eligible profile's "Preview Wave demo", carrying the actual name, intent and approach; Social → unblocked Maya, Business → unblocked Jules | `RoomRun.openWaveDemo`, `DemoSession.openWaveDemo`, `RoomView` profile action | domain tests | W1, W2, W3, W13 |
 | Shares the Room run identity, populated state and the one blocked set | `RoomRun.wave` | domain tests | W8 |
 | Two independent immutable invitations; outgoing never accepts itself; only the valid pending recipient accepts | `WaveInvitation`, `acceptanceRefusal` | domain tests, including a randomised sequence test | W6 |
-| Duplicate or stale actions, withdraw, decline, block, expiry or Room end never create acceptance | `RoomRun.perform` | domain tests | W5, W7 |
+| Duplicate or stale actions, withdraw, decline, block, expiry or Room end never create acceptance; every invitation control re-validates the current run | `RoomRun.perform`, `WaveDemo.apply` | domain tests | W5, W7 |
 | Commit state before decoration; Block and Leave interrupt the join | `WaveView` (state first, animation after; block and Leave replace the page) | app type-check only | W7, W9, W12 |
-| Menu resets never clear blocks or revive an ended Room | `RoomRun.perform`, `isConsistent` | domain tests | W8, W9 |
+| Menu resets never clear blocks or revive an ended Room; the menu's Back returns to the still-valid Room with its state and blocks | `RoomRun.perform`, `closeWaveDemo`, `isConsistent` | domain tests | W2, W8, W9, W10 |
 | Leave ends Room and Wave at once; Return to Places opens the actual Now with choices and the draft kept | `RoomRun.leave`, existing Places return | domain tests | W1, W9 |
 | Report is an unsent local preview | `WaveOverlay.report` | domain tests | W4, W11b |
 | No send, chat, notification, backend, timer or numeric allowance | the sources | validator check 11 (with the new Wave-only scan) and `DomainSourceGuardTests` | D2 |
@@ -111,109 +120,171 @@ Wave extends the Room system rather than replacing it:
   only). Three Room components that hard-code Room identifiers or copy got Wave variants instead (ticket, DEMO
   badge, envelope).
 
-Decisions where the handoff is silent (each is a recorded deviation or choice, not a founder approval):
+Decisions where the handoff is silent, as made for the first candidate (each a recorded deviation or choice,
+not a founder approval). Decisions 2, 3 and 8 are superseded by the founder's own of 30 September (§3a):
 1. **Room's Wave-information panel removed.** The handoff turns the profile's information action into "Preview Wave
    demo"; the panel it opened (66:134, including the approved line "Sending Waves comes in the next preview.") has
    no entry point, so it is removed.
-2. **Back from the menu.** The design has no route from the Wave menu back to the Room. A back swipe or
-   VoiceOver escape on the menu returns to the Room profile (or to filtered People if the counterpart is blocked);
-   no visible control is added. Out-confirm's designed Back returns to the menu; closed screens' outer Back returns
-   to the menu; pending, review and accepted have no outer Back; the ended screen's outer Back goes to Places, as
-   Room's does.
-3. **Blocked counterpart and new examples.** All three menu starts show the approved "Connection blocked." (74:576).
+2. **Back from the menu.** *Superseded: the menu now has the visible 75:119 Back (§3a, decision 1).* The design has
+   no route from the Wave menu back to the Room; a back swipe or VoiceOver escape on the menu returned to the Room
+   profile (or to filtered People if the counterpart is blocked). Out-confirm's designed Back returns to the menu;
+   closed screens' outer Back returns to the menu; pending, review and accepted have no outer Back; the ended
+   screen's outer Back goes to Places, as Room's does. These still hold.
+3. **Blocked counterpart and new examples.** *Superseded (§3a, decision 2):* the three starts are now disabled
+   after a block, with one generic line; they no longer show the blocked screen.
 4. **Leave inside the Wave** shows the Wave's ended screen (74:578); Leave from the plain Room still shows Room's.
 5. **Closed invitations** are kept in memory for the run's life.
 6. **Panel Close** uses Room's 240-ms dissolve (Figma CLOSE carries no transition).
 7. **Invitation preference line** shows the counterpart's own intent and approach; the header ticket shows the
    viewer's name, intent and approach. Different approaches are allowed.
-8. **Uppercase name lines** ("OUTGOING · YOU ARE {NAME}") read in sentence case to VoiceOver. A guest whose
-   Guest List name equals the counterpart's (case-insensitively) is written "YOU" in the direction line
-   ("MAYA → YOU · INCOMING") so the two people stay distinct; the context line still reads "YOU ARE MAYA".
+8. **Uppercase name lines** ("OUTGOING · YOU ARE {NAME}") read in sentence case to VoiceOver. *The rest is
+   superseded (§3a, decision 4):* no name is compared any more; the direction line keeps the typed name
+   ("MAYA → MAYA · INCOMING") and VoiceOver reads the viewer as "you" by identity.
 9. **No initials avatars** are drawn: the approved spec has no avatar node although the asset map mentions them.
 10. **The demo-conditions panels** keep their measured 5-pt bottom padding and scroll at larger text.
 11. **Ring rendering:** Figma's shadow blur 7 is drawn as SwiftUI radius 3.5, and the joined rotation pivots on each
     ring's top-left corner as the matrices specify; both need a native capture to confirm.
 
-**Open for the founder** (the build follows the choice named; each can be changed cheaply):
-- decisions 1, 2, 3, 5 and 8 above;
-- the VoiceOver hint on "Preview Wave demo" ("Opens a fictional Wave demo. Nothing is sent."), heard but not seen;
-- a Block tapped late, while the report preview is open on top, still counts, as in the Room;
+## 3a. The founder's decisions of 30 September, as built
+
+The founder resolved seven open items of §3 on 30 September 2026, and accepted the Wave-information
+panel's removal (below). Each is built as stated, on top of
+`124c6a4`, and each is recorded here as an integration adjustment, not as founder visual approval.
+
+| # | Decision (founder) | What the code does now | Evidence today (Linux) | Native row (not run) |
+| --- | --- | --- | --- | --- |
+| 1 | Use the existing visible, accessible Back pattern to return from the Wave menu to the still-valid Room; the swipe may do the same; keep Room state and blocks | The menu wears the 75:119 chrome (the out-confirm pattern: 44 × 44 chevron "Back", then the header "Wave", DEMO, Safety) instead of 75:111. Back and the edge swipe both call `RoomRun.closeWaveDemo()` through `DemoSession.closeWaveDemo(_:)` (run-ID guarded), with the 240-ms dissolve. The run keeps its identity, phase, blocks, closed invitations and start count; the profile that opened the Wave shows again, or the filtered People once that person is blocked | `testTheMenuBackReturnsToTheStillValidRoom`, `testOuterBackFollowsTheVisibleBackOnly` | W2 (Back and re-entry), W10 (swipe = Back), W11a (Back at the largest text) |
+| 2 | Keep the three example buttons' distinct labels; after blocking, disable them and show one generic "Connection blocked" explanation that does not expose the blocked person | Starts are refused once the counterpart is blocked (`WaveExample.blockedStart` is gone, and no identity is issued). The menu keeps "Start outgoing example", "Start incoming example" and "Show no-allowance example", disabled, with the hint "Unavailable. Connection blocked.", and the boundary line becomes "Connection blocked. / New examples are unavailable in this demo." (new copy; it names nobody). The approved blocked screen 74:576 is still reached by blocking over an active invitation | `testNewExamplesNeverUnblockOrRevive`, `testMenuStartsRecheckEligibilityEachTime` | W7, W8, W4 (capture), W11a |
+| 3 | Keep closed invitation IDs and statuses in memory for the Room session; never revive them | Unchanged: `RoomRun.closedInvitations` is append-only for the run's life; the menu Back keeps it | `testClosedInvitationsAreRetainedAppendOnlyForTheWholeRun`, `testTheMenuBackReturnsToTheStillValidRoom` | D1 (not visible in the UI) |
+| 4 | "You" identifies the current viewer by actor ID, never by matching names; keep the actual Guest List name and draft | The name comparison is removed. The slip's line is written from the invitation's own participants (sender, then recipient) with the actual Guest List name, as the approved design does ("MAYA → MAYA · INCOMING" for a guest who typed Maya). VoiceOver reads the participant that is `.viewer` as "you", with the name: "From Maya to you (Maya). Incoming." The draft is never written | `testAViewerNamedLikeTheCounterpartKeepsTheirOwnIdentity`, `testTheWaveNeverWritesTheFlowOrDraft` | W6 (a guest named Maya), W1–W3 (exact spoken lines) |
+| 5 | Add the spoken hint "Opens a fictional Wave demo. Nothing is sent." | On "Preview Wave demo", from `RoomCopy.previewWaveDemoHint` | the copy is pinned in the domain tests; speech itself is a manual check | VoiceOver (manual) |
+| 6 | A queued Block may affect only its original actor in the same valid Room run; the report panel must prevent touches reaching controls underneath | `WaveAction.blockCounterpart(actor, run:)` carries both; the run refuses it for any other actor, any other run, a closed safety, an ended run or a second time. Only the top overlay is ever drawn; the report card and the dim take every touch, and the page below takes none | `testAQueuedBlockAffectsOnlyItsActorInItsRun`, `testOverlaysFreezeTheScreenBelow` | W5 (a tap where Block was, under the report, changes nothing) |
+| 7 | The fixed viewer ID is acceptable if it is distinct from counterpart IDs, independent of names, and every invitation validates the current Room run | `WaveParticipant.viewer` is distinct from every `.sample(actor)` by construction and never derived from a name; every invitation control now re-validates `invitation.roomRunID == run` as well as the invitation | `testTheFixedViewerIdentityIsDistinctAndNameIndependent`, `testEveryInvitationControlRevalidatesTheRun` | D1; W6 (roles never change) |
+
+**The Room keeps seven panels.** The founder accepted the removal of the superseded Wave-information panel
+(66:134) on 30 September 2026: *"Removing the superseded Room information panel is acceptable. Record the
+seven remaining Room panels and preserve Wave's information content."*
+The Room's remaining panels are the approved 66:127 global safety, 66:128 and 66:129 Maya's safety,
+66:130 and 66:131 Jules's safety, and the unsent report previews 66:132 (Maya) and 66:133 (Jules), with
+their four report-reason variants.
+
+**The retired panel's information is kept in the Wave's approved copy:**
+
+| Retired Room copy (66:134) | Where the Wave says it now |
+| --- | --- |
+| "How Waves work" (the profile's action) | "Preview Wave demo", which opens the Wave itself |
+| "A Wave is / an invitation." | "A Wave invites a conversation." (out-confirm 74:569) |
+| "Chat opens only after the other person accepts." | "Maya chooses whether to accept." (74:569), "Only Maya can accept." (74:570), "A temporary private chat can open next." (74:574) and the private-chat information panel 74:583 ("Both people have agreed in this incoming demo. Private Chat and Keep are the next chapter.") |
+| "Sending Waves comes in the next preview." | Superseded: the Wave demo is that preview, and every active screen says "Nothing is sent." |
+| "Back to profile" | The menu's visible Back (decision 1) |
+
+None of the Wave's own information content was removed: the menu's explanation, the four boundaries,
+the chat information panel and the three demo-conditions panels are unchanged.
+
+**Still open for the founder** (the build follows the choice named; each can be changed cheaply):
+- the two visible changes the 30 September decisions brought to the approved menu (74:568): its header now
+  shows Back and "Wave" instead of the "Proximeet" wordmark; and the blocked menu's new copy ("Connection
+  blocked. / New examples are unavailable in this demo.") and disabled choices, whose filled buttons use the
+  other screens' approved disabled colours but whose disabled outline ("Show no-allowance example") has no
+  approved reference;
+- the new hints "Returns to the Room. Nothing is sent." (the menu's Back) and "Unavailable. Connection
+  blocked." (each disabled choice), heard but not seen;
+- two deliberate, separate taps on the confirmation's Back leave the Wave (the menu's Back sits in the same
+  place); a rapid double tap stops at the menu;
 - the DEBUG-only launch option `-ProximeetFixtureName`, which exists to capture long names at the largest text;
 - the approved Block explanation (74:581) says blocking hides the person's "card and invitation"; blocking Jules
   also removes his public note. The approved copy is kept unchanged;
-- the contract asks for a stable existing demo viewer ID; the code has none, so the Wave uses the single
-  `WaveParticipant.viewer` identity and reads the Guest List name once when it opens (a recorded deviation);
 - "Show expired example" closes the current invitation (an accepted one included) but does not end the Room: the
   fixed Thursday snapshot keeps the Room eligible, and the contract ends the Room only when the Room itself is
   ineligible.
 
 ## 4. Checks executed, with their evidence
 
-All on the Linux VPS (Ubuntu, Swift 6.3.3), on the working files of the candidate before the commit. None is a
-native compile or a simulator run.
+All on the Linux VPS (Ubuntu, Swift 6.3.3), on the working files of each candidate before its commit. None is
+a native compile or a simulator run.
 
-| Check | Command | Result |
-| --- | --- | --- |
-| Design graph audit (the reviewed design fixture only) | `python3 validation/audit_design_graph.py` in the handoff | exit 0, `"passed": true`, `"errors": []`; 12 states, 7 overlays, 74 routes, one accept edge (75:419, in-review, SMART_ANIMATE 800 ms), 4 report-reason variants, all other authored navigation 240-ms dissolve |
-| Domain tests | `swift test --package-path ProximeetDomain` in a scratch copy holding `ProximeetDomain/` and `Proximeet/` | `Executed 254 tests, with 0 failures (0 unexpected)`: 210 at the base + 43 `WaveDemoTests` + 1 Room test for the retired panel, Room tests adjusted |
-| D2, the source-reading domain tests | the same, `--filter` on the eight D2 tests | `Executed 8 tests, with 0 failures (0 unexpected)` |
-| App type-check (not a native compile) | the Linux rig: the app's Swift files against SwiftUI / UIKit / CoreGraphics / Accessibility stub modules, strict concurrency | `Debug: 0 errors, 0 warnings; Release: 0 errors, 0 warnings` |
-| UI-test type-check (not a native compile) | every `ProximeetUITests` file against an XCTest shim (extended with the real `XCUIScreen.main.screenshot()`, `navigationBars` and `XCTAttachment(data:uniformTypeIdentifier:)`) | exit 0, 0 errors; 6 warnings, all the pre-existing `reviewFlag` warnings in the Birthday, Pass and Welcome tests |
-| Project generator | `python3 -B scripts/generate_project.py --check` | `generate_project --check: up to date` |
-| Project validator | `python3 -B scripts/validate_project.py` | `13 checks, 0 failed`; check 7: 30 + 7 Wave-plan UI tests selected, all 14 Wave and all 13 Room methods selected by some plan; check 11: both scanner self-tests passed, including the new Wave-only scan |
-| Source gate | `python3 -B scripts/places_source_manifests.py`, then `--check`, then `scripts/places_review.sh checkpoint` | `up to date: approved 119, review 217`; checkpoint `result=MATCH` (run last, after every edit) |
-| Guardrail audit | the `guardrail-auditor` agent on the full diff against `1a5f97e` | first pass FAIL on this report's wording (hardening changes called "fixed" without a native run or capture) and two stale script comments; all ten product guardrails PASS in the source. Reworded; re-check PASS |
+| Check | Command | First candidate (`124c6a4`) | Second candidate |
+| --- | --- | --- | --- |
+| Design graph audit (the reviewed design fixture only) | `python3 validation/audit_design_graph.py` in the handoff | exit 0, `"passed": true`, `"errors": []`; 12 states, 7 overlays, 74 routes, one accept edge (75:419, in-review, SMART_ANIMATE 800 ms), 4 report-reason variants, all other authored navigation 240-ms dissolve | the same (the handoff is unchanged) |
+| Domain tests | `swift test --package-path ProximeetDomain` in a scratch copy holding `ProximeetDomain/` and `Proximeet/` | `Executed 254 tests, with 0 failures (0 unexpected)` | `Executed 258 tests, with 0 failures (0 unexpected)`: 47 `WaveDemoTests` (4 new, 8 rewritten for the decisions) |
+| D2, the source-reading domain tests | the same, `--filter` on the eight D2 tests | `Executed 8 tests, with 0 failures (0 unexpected)` | `Executed 8 tests, with 0 failures (0 unexpected)` (the committed candidate itself is re-run after the commit, from `git archive`, and reported with its SHA) |
+| App type-check (not a native compile) | the Linux rig: the app's Swift files against SwiftUI / UIKit / CoreGraphics / Accessibility stub modules, strict concurrency | `Debug: 0 errors, 0 warnings; Release: 0 errors, 0 warnings` | the same; the rig was shown to catch the old `.blockCounterpart` form and a `closeWaveDemo()` without its run ID (2 planted errors, 2 reported) |
+| UI-test type-check (not a native compile) | every `ProximeetUITests` file against an XCTest shim (extended with the real `XCUIScreen.main.screenshot()`, `navigationBars` and `XCTAttachment(data:uniformTypeIdentifier:)`) | exit 0, 0 errors; 6 pre-existing `reviewFlag` warnings (Birthday, Pass, Welcome tests) | the same, with `RunBudget.swift` included |
+| Project generator | `python3 -B scripts/generate_project.py --check` | `up to date` | `up to date` (the project now lists `RunBudget.swift`) |
+| Project validator | `python3 -B scripts/validate_project.py` | `13 checks, 0 failed` | `13 checks, 0 failed`; check 7 adds `Wave compute budget: WaveVerificationMain 6240 s + WaveVerificationSmall 2160 s + 2 x 600 s … = 9600 s <= 9600 s (160 min)` and `RunBudget.begin opens setUpWithError in every Wave-selected UI test class`; eight broken variants of the plans and guard were each rejected on a scratch copy |
+| Source gate | `python3 -B scripts/places_source_manifests.py`, then `--check`, then `scripts/places_review.sh checkpoint` | `up to date: approved 119, review 217`; `result=MATCH` | `up to date: approved 119, review 218`; `result=MATCH` (run last, after every edit) |
+| Independent reviews | three read-only reviewers (the founder's decisions and the contract; whether the native UI tests can pass; guardrails and honesty), then the `guardrail-auditor` on the full diff against `1a5f97e` | the auditor: FAIL on this report's wording, then PASS | the three reviewers: PASS each, with should-fix items (stale counts and comments, a session-level test for the menu's Back, the hints pinned, a double tap on the confirmation's Back), all applied; then the `guardrail-auditor`: FAIL twice on documentation wording only (an estimate left from the first candidate; the untested compute guard stated as holding the build at 160, in five places; the panel removal not attributed to the founder), each fix applied exactly as it named; the product code passed every guardrail in both passes |
 
 **What the Linux checks cannot see.** SwiftUI layout and rendering, the accessibility tree, the 800-ms join and
 the 240-ms dissolves, VoiceOver speech, Dynamic Type metrics, safe areas, the real XCTest runtime and every
 UI-test assertion. The type-checks use stub modules that model only the declarations the app uses.
 
-**Found in an independent hardening review and changed in source before this report** (none is verified
-natively; each is PENDING a native run and, for the view, a capture):
-- HIGH: at the largest text, the incoming review's Decline could never be revealed by the tests, because the
-  reveal helper used the 13-pt bar padding everywhere and that screen's bar pads 10. Changed in the helper; unverified until W11a and W14a run.
-- MEDIUM: by code reading, the rings would sit up to 8.5 pt above the approved alignment below 440 pt. Changed:
-  fixed height, top alignment, a width floor at zero, and no hit testing; unverified until a native capture at
-  390 pt.
-- LOW: a viewer named like the counterpart (now "YOU"); the preference line's spoken attribution (now "Maya's
-  intent and approach: …"); a selected reason read "Selected" twice (the selected trait alone now; VoiceOver speech unverified); taps that
-  trusted `isHittable` under the bar (every tap now measures and reveals first); the direction line's order
-  (now asserted sender before recipient); the validator had no Wave-specific scan (added: no `Date(`,
-  `Date.now`, `Clock`, `DispatchQueue`, `.delay(`, `NotificationCenter`, `print(`, `Logger`, `os_log`,
-  `NSLog` in code, and no "delivered", "online now", "read receipt", "typing" or "notified" in copy, with a
-  known-answer fixture); the runbook's timing wording (now "estimated, unverified").
-- Also found while re-counting: two new domain tests read the repository's files. Both Main plans now skip them
-  alongside the six the Room already skipped, and they run on the VPS as D2 (8 tests); each also skips itself
-  when no source tree is present, as a safety net.
+**Found in the first candidate's hardening review and changed in source** (none is verified natively; each is
+PENDING a native run and, for the view, a capture): at the largest text the incoming review's Decline could
+never be revealed by the tests (the reveal helper now uses that screen's 10-pt bar padding; unverified until
+W11a and W14a run); by code reading the rings would sit up to 8.5 pt above the approved alignment below 440 pt
+(fixed height, top alignment, a width floor, no hit testing; unverified until a native capture at 390 pt); a
+selected reason read "Selected" twice (the selected trait alone now; VoiceOver speech unverified); taps that
+trusted `isHittable` under the bar (every tap now measures and reveals first); the validator had no
+Wave-specific scan (added, with a known-answer fixture); two new domain tests read the repository's files
+(both Main plans skip them; they run on the VPS as D2).
 
-## 5. The native test manifest and the smallest bounded Xcode Cloud proposal
+## 5. The native test manifest, the authorized build, and why it has not started
 
 - **Manifest:** `docs/verification/wave-xcode-cloud-manifest.tsv`, 39 rows.
   - **WaveVerificationMain** (iPhone 17 Pro Max, 440 × 956): W1–W10, W11a, W11b, W12, W13 (all 14
     `WaveReviewTests`), R1–R13 (all 13 `RoomReviewTests`), P1, P4, C1 (the Places tests that go through the
-    Room) and D1 (the domain target minus the 8 D2 tests): **30 UI + 246 domain = 276 tests**.
+    Room) and D1 (the domain target minus the 8 D2 tests): **30 UI + 250 domain = 280 tests**.
   - **WaveVerificationSmall** (iPhone 17e, else 16e, 390 × 844): W14a, W14b (both largest-text Wave tests),
     R14, C15, P9, C12, C11: **7 tests**.
-  - **D2** on the VPS: 8 source-reading domain tests.
-- **Coverage asked for, and the rows that carry it:** every screen and panel (W4 captures, W11a/W11b/W14a/W14b
-  reachability); both intents and both approaches (W1, W2, W3); long names and largest text (W11, W14 with
-  `-ProximeetFixtureName`); safe areas and modal isolation (W4, W11, W14: nothing of the page under a panel in
-  the accessibility tree); Leave everywhere (W9); immutable roles (W6); stale and duplicate actions (W5);
-  interrupted acceptance (W7); blocks in both orders and Jules's note removal (W8); Places return with the
-  draft (W1, W9); ineligible and other-intent profiles never reach the Wave (W13); back swipes (W10); Reduce
-  Motion preview (W12). Room and Places regressions: R1–R14, P1, P4, P9, C1, C11, C12, C15.
-- **Left out, deliberately:** the 16 Room-plan regression rows that never open the Room (C2, C3, P2, C9, C4–C8;
-  P10–P13, C10, C13, C14). Adding both Room plans to the same build removes that residual risk for about 77
-  more compute minutes.
-- **The proposal** (`docs/verification/wave-xcode-cloud-verification.md`): **one** build of a new manual-start
-  **Wave Verification** workflow, its two Test actions side by side, at the candidate commit, estimated at
-  **about 80–120 min wall time and about 105–160 compute minutes** (scaled from the Room run on 1a5f97e: Main
-  50 min 55 s, Small 26 min 28 s, 1.04–1.18 times the Codemagic-measured test time); **at most one contingency
-  build** under the runbook's §6 rules; **the archive and delivery asked for separately** after a sufficient
-  pass. Room's allowance does not transfer, and no Wave CI budget is authorized.
-- **Before any of it:** pushing the branch (a new branch; no force, no merge) and confirming that no Xcode Cloud
-  workflow's start condition matches it both need authorization; creating the workflow is the founder's step in
-  App Store Connect.
+  - **D2** on the VPS: 8 source-reading domain tests, run once there and not among the 250.
+- **The count, reconciled.** The first candidate expected **283** native executions (276 + 7). The decisions
+  added four domain tests and no UI test method, so this candidate expects **287**: 280 + 7. The domain
+  target has 258 tests, 250 on the simulator and 8 on the VPS; nothing is counted twice.
+- **Coverage asked for, and the rows that carry it:** every screen and panel (W4 captures, now with the blocked
+  menu; W11a/W11b/W14a/W14b reachability); both intents and both approaches (W1, W2, W3); long names and
+  largest text (W11, W14 with `-ProximeetFixtureName`); safe areas and modal isolation (W4, W11, W14; W5: a tap
+  where Block was, under the report, reaches nothing); Leave everywhere (W9); immutable roles and "you" by
+  identity (W6, with a guest named Maya); stale and duplicate actions (W5); interrupted acceptance (W7);
+  blocks in both orders, the disabled menu and Jules's note removal (W8); the menu's visible Back and re-entry
+  (W2, W10); Places return with the draft (W1, W9); ineligible and other-intent profiles never reach the Wave
+  (W13); back swipes (W10); Reduce Motion preview (W12). Room and Places regressions: R1–R14, P1, P4, P9, C1,
+  C11, C12, C15.
+- **Left out, with the justification the founder asked for:** the 16 Room-plan regression rows C2, C3, P2, C9,
+  C4–C8 (440 pt) and P10–P13, C10, C13, C14 (390 pt). An independent read of every row found that none opens
+  the Room (so none can reach the Wave), that with `-ProximeetFixtureName` absent every changed shared fixture
+  function returns exactly what it returned at 1a5f97e, that `DemoSession` only gained members, that no Places,
+  Signal, Wristband, component, design-system or app-entry file changed, and that the only edit to their
+  classes, the compute guard's first line, does nothing unless a Wave plan's budget variable is set. The full
+  paragraph, with its file and line evidence, is in the runbook §2.
+- **Authorized (30 September 2026):** pushing only this branch, creating the manual **Wave Verification**
+  workflow, and **one** build of at most **160 compute minutes** across its actions; no automatic retry,
+  Codemagic, billing change, archive or TestFlight distribution. Estimated at **about 107–161 compute minutes**
+  (Main about 81–121 min, Small about 26–40 min, scaled from the Room build on 1a5f97e: 77.38 compute minutes).
+- **The compute guard.** Nothing on this machine can cancel an Xcode Cloud build, so the tests are designed to stop themselves:
+  `ProximeetUITests/RunBudget.swift` gives Main's UI tests 104 minutes and Small's 36, with 10 minutes an action
+  allowed for everything else (the Room's build suggests 4–6), so 160 in all, a target the guard aims at, not a
+  guarantee (validator check 7). A test that
+  would start past its budget is designed to fail at once with `RUN_BUDGET_SPENT` (unverified until the run). At the upper estimates it would stop the
+  last-ordered Wave tests first (on Main W1, the recorded walkthrough, W12 and W6; on Small W14a), which would
+  make the run insufficient; the guard does not bound the time outside the UI tests, and only Apple's meter
+  shows the real count.
+- **Why it has not started.** The founder asked for the App Store Connect workflow triggers to be inspected
+  before the push, by my own tools. None reaches App Store Connect: there is no API key and no Apple sign-in on
+  this machine and no connector for it, and the standing rules forbid signing in or requesting Apple
+  credentials. The same holds for creating the workflow, starting or cancelling the build, reading Apple's
+  usage meter and downloading its screenshots and recordings. What GitHub can show was read instead
+  (30 September 2026, 22:13Z): none of the 11 pushes or branch creations since Xcode Cloud was connected
+  started a build within five minutes; nine never got an Xcode Cloud run, among them three new branches; the
+  two that did started 18 minutes to nearly 2 hours later, consistent with a manual Start Build; there are no
+  pull requests or tags. That contradicts an any-branch trigger on either existing workflow (Room
+  Verification, Proximeet TestFlight), but cannot rule out one scoped to `wave/*`, or a change made after the
+  last Xcode Cloud activity (16:22:28Z). It is evidence, not the inspection asked for, so the push is held.
+- **The steps that remain** (runbook §5): the founder confirms the start conditions and creates the manual
+  workflow; the lead pushes, proves the push with `git ls-remote` and watches ten minutes for any build that
+  starts by itself; the founder presses Start Build at the candidate; the lead reads both actions' check runs
+  on GitHub to the end and reports them; the founder downloads the result bundles (screenshots, recordings,
+  logs) for the lead. No second build without a new authorization.
 - **Xcode Cloud cannot run:** the 8 D2 source-reading tests (its test environment has no repository), and
   nothing in §7 below.
 
@@ -224,56 +295,68 @@ There is no hosted preview. Codemagic is disabled and Appetize is not a delivery
   More options → Continue the demo (no account) → Birthday → Pass → Guest List (the name typed here is the one
   the Wave shows) → Wristband Social (or Business) → Signal → Places → Common Ground → Preview room demo →
   Enter room demo → Show populated example → View card on Maya's introduction (Jules's for Business) →
-  **Preview Wave demo**.
+  **Preview Wave demo**; the menu's Back returns to that profile.
 - **DEBUG shortcuts** (Xcode scheme arguments): `-ProximeetFixture wave-menu` (or any of the 12 `wave-*` keys),
-  with `-ProximeetWavePanel`, `-ProximeetWaveReason`, `-ProximeetWaveFrom`, `-ProximeetWaveAfterBlock`,
-  `-ProximeetRoomBlocked` and `-ProximeetFixtureName` as documented at the top of `DebugFixtures.swift`.
-- **After an authorized run:** the result bundle keeps every test's captures and screen recording
-  (`keepAlways`), which is the first time anyone will see the native Wave.
+  with `-ProximeetWavePanel`, `-ProximeetWaveReason`, `-ProximeetWaveFrom`, `-ProximeetWaveAfterBlock menu | room`
+  (after `wave-blocked`: the disabled menu, or the Room's filtered People), `-ProximeetRoomBlocked` and
+  `-ProximeetFixtureName`, as documented at the top of `DebugFixtures.swift`.
+- **After the authorized build:** the result bundles keep every test's captures and screen recording
+  (`keepAlways`). The motion walkthrough is W1's recording (the whole real route with full holds), with W2, W8
+  and W10 for the menu's Back and the blocked menu. It will be the first time anyone sees the native Wave.
 
 ## 7. The honest remaining manual checks
 
 None of these is covered by any automated row, and each is **PENDING FOUNDER**:
 - **Native compilation and every automated row**: nothing has run on an Apple system.
-- **VoiceOver:** reading order, focus after a panel closes, the modal panels, the decorative rings staying silent,
-  and the sentence-case labels. The tests check the accessibility tree, not speech.
+- **VoiceOver:** reading order, focus after a panel closes and after the menu's Back, the modal panels, the
+  decorative rings staying silent, "you (name)" in the direction line, the sentence-case labels, and the hints
+  (on "Preview Wave demo", on the menu's Back and on the disabled choices). The tests check the accessibility
+  tree, not speech, and XCUITest cannot read hints.
 - **The system Reduce Motion setting:** the tests use the app's preview flag, not the setting.
-- **Motion quality:** the 800-ms ring join on Accept, the 240-ms dissolves, and the ring shadow and pivot
-  (decision 11), judged on video.
+- **Motion quality:** the 800-ms ring join on Accept, the 240-ms dissolves (the menu's Back included), and the
+  ring shadow and pivot (decision 11), judged on video.
 - **The device:** install, performance and feel on the founder's iPhone, and the founder's visual approval of
-  the native Wave against the approved board.
+  the native Wave against the approved board, including the menu's new header and the blocked menu (its
+  generic line may wrap to three lines on the 390-pt phone).
 
 **Known baseline issues, carried and not caused by the Wave:** the Guest List negative-frame warning (it
 predates the Room; whether it is gone is only known after a native run), and the largest-text wrapping of the
 INTRODUCTIONS label.
 
-## 8. Changed files (against `1a5f97e`)
+## 8. Changed files (against `1a5f97e`, both candidates together)
 
-| File | Change |
-| --- | --- |
-| `ProximeetDomain/Sources/ProximeetDomain/WaveDemo.swift` | new, +715 |
-| `ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift` | +153 −30 |
-| `ProximeetDomain/Tests/ProximeetDomainTests/WaveDemoTests.swift` | new, +2,099 |
-| `ProximeetDomain/Tests/ProximeetDomainTests/RoomDemoTests.swift` | +48 −11 |
-| `Proximeet/Scenes/WaveView.swift` | new, +1,240 |
-| `Proximeet/Scenes/RoomView.swift` | +114 −88 |
-| `Proximeet/App/DemoSession.swift` | +26 |
-| `Proximeet/App/DebugFixtures.swift` | +261 −25 |
-| `ProximeetUITests/WaveReviewTests.swift` | new, +3,171 |
-| `ProximeetUITests/RoomReviewTests.swift` | +103 −100 |
-| `TestPlans/WaveVerificationMain.xctestplan`, `TestPlans/WaveVerificationSmall.xctestplan` | new |
-| `TestPlans/RoomVerificationMain.xctestplan` | skips the two new source-reading domain tests; at this commit its domain run also includes `WaveDemoTests` (246 domain tests, 204 at `1a5f97e`) |
-| `Proximeet.xcodeproj/project.pbxproj`, `…/xcschemes/Proximeet.xcscheme` | regenerated: the new sources and the two plans |
-| `scripts/generate_project.py`, `scripts/validate_project.py`, `scripts/places_source_manifests.py` | the plans; the plan and Wave checks; the handoff copy |
-| `docs/design/wave-approved/` | new: the approved handoff copy (§1) |
-| `docs/verification/wave-xcode-cloud-manifest.tsv`, `docs/verification/wave-xcode-cloud-verification.md` | new |
-| `docs/verification/places-approved-files.sha256`, `docs/verification/places-review-files.sha256` | regenerated last; the review manifest also refreshes two base entries that were already out of date at `1a5f97e` (`ProximeetUITests/PlacesReviewTests.swift`, `ProximeetUITests/SignalReviewTests.swift`), which the Wave did not touch |
-| `docs/reports/wave-chapter-09.md` | this report |
+| File | Against `1a5f97e` | Of which the second candidate (against `124c6a4`) |
+| --- | --- | --- |
+| `ProximeetDomain/Sources/ProximeetDomain/WaveDemo.swift` | new, +774 | +97 −38: participant-based lines, disabled starts, the Block's actor and run, run re-validation, the menu's chrome |
+| `ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift` | +167 −30 | +19 −5: the Block's guard, `waveCounterpartBlocked`, the hint |
+| `ProximeetDomain/Tests/ProximeetDomainTests/WaveDemoTests.swift` | new, +2,317 | +275 −57: four new tests, eight rewritten |
+| `ProximeetDomain/Tests/ProximeetDomainTests/RoomDemoTests.swift` | +48 −11 | – |
+| `Proximeet/Scenes/WaveView.swift` | new, +1,339 | +153 −54: the menu's Back, the blocked menu and `WaveChoiceStyle`, the direction line by participant, the Block's payload, the report card's hit area |
+| `Proximeet/Scenes/RoomView.swift` | +116 −88 | +5 −3: the hint constant, a comment |
+| `Proximeet/App/DemoSession.swift` | +33 | +7: `closeWaveDemo(_:)` |
+| `Proximeet/App/DebugFixtures.swift` | +257 −25 | +28 −32: `-ProximeetWaveAfterBlock menu \| room`, the Block's payload |
+| `ProximeetUITests/WaveReviewTests.swift` | new, +3,420 | +334 −85: the decisions' checks in the existing 14 methods |
+| `ProximeetUITests/RunBudget.swift` | new, +155 | new: the compute guard |
+| `ProximeetUITests/RoomReviewTests.swift` | +109 −102 | +9 −5: the guard, comments |
+| `ProximeetUITests/PlacesReviewTests.swift`, `ProximeetUITests/PlacesCorrectionTests.swift` | +1 each | +1 each: the guard's first line |
+| `TestPlans/WaveVerificationMain.xctestplan`, `TestPlans/WaveVerificationSmall.xctestplan` | new | +4 each: the budget variable |
+| `TestPlans/RoomVerificationMain.xctestplan` | +3 −1: skips the two chapter-09 source readers | – |
+| `Proximeet.xcodeproj/project.pbxproj`, `…/xcschemes/Proximeet.xcscheme` | regenerated: the new sources and the two plans | +4: `RunBudget.swift` |
+| `scripts/validate_project.py` | +222 −13 | +96: the budget and guard checks |
+| `scripts/generate_project.py`, `scripts/places_source_manifests.py` | the plans; the handoff copy | – |
+| `docs/design/wave-approved/` | new: the approved handoff copy (§1) | – |
+| `docs/verification/wave-xcode-cloud-manifest.tsv`, `docs/verification/wave-xcode-cloud-verification.md` | new | rewritten for the authorized build |
+| `docs/verification/places-approved-files.sha256`, `docs/verification/places-review-files.sha256` | regenerated last; the review manifest also refreshes two base entries that were already out of date at `1a5f97e` (`ProximeetUITests/PlacesReviewTests.swift`, `ProximeetUITests/SignalReviewTests.swift`) | regenerated last |
+| `docs/reports/wave-chapter-09.md` | this report | – |
 
 Bundle identifier `com.goseng.proximeet` and Goseng automatic signing are unchanged (validator check 6; package
-link and build phases, checks 4–5). The Release demo entry (`WelcomeView.swift`) is not in the diff.
+link and build phases, checks 4–5). The Release demo entry (`WelcomeView.swift`) is not in the diff. No Places,
+Signal, Wristband, component, design-system or app-entry file changed.
 
-## 9. Not done, by instruction
+## 9. Not done
 
-No push, no Xcode Cloud run or workflow change, no Codemagic, no Apple configuration, upload, signing change,
-merge, TestFlight or deployment. Chat and Keep are out of scope and not started.
+- **Held, pending the start-condition inspection (§5):** the push, and with it the workflow, the build, its
+  results, screenshots and motion walkthrough.
+- **Not authorized:** a second build or any retry, the archive, TestFlight distribution, Codemagic, any change
+  to billing, signing, other workflows or the default branch.
+- **Out of scope:** Chat and Keep, not started.

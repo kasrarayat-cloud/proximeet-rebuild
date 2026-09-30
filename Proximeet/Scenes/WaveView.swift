@@ -6,14 +6,21 @@ import ProximeetDomain
 /// 75:627–75:657), on the 440 × 956 reference canvas.
 ///
 /// Shown by `RoomView`, in place of the Room's page and panels, while the shown run has a Wave: from
-/// "Preview Wave demo" on an eligible same-intent profile until the menu closes back to the Room, and
-/// after a Leave made from inside it (so the Wave's own ended screen 74:578 shows, not the Room's 66:114).
+/// "Preview Wave demo" on an eligible same-intent profile until the menu closes back to the still-valid
+/// Room (by the menu's visible Back, the existing 75:119 Back pattern, used to meet the founder's decision
+/// of 30 September 2026, or the same outer Back: a swipe or VoiceOver's escape), and after a Leave made from
+/// inside it
+/// (so the Wave's own ended screen 74:578 shows, not the Room's 66:114). Closing keeps the run's
+/// identity, phase, blocks and closed invitations.
+///
 /// Everything on screen is derived from the `RoomRun` and its `WaveDemo` it is given: the screen, the
 /// overlay stack, the invitation's status, the counterpart and the viewer's actual Guest List name. This
 /// view keeps no copy of any of them. Every control goes through the session to the run it was drawn for
-/// (`performWave(run.id, …)`) and carries what it was drawn for — the invitation's identity, the screen,
-/// or the overlay — so a late, repeated or stale tap changes nothing. A blocked counterpart and every
-/// closed or ended invitation are absent from the view tree, not hidden.
+/// (`performWave(run.id, …)`, and the menu's Back `closeWaveDemo(run.id)`) and carries what it was drawn
+/// for — the invitation's identity, the screen, the overlay, or Block's actor — so a late, repeated or
+/// stale tap changes nothing. A blocked counterpart and every closed or ended invitation are absent from
+/// the view tree, not hidden; once blocked, the menu's three choices stay, disabled, beside one generic
+/// line that names nobody.
 ///
 /// Motion follows the prototype: every navigation, overlay and reason change is a 240 ms ease-out
 /// dissolve (the Figma CLOSE actions carry no transition, so Close follows the Room's own 240 ms
@@ -151,14 +158,17 @@ struct WaveView: View {
     // MARK: - Chrome (75:111, 75:119, 75:130)
 
     /// The persistent demo chrome (392 × 44 at 24, 64), the Room's own: the brand at x 8, the DEMO badge
-    /// at x 260 and the Safety shield at x 348. Only the unsent confirmation (75:119) has the Back chevron
-    /// and the title "Wave" at x 60; the ended screen (75:130) keeps the badge in place and leaves the
-    /// shield's slot empty.
+    /// at x 260 and the Safety shield at x 348. The unsent confirmation and, by the founder's integration
+    /// decision of 30 September 2026, the menu use 75:119 instead: the Back chevron and the title "Wave"
+    /// at x 60 (on the menu Back returns to the Room; on the confirmation it discards the unsent example).
+    /// The ended screen (75:130) keeps the badge in place and leaves the shield's slot empty.
     private func chrome(_ screen: WaveScreen) -> some View {
         HStack(spacing: 0) {
             ZStack(alignment: .leading) {
-                if screen.chrome == .back, let invitation = wave.invitation {
-                    composeLeading(invitation.id)
+                // One branch for both Backs, so going from the menu to the confirmation keeps the chevron
+                // and "Wave" in place (only what Back does changes) rather than crossfading two copies.
+                if let back = backControl(screen) {
+                    backLeading(back)
                         .transition(.opacity)
                 } else {
                     RoomChromeTitle(text: WaveCopy.brand)
@@ -182,16 +192,35 @@ struct WaveView: View {
         .padding(.top, 2)
     }
 
-    /// The confirmation's Back (44 × 44, the chevron of 75:122) and "Wave", 16 apart. Back discards the
-    /// unsent invitation (its identity is never reused) and shows the menu; nothing is sent.
-    private func composeLeading(_ id: WaveInvitationID) -> some View {
-        HStack(spacing: 16) {
-            RoomIconButton(pieces: RoomPaths.chevron) {
-                perform(.discardCompose(id), animation: dissolveAnimation)
+    /// What the 75:119 Back does on `screen`, or nil where the chrome has no Back. The menu's Back returns
+    /// to the still-valid Room that opened the Wave, with its state and blocks kept (the run refuses it
+    /// from a stale run or with anything open); the confirmation's discards the unsent invitation (its
+    /// identity is never reused) and shows the menu. Nothing is sent either way.
+    private func backControl(_ screen: WaveScreen) -> WaveBackControl? {
+        guard screen.chrome == .back else { return nil }
+        let id = run.id
+        if screen == .menu {
+            return WaveBackControl(hint: WaveCopy.menuBackHint) {
+                withAnimation(dissolveAnimation) {
+                    _ = session.closeWaveDemo(id)
+                }
             }
-            .accessibilityLabel("Back")
-            .accessibilityHint(Text(verbatim: "Returns to the demo menu. This unsent example is discarded."))
-            .accessibilityIdentifier("wave.back")
+        }
+        guard let invitation = wave.invitation else { return nil }
+        let invitationID = invitation.id
+        return WaveBackControl(hint: "Returns to the demo menu. This unsent example is discarded.") {
+            perform(.discardCompose(invitationID), animation: dissolveAnimation)
+        }
+    }
+
+    /// The 75:119 leading pair: Back (44 × 44, the chevron of 75:122) and "Wave", 16 apart, shared by the
+    /// menu and the unsent confirmation.
+    private func backLeading(_ back: WaveBackControl) -> some View {
+        HStack(spacing: 16) {
+            RoomIconButton(pieces: RoomPaths.chevron, action: back.action)
+                .accessibilityLabel("Back")
+                .accessibilityHint(Text(verbatim: back.hint))
+                .accessibilityIdentifier("wave.back")
             // Spec order: Back → "Wave" (header) → DEMO → Safety, as the Room profile's chrome.
             RoomChromeTitle(text: WaveCopy.composeBrand)
                 .accessibilityAddTraits(.isHeader)
@@ -230,8 +259,13 @@ struct WaveView: View {
     /// (Regular 16/24, centred, in 52 at y 496) and the three explicit choices: Start outgoing (60 at
     /// y 580), Start incoming (60 at y 654) and Show no-allowance (outline 52 at y 730). The menu alone
     /// starts nothing; each start is re-checked by the run when it arrives.
+    ///
+    /// Once the counterpart is blocked (founder decision, 30 September 2026), the three choices keep their
+    /// own labels and are disabled, and the boundary's slot holds one generic explanation instead
+    /// (`WaveCopy.menuBlocked`, same type and box). Nothing on the menu names the counterpart, blocked or not.
     private func menuContent(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let blocked = run.waveCounterpartBlocked
+        return VStack(alignment: .leading, spacing: 0) {
             RoomHeadline(lines: WaveCopy.menuHeadline, size: 48, lineHeight: 56, tracking: -1.92, box: 112,
                          identifier: "wave.menu.headline")
                 .accessibilityFocused($focus, equals: .menuHeadline)
@@ -242,36 +276,47 @@ struct WaveView: View {
                 .padding(.top, 19)
             WaveHaloRings(joined: false, width: width)
                 .padding(.top, 40)
-            WristbandBodyText(text: WaveCopy.menuBoundary, size: 16, lineHeight: 24,
-                              color: RoomStyle.secondaryText, alignment: .center)
+            // #A8B0AD on the ground either way (the boundary's own colour, well above AA).
+            WristbandBodyText(text: blocked ? WaveCopy.menuBlocked : WaveCopy.menuBoundary, size: 16,
+                              lineHeight: 24, color: RoomStyle.secondaryText, alignment: .center)
                 .frame(minHeight: 52 * scale, alignment: .top)
-                .accessibilityIdentifier("wave.menu.boundary")
+                .accessibilityIdentifier(blocked ? "wave.menu.blocked" : "wave.menu.boundary")
                 .padding(.top, 23)
-            menuChoices
+            menuChoices(blocked: blocked)
                 .padding(.top, 32)
         }
     }
 
-    private var menuChoices: some View {
+    /// The three explicit choices. Blocked, each is disabled (drawn in the other screens' approved disabled
+    /// fill and label colours; the disabled outline has no approved reference, `WaveChoiceStyle`) and
+    /// VoiceOver hears "Unavailable. Connection blocked." after its own label; the
+    /// run refuses a start that arrives anyway.
+    private func menuChoices(blocked: Bool) -> some View {
         VStack(spacing: 0) {
             Button(WaveCopy.startOutgoing) {
                 perform(.startOutgoing, animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 60))
-            .accessibilityHint(Text(verbatim: "Starts a new fictional outgoing example. Nothing is sent to anyone."))
+            .buttonStyle(WaveChoiceStyle(kind: .primary, height: 60))
+            .disabled(blocked)
+            .accessibilityHint(Text(verbatim: blocked ? WaveCopy.startBlockedHint
+                                    : "Starts a new fictional outgoing example. Nothing is sent to anyone."))
             .accessibilityIdentifier("wave.menu.startOutgoing")
             Button(WaveCopy.startIncoming) {
                 perform(.startIncoming, animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 60))
-            .accessibilityHint(Text(verbatim: "Starts a new fictional incoming example. Nothing is sent to anyone."))
+            .buttonStyle(WaveChoiceStyle(kind: .primary, height: 60))
+            .disabled(blocked)
+            .accessibilityHint(Text(verbatim: blocked ? WaveCopy.startBlockedHint
+                                    : "Starts a new fictional incoming example. Nothing is sent to anyone."))
             .accessibilityIdentifier("wave.menu.startIncoming")
             .padding(.top, 14)
             Button(WaveCopy.showNoAllowance) {
                 perform(.showNoAllowance, animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .outline, height: 52))
-            .accessibilityHint(Text(verbatim: "Demo condition. Shows an example without a Wave allowance."))
+            .buttonStyle(WaveChoiceStyle(kind: .outline, height: 52))
+            .disabled(blocked)
+            .accessibilityHint(Text(verbatim: blocked ? WaveCopy.startBlockedHint
+                                    : "Demo condition. Shows an example without a Wave allowance."))
             .accessibilityIdentifier("wave.menu.noAllowance")
             .padding(.top, 16)
         }
@@ -289,7 +334,7 @@ struct WaveView: View {
                 .padding(.top, 20)
             stateRow(screen, invitation: invitation)
                 .padding(.top, 10)
-            invitationCard(screen, width: width)
+            invitationCard(screen, invitation: invitation, width: width)
                 .padding(.top, 2)
             WristbandBodyText(text: WaveCopy.boundary(screen) ?? "", size: 14, lineHeight: 22,
                               color: RoomStyle.secondaryText, alignment: .center)
@@ -370,7 +415,7 @@ struct WaveView: View {
     /// The Wave invitation (75:154 / 75:167 / 75:180 / 75:193, 376 × 316): the Halo rings (376 × 128) drawn
     /// first, then the ivory slip (376 × 188 from y 128, radius 24) over them, so a joined ring's lower edge
     /// tucks under the paper as on the board.
-    private func invitationCard(_ screen: WaveScreen, width: CGFloat) -> some View {
+    private func invitationCard(_ screen: WaveScreen, invitation: WaveInvitation, width: CGFloat) -> some View {
         let joined = screen.rings == .joined
         return VStack(spacing: 0) {
             ZStack {
@@ -378,7 +423,7 @@ struct WaveView: View {
                     .id(ringIdentity(joined: joined))
                     .transition(.opacity)
             }
-            invitationSlip(screen)
+            invitationSlip(screen, invitation: invitation)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("wave.invitation")
@@ -396,10 +441,10 @@ struct WaveView: View {
     /// the title (ExtraBold 28/40 at 20, 53), the purpose (Regular 16/23 in 48 at 24, 102) and the
     /// counterpart's own intent and approach (SemiBold 14/22 at 24, 156), 10 above the slip's end. Words
     /// that change with the state crossfade in place.
-    private func invitationSlip(_ screen: WaveScreen) -> some View {
+    private func invitationSlip(_ screen: WaveScreen, invitation: WaveInvitation) -> some View {
         let counterpart = wave.counterpart
         return VStack(spacing: 0) {
-            directionLine(screen, counterpart: counterpart)
+            directionLine(screen, invitation: invitation)
             WaveCardTitle(text: WaveCopy.invitationTitle(screen, counterpart: counterpart) ?? "")
                 .contentTransition(.opacity)
                 .accessibilityFocused($focus, equals: .invitationTitle)
@@ -431,14 +476,17 @@ struct WaveView: View {
     }
 
     /// "ALEX → MAYA · OUTGOING" and its siblings: who sent it, to whom, and which way, in upper case on the
-    /// slip; VoiceOver hears the same in sentence case ("From Alex to Maya. Outgoing.").
-    private func directionLine(_ screen: WaveScreen, counterpart: RoomActor) -> some View {
-        let text = WaveCopy.directionLine(screen, viewer: wave.viewerName, counterpart: counterpart) ?? ""
+    /// slip, from the invitation's own sender and recipient. The viewer is `.viewer` by identity and is
+    /// written with the actual Guest List name, even when it is the counterpart's own (founder decision,
+    /// 30 September 2026); VoiceOver hears the same in sentence case with "you" for that identity ("From
+    /// you (Alex) to Maya. Outgoing."), never inferred from a name.
+    private func directionLine(_ screen: WaveScreen, invitation: WaveInvitation) -> some View {
+        let text = WaveCopy.directionLine(invitation, on: screen, viewer: wave.viewerName) ?? ""
+        let spoken = WaveCopy.directionSpoken(invitation, on: screen, viewer: wave.viewerName) ?? ""
         return RoomLabel(text: text, color: RoomStyle.ink, alignment: .center)
             .contentTransition(.opacity)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: Self.directionLabel(screen, viewer: wave.viewerName,
-                                                                   counterpart: counterpart)))
+            .accessibilityLabel(Text(verbatim: spoken))
             .accessibilityAddTraits(.isStaticText)
             .accessibilityIdentifier("wave.invitation.direction")
     }
@@ -604,6 +652,12 @@ struct WaveView: View {
     /// The top overlay, centred over the dimmed screen (the ground at 72 %; tapping the dim does nothing).
     /// It scrolls when taller than the space, so its Leave is always reachable. A different overlay
     /// dissolves in; a report reason changes in place.
+    ///
+    /// Only the top overlay is drawn (`wave.overlay`, the stack's last): under the report preview the
+    /// counterpart's safety, and its Block, are not in the view tree at all. The dim takes every tap aimed
+    /// outside the card, the card takes every tap on itself (`panelCard`), and the page below takes none
+    /// (`layers`), so no touch on an overlay reaches a control underneath (founder decision, 30 September
+    /// 2026).
     private func panelLayer(_ overlay: WaveOverlay, width: CGFloat, height: CGFloat) -> some View {
         ZStack {
             RoomStyle.ground
@@ -641,6 +695,10 @@ struct WaveView: View {
         .padding(.horizontal, 24)
         .frame(width: width, alignment: .leading)
         .background(RoomStyle.panel, in: RoundedRectangle(cornerRadius: 28, style: .circular))
+        // The founder's rule for the report panel (30 September 2026), on every overlay: the card's whole
+        // rectangle, gaps between its controls included, takes the touch, so none passes through it to
+        // the dim or to anything beneath. Hit testing only; nothing drawn changes.
+        .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
         .accessibilityIdentifier(panelIdentifier(overlay))
@@ -696,7 +754,9 @@ struct WaveView: View {
             panelText(WaveCopy.counterpartSafetyExplanation, size: 16, lineHeight: 24, box: 80)
                 .padding(.top, 22)
             Button(WaveCopy.block(counterpart)) {
-                performAtOnce(.blockCounterpart)
+                // The actor and the run this Block was drawn for: a queued tap blocks nobody else, and
+                // nothing in another run (founder decision, 30 September 2026).
+                performAtOnce(.blockCounterpart(counterpart, run: run.id))
             }
             .buttonStyle(RoomButtonStyle(kind: .primary, height: 52))
             .accessibilityHint(Text(verbatim: "Hides this fictional person’s card and invitation in this demo."))
@@ -958,24 +1018,18 @@ struct WaveView: View {
     private static func contextLabel(_ direction: WaveDirection, viewer: String) -> String {
         "\(direction == .outgoing ? "Outgoing" : "Incoming"). You are \(viewer)."
     }
-
-    /// The direction line read in sentence case, naming sender and recipient in order. When the guest's
-    /// name is the counterpart's, the guest's slot says "you", as the visible line says "YOU".
-    private static func directionLabel(_ screen: WaveScreen, viewer: String, counterpart: RoomActor) -> String {
-        let you = WaveCopy.sharesCounterpartName(viewer: viewer, counterpart: counterpart) ? "you" : viewer
-        switch screen {
-        case .outgoingConfirm, .outgoingPending: return "From \(you) to \(counterpart.name). Outgoing."
-        case .incomingReview: return "From \(counterpart.name) to \(you). Incoming."
-        case .incomingAccepted: return "\(counterpart.name) and \(you). Incoming demo."
-        default: return ""
-        }
-    }
 }
 
 // MARK: - Scroll targets and focus
 
 private enum WaveScrollTarget: Hashable {
     case top
+}
+
+/// The 75:119 Back's hint and action on the screen it was drawn for (see `WaveView.backControl`).
+private struct WaveBackControl {
+    let hint: String
+    let action: @MainActor () -> Void
 }
 
 /// The elements VoiceOver is moved to (see `WaveView.focusTarget`).
@@ -1175,6 +1229,51 @@ struct WaveDemoBadge: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Demo"))
             .accessibilityIdentifier("wave.demoBadge")
+    }
+}
+
+/// The menu's three choices: exactly `RoomButtonStyle` while enabled (it is `RoomButtonBody` itself), and,
+/// once disabled by a blocked counterpart, the app's approved disabled treatment (Birthday, Guest List,
+/// Wristband, Signal and Places: a #1F2424 fill with a #737D7A label, `WristbandStyle.disabledFill` and
+/// `.disabledText`). No approved screen has a disabled outline, so the outline keeps its shape, its 1-pt
+/// border in the disabled fill and its label in the disabled text colour (#737D7A on the #050606 ground
+/// is 4.8:1; on the #1F2424 fill 3.7:1, as on those five screens). Same metrics, radius and height; no
+/// press dimming, as a disabled button takes no press. `RoomButtonStyle`, shared with the Room, does not
+/// read `isEnabled`, so the treatment lives here rather than changing the Room's buttons.
+struct WaveChoiceStyle: ButtonStyle {
+    let kind: RoomButtonStyle.Kind
+    let height: CGFloat
+
+    func makeBody(configuration: Configuration) -> some View {
+        WaveChoiceBody(configuration: configuration, primary: kind == .primary, height: height)
+    }
+}
+
+private struct WaveChoiceBody: View {
+    let configuration: ButtonStyleConfiguration
+    let primary: Bool
+    let height: CGFloat
+    @Environment(\.isEnabled) private var isEnabled
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 16
+
+    var body: some View {
+        if isEnabled {
+            RoomButtonBody(configuration: configuration, primary: primary, height: height)
+        } else {
+            let shape = RoundedRectangle(cornerRadius: 18, style: .circular)
+            configuration.label
+                .manrope(.semiBold, size: size, designSize: 16, lineHeight: 24)
+                .foregroundStyle(WristbandStyle.disabledText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, minHeight: height)
+                .background(primary ? WristbandStyle.disabledFill : Color.clear, in: shape)
+                .overlay {
+                    shape.strokeBorder(primary ? Color.clear : WristbandStyle.disabledFill, lineWidth: 1)
+                }
+                .contentShape(shape)
+        }
     }
 }
 

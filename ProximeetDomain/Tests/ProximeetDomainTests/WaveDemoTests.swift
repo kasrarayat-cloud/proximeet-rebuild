@@ -155,22 +155,47 @@ final class WaveDemoTests: XCTestCase {
                        .senderDiffersFromRecipient, "the sender must be this Wave's counterpart")
     }
 
+    /// "You" is the participant `.viewer`, never a name match (founder decision, 30 September 2026): a
+    /// guest who typed the counterpart's own name keeps that name as typed on the slip, and VoiceOver's
+    /// "you" follows the invitation's participants whatever the names are.
     func testAViewerNamedLikeTheCounterpartKeepsTheirOwnIdentity() {
         var run = WaveFixture.menu(.social, name: "Maya")
+        XCTAssertEqual(run.wave?.viewerName, "Maya", "the actual Guest List name, as typed")
         XCTAssertTrue(run.perform(.startIncoming))
-        guard let id = run.wave?.invitation?.id else { return XCTFail("no invitation") }
-        XCTAssertEqual(run.wave?.invitation?.recipient, .viewer)
-        XCTAssertTrue(run.perform(.accept(id)), "identity is the participant, never the display name")
-        // The guest named like the counterpart is "YOU" in the direction line, so sender and recipient
-        // stay distinct; the context line still names them ("YOU ARE MAYA").
-        XCTAssertEqual(WaveCopy.directionLine(.incomingAccepted, viewer: "Maya", counterpart: .maya),
-                       "MAYA + YOU · INCOMING DEMO")
-        XCTAssertEqual(WaveCopy.directionLine(.incomingReview, viewer: " maya ", counterpart: .maya),
-                       "MAYA → YOU · INCOMING")
-        XCTAssertEqual(WaveCopy.directionLine(.outgoingPending, viewer: "JULES", counterpart: .jules),
-                       "YOU → JULES · OUTGOING")
-        XCTAssertEqual(WaveCopy.directionLine(.outgoingPending, viewer: "Mayana", counterpart: .maya),
-                       "MAYANA → MAYA · OUTGOING", "only an equal name becomes YOU")
+        guard let invitation = run.wave?.invitation else { return XCTFail("no invitation") }
+        XCTAssertEqual(invitation.sender, .sample(.maya))
+        XCTAssertEqual(invitation.recipient, .viewer)
+        XCTAssertNotEqual(invitation.sender, invitation.recipient, "same name, different identities")
+        XCTAssertEqual(WaveCopy.directionLine(invitation, on: .incomingReview, viewer: "Maya"), "MAYA → MAYA · INCOMING")
+        XCTAssertEqual(WaveCopy.directionSpoken(invitation, on: .incomingReview, viewer: "Maya"),
+                       "From Maya to you (Maya). Incoming.")
+        XCTAssertTrue(run.perform(.accept(invitation.id)), "identity is the participant, never the display name")
+        guard let accepted = run.wave?.invitation else { return XCTFail("no invitation") }
+        XCTAssertEqual(WaveCopy.directionLine(accepted, on: .incomingAccepted, viewer: "Maya"),
+                       "MAYA + MAYA · INCOMING DEMO")
+        XCTAssertEqual(WaveCopy.directionSpoken(accepted, on: .incomingAccepted, viewer: "Maya"),
+                       "Maya and you (Maya). Incoming demo.")
+        // Outgoing: the viewer is the sender, by identity.
+        var outgoing = WaveFixture.menu(.business, name: "JULES")
+        XCTAssertTrue(outgoing.perform(.startOutgoing))
+        guard let sent = outgoing.wave?.invitation else { return XCTFail("no invitation") }
+        XCTAssertEqual(WaveCopy.directionLine(sent, on: .outgoingConfirm, viewer: "JULES"), "JULES → JULES · OUTGOING")
+        XCTAssertEqual(WaveCopy.directionSpoken(sent, on: .outgoingConfirm, viewer: "JULES"),
+                       "From you (JULES) to Jules. Outgoing.")
+        // A name is never compared: any name, colliding or not, reads the same way round.
+        for name in ["Maya", " maya ", "MAYA", "Mayana", "Alex"] {
+            XCTAssertEqual(WaveCopy.directionSpoken(.outgoingPending, sender: .viewer, recipient: .sample(.maya),
+                                                    viewer: name), "From you (\(name)) to Maya. Outgoing.")
+            XCTAssertEqual(WaveCopy.directionSpoken(.incomingReview, sender: .sample(.maya), recipient: .viewer,
+                                                    viewer: name), "From Maya to you (\(name)). Incoming.")
+            XCTAssertEqual(WaveCopy.name(of: .viewer, viewer: name), name)
+        }
+        // Participants that disagree with the screen, or a self-addressed pair, name no direction.
+        XCTAssertNil(WaveCopy.directionLine(.outgoingPending, sender: .sample(.maya), recipient: .viewer, viewer: "A"))
+        XCTAssertNil(WaveCopy.directionLine(.incomingReview, sender: .viewer, recipient: .sample(.maya), viewer: "A"))
+        XCTAssertNil(WaveCopy.directionLine(.outgoingPending, sender: .viewer, recipient: .viewer, viewer: "A"))
+        XCTAssertNil(WaveCopy.directionSpoken(.incomingAccepted, sender: .sample(.maya), recipient: .sample(.maya),
+                                              viewer: "A"))
         XCTAssertEqual(WaveCopy.stateContext(.incoming, viewer: "Maya"), "INCOMING · YOU ARE MAYA")
     }
 
@@ -308,7 +333,7 @@ final class WaveDemoTests: XCTestCase {
                 var run = WaveFixture.at(screen, intent)
                 XCTAssertTrue(run.perform(.openSafety(from: screen)))
                 XCTAssertTrue(run.perform(.previewReport))
-                XCTAssertTrue(run.perform(.blockCounterpart), "\(intent) \(screen)")
+                XCTAssertTrue(run.perform(run.waveBlock), "\(intent) \(screen)")
                 XCTAssertEqual(run.blocked, [counterpart])
                 XCTAssertEqual(run.wave?.screen, .blocked)
                 XCTAssertEqual(run.wave?.invitation?.status, .blocked)
@@ -319,7 +344,134 @@ final class WaveDemoTests: XCTestCase {
                 XCTAssertEqual(run.visibleNoteAuthors, counterpart == .jules ? [] : [.jules],
                                "Jules's note goes only with Jules")
                 XCTAssertTrue(run.isConsistent)
-                XCTAssertFalse(run.perform(.blockCounterpart), "no second block, no undo")
+                XCTAssertFalse(run.perform(run.waveBlock), "no second block, no undo")
+            }
+        }
+    }
+
+    /// A queued Block acts only for the actor it was drawn for, in the run it was drawn in, while that
+    /// actor's safety is still open, the report preview above it included (founder decision, 30 September
+    /// 2026). Any other actor, a foreign run, a closed safety or an ended run changes nothing.
+    func testAQueuedBlockAffectsOnlyItsActorInItsRun() {
+        for intent in [BandIntent.social, .business] {
+            let counterpart = WaveFixture.counterpart(intent)
+            let other: RoomActor = counterpart == .maya ? .jules : .maya
+            var run = WaveFixture.at(.incomingReview, intent)
+            let before = run
+            XCTAssertFalse(run.perform(.blockCounterpart(counterpart, run: run.id)), "\(intent): no safety open")
+            XCTAssertEqual(run, before)
+            XCTAssertTrue(run.perform(.openSafety(from: .incomingReview)))
+            XCTAssertTrue(run.perform(.previewReport))
+            let reporting = run
+            XCTAssertFalse(run.perform(.blockCounterpart(other, run: run.id)), "\(intent): never another actor")
+            XCTAssertFalse(run.perform(.blockCounterpart(counterpart, run: RoomRunID(run.id.value + 1))),
+                           "\(intent): never from another run")
+            XCTAssertEqual(run, reporting, "\(intent): the refused Blocks changed nothing")
+            XCTAssertTrue(run.perform(.blockCounterpart(counterpart, run: run.id)),
+                          "\(intent): queued under the report, for its own actor in its own run")
+            XCTAssertEqual(run.blocked, [counterpart], "\(intent): that actor alone")
+            XCTAssertEqual(run.wave?.screen, .blocked)
+            XCTAssertFalse(run.perform(.blockCounterpart(counterpart, run: run.id)), "\(intent): once")
+            var ended = WaveFixture.at(.outgoingPending, intent)
+            XCTAssertTrue(ended.perform(.openSafety(from: .outgoingPending)))
+            let queued = ended.waveBlock
+            XCTAssertTrue(ended.leave())
+            XCTAssertFalse(ended.perform(queued), "\(intent): nothing after Leave")
+            XCTAssertEqual(ended.blocked, [], "\(intent): a Leave clears no block and a late Block adds none")
+        }
+    }
+
+    /// Every invitation control re-validates the current Room run as well as the invitation: a Wave whose
+    /// invitation belongs to another run refuses them all, and the view's handles only ever carry the
+    /// current run's identities.
+    func testEveryInvitationControlRevalidatesTheRun() {
+        let runA = RoomRunID(7), runB = RoomRunID(8)
+        func central(_ run: RoomRunID) -> WaveCentral {
+            WaveCentral(runID: run, active: true, populated: true, blocked: [], intent: .social, venue: .commonGround)
+        }
+        for direction in [WaveDirection.outgoing, .incoming] {
+            var wave = WaveDemo(counterpart: .maya, viewerName: "Alex", intent: .social, approach: .chatFirst,
+                                venue: .commonGround)
+            let start: WaveAction = direction == .outgoing ? .startOutgoing : .startIncoming
+            XCTAssertTrue(wave.apply(start, central: central(runA), nextID: WaveInvitationID(run: runA, sequence: 1)))
+            guard let id = wave.invitation?.id else { return XCTFail("no invitation") }
+            XCTAssertEqual(id.run, runA)
+            let shown = wave
+            let controls: [WaveAction] = [.discardCompose(id), .send(id), .withdraw(id), .accept(id), .decline(id),
+                                          .openConditions(id), .showExpired(id), .showSenderWithdrawn(id),
+                                          .openChatInformation(id)]
+            for action in controls {
+                var attempt = shown
+                XCTAssertFalse(attempt.apply(action, central: central(runB), nextID: WaveInvitationID(run: runB,
+                                                                                                          sequence: 1)),
+                               "\(direction) \(action) in another run")
+                XCTAssertEqual(attempt, shown)
+            }
+            XCTAssertEqual(shown.acceptanceRefusal(id, central: central(runB)),
+                           .sameRoomRun, "\(direction): the invitation belongs to another run")
+            XCTAssertFalse(shown.isConsistent(central: central(runB)))
+        }
+        // No invitation can be made for a run other than its own identity's.
+        XCTAssertNil(WaveInvitation(id: WaveInvitationID(run: runA, sequence: 1), roomRunID: runB, sender: .viewer,
+                                    recipient: .sample(.maya), venue: .commonGround, intent: .social))
+    }
+
+    /// The menu's visible Back (the 75:119 pattern) returns to the still-valid Room: the run keeps its
+    /// identity, phase, blocks, closed invitations and start count, and shows the profile that opened the
+    /// Wave, or the filtered People once that profile's person is blocked. It exists only on the menu.
+    func testTheMenuBackReturnsToTheStillValidRoom() {
+        XCTAssertEqual(WaveScreen.menu.chrome, .back)
+        XCTAssertEqual(WaveScreen.outgoingConfirm.chrome, .back)
+        for screen in WaveScreen.allCases where screen != .menu && screen != .outgoingConfirm {
+            XCTAssertNotEqual(screen.chrome, .back, "\(screen)")
+        }
+        for intent in [BandIntent.social, .business] {
+            let counterpart = WaveFixture.counterpart(intent)
+            var run = WaveFixture.menu(intent)
+            XCTAssertTrue(run.perform(.startOutgoing))
+            XCTAssertTrue(run.perform(.discardCompose(run.wave!.invitation!.id)))
+            let (id, phase, starts) = (run.id, run.phase, run.waveStarts)
+            XCTAssertTrue(run.closeWaveDemo())
+            XCTAssertEqual(run.route, [.profile(counterpart)], "\(intent): the profile that opened it")
+            XCTAssertEqual([run.id, run.phase, run.waveStarts] as [AnyHashable], [id, phase, starts] as [AnyHashable])
+            XCTAssertNil(run.wave)
+            XCTAssertTrue(run.isConsistent)
+            XCTAssertTrue(run.openWaveDemo(viewerName: "Alex"), "\(intent): Preview Wave demo again")
+            XCTAssertEqual(run.wave?.screen, .menu)
+            // After a block: back to the filtered People, the block and the closed record kept.
+            XCTAssertTrue(run.perform(.startIncoming))
+            XCTAssertTrue(run.perform(.openSafety(from: .incomingReview)))
+            XCTAssertTrue(run.perform(run.waveBlock))
+            XCTAssertTrue(run.perform(.backToMenu(from: .blocked)))
+            let closed = run.closedInvitations
+            XCTAssertTrue(run.closeWaveDemo())
+            XCTAssertEqual(run.route, [], "\(intent): the filtered People, never the blocked profile")
+            XCTAssertEqual(run.blocked, [counterpart])
+            XCTAssertEqual(run.closedInvitations, closed, "\(intent): the closed record is kept")
+            XCTAssertFalse(run.visiblePeople.contains(counterpart))
+            XCTAssertFalse(run.openProfile(counterpart), "\(intent): the blocked profile stays gone")
+            XCTAssertTrue(run.isActive, "\(intent): the Room is still valid")
+        }
+    }
+
+    /// The fixed viewer identity (accepted by the founder for this bounded demo): distinct from every
+    /// sample's, independent of every name, and one and the same in both directions.
+    func testTheFixedViewerIdentityIsDistinctAndNameIndependent() {
+        for actor in RoomActor.allCases {
+            XCTAssertNotEqual(WaveParticipant.viewer, .sample(actor))
+        }
+        XCTAssertEqual(Set(RoomActor.allCases.map { WaveParticipant.sample($0) } + [.viewer]).count,
+                       RoomActor.allCases.count + 1)
+        for name in ["Alex", "Maya", "Jules", "maya ", "Zoë"] {
+            for intent in [BandIntent.social, .business] {
+                var run = WaveFixture.menu(intent, name: name)
+                XCTAssertTrue(run.perform(.startOutgoing))
+                XCTAssertEqual(run.wave?.invitation?.sender, .viewer, "\(name) \(intent)")
+                XCTAssertTrue(run.perform(.discardCompose(run.wave!.invitation!.id)))
+                XCTAssertTrue(run.perform(.startIncoming))
+                XCTAssertEqual(run.wave?.invitation?.recipient, .viewer, "\(name) \(intent)")
+                XCTAssertEqual(run.wave?.invitation?.sender, .sample(WaveFixture.counterpart(intent)))
+                XCTAssertEqual(run.wave?.invitation?.id.run, run.id, "every invitation is this run's")
             }
         }
     }
@@ -331,11 +483,11 @@ final class WaveDemoTests: XCTestCase {
             // Room first (the other intent's sample), then the Wave's counterpart.
             var roomFirst = WaveFixture.at(.incomingReview, intent, preblock: [other])
             roomFirst.perform(.openSafety(from: .incomingReview))
-            roomFirst.perform(.blockCounterpart)
+            roomFirst.perform(roomFirst.waveBlock)
             // The Wave's counterpart first, back to the Room, then the other sample there.
             var waveFirst = WaveFixture.at(.incomingReview, intent)
             waveFirst.perform(.openSafety(from: .incomingReview))
-            waveFirst.perform(.blockCounterpart)
+            waveFirst.perform(waveFirst.waveBlock)
             XCTAssertTrue(waveFirst.perform(.backToMenu(from: .blocked)))
             XCTAssertEqual(waveFirst.outerBack(), .closedLevel)
             XCTAssertNil(waveFirst.wave)
@@ -349,21 +501,32 @@ final class WaveDemoTests: XCTestCase {
         }
     }
 
+    /// After a block the menu's three choices are disabled (founder decision, 30 September 2026): each is
+    /// refused and changes nothing, the menu stays, and the one generic explanation names nobody.
     func testNewExamplesNeverUnblockOrRevive() {
         var run = WaveFixture.at(.outgoingPending, .social)
+        XCTAssertFalse(run.waveCounterpartBlocked)
         run.perform(.openSafety(from: .outgoingPending))
-        run.perform(.blockCounterpart)
+        run.perform(run.waveBlock)
+        XCTAssertTrue(run.waveCounterpartBlocked)
         run.perform(.backToMenu(from: .blocked))
-        let starts = run.waveStarts
+        XCTAssertEqual(run.wave?.screen, .menu)
+        let menu = run
         for action in [WaveAction.startOutgoing, .startIncoming, .showNoAllowance] {
-            var attempt = run
-            XCTAssertTrue(attempt.perform(action))
-            XCTAssertEqual(attempt.wave?.screen, .blocked, "\(action): the generic blocked state")
-            XCTAssertNil(attempt.wave?.invitation)
-            XCTAssertEqual(attempt.waveStarts, starts, "no identity issued")
-            XCTAssertEqual(attempt.blocked, [.maya])
-            XCTAssertNil(attempt.wave?.visibleCounterpart)
+            XCTAssertFalse(run.perform(action), "\(action) is disabled after the block")
+            XCTAssertEqual(run, menu, "\(action) changed nothing")
         }
+        XCTAssertEqual(run.blocked, [.maya])
+        XCTAssertNil(run.wave?.visibleCounterpart)
+        XCTAssertTrue(run.waveCounterpartBlocked)
+        for actor in RoomActor.allCases {
+            XCTAssertNil(WaveCopy.menuBlocked.range(of: actor.name), "the explanation names nobody")
+            XCTAssertNil(WaveCopy.startBlockedHint.range(of: actor.name))
+        }
+        XCTAssertEqual(WaveCopy.menuBlocked, "Connection blocked.\nNew examples are unavailable in this demo.")
+        XCTAssertEqual(WaveCopy.startBlockedHint, "Unavailable. Connection blocked.")
+        // The three choices keep their own, distinct labels.
+        XCTAssertEqual(Set([WaveCopy.startOutgoing, WaveCopy.startIncoming, WaveCopy.showNoAllowance]).count, 3)
     }
 
     // MARK: - Leave
@@ -501,9 +664,9 @@ final class WaveDemoTests: XCTestCase {
                        "Alex · Social · Okay to say hello")
         XCTAssertEqual(RoomActor.maya.line, "Social · Chat first", "the invitation shows the counterpart's own values")
         XCTAssertEqual(WaveCopy.stateContext(.outgoing, viewer: "Alex"), "OUTGOING · YOU ARE ALEX")
-        XCTAssertEqual(WaveCopy.directionLine(.outgoingPending, viewer: "Sam", counterpart: .jules),
+        XCTAssertEqual(WaveTestCopy.line(.outgoingPending, "Sam", .jules),
                        "SAM → JULES · OUTGOING")
-        XCTAssertEqual(WaveCopy.directionLine(.incomingReview, viewer: "Alex", counterpart: .maya),
+        XCTAssertEqual(WaveTestCopy.line(.incomingReview, "Alex", .maya),
                        "MAYA → ALEX · INCOMING")
         XCTAssertEqual(WaveCopy.invitationTitle(.outgoingPending, counterpart: .jules), "Waiting for Jules.")
         XCTAssertEqual(WaveCopy.invitationPurpose(.outgoingConfirm, counterpart: .jules),
@@ -511,6 +674,10 @@ final class WaveDemoTests: XCTestCase {
         XCTAssertEqual(WaveCopy.block(.jules), "Block Jules in demo")
         XCTAssertEqual(WaveCopy.counterpartSafetyTitle(.jules), "Jules · safety")
         XCTAssertEqual(WaveCopy.roleExplanation(viewer: "Alex"), "You are Alex in both examples.")
+        // The founder's words of 30 September 2026, and the two hints added with them.
+        XCTAssertEqual(RoomCopy.previewWaveDemoHint, "Opens a fictional Wave demo. Nothing is sent.")
+        XCTAssertEqual(WaveCopy.menuBackHint, "Returns to the Room. Nothing is sent.")
+        XCTAssertEqual(WaveCopy.startBlockedHint, "Unavailable. Connection blocked.")
         for screen in WaveScreen.allCases {
             for text in [WaveCopy.boundary(screen), WaveCopy.closedExplanation(screen)].compactMap({ $0 }) {
                 XCTAssertNil(text.range(of: #"\d"#, options: .regularExpression), "no numeric allowance: \(text)")
@@ -614,13 +781,12 @@ final class WaveDemoTests: XCTestCase {
             run.perform(.startOutgoing)
             run.perform(.send(id()))
             run.perform(.openSafety(from: .outgoingPending))
-            run.perform(.blockCounterpart)
+            run.perform(run.waveBlock)
             let closed: [WaveStatus] = [.withdrawn, .declined, .senderWithdrawn, .unavailable, .blocked]
             expect(closed, "blocked")
             run.perform(.backToMenu(from: .blocked))
-            run.perform(.startIncoming)
-            expect(closed, "a start after the block is the generic blocked state, with no invitation")
-            run.perform(.backToMenu(from: .blocked))
+            XCTAssertFalse(run.perform(.startIncoming), "the starts are disabled after the block")
+            expect(closed, "a refused start adds nothing")
             XCTAssertEqual(run.outerBack(), .closedLevel)
             XCTAssertNil(run.wave, "back to the filtered People")
             expect(closed, "the Wave closed; the run keeps its record")
@@ -722,8 +888,9 @@ final class WaveDemoTests: XCTestCase {
     }
 
     /// The controls each overlay itself offers (74:580–74:586): its Close/Back, the safety's Block and
-    /// Preview report, the report's reasons (Block stays possible while its safety is below), and Demo
-    /// cases' two labelled conditions.
+    /// Preview report, the report's reasons (a queued Block from the safety below still counts, for its own
+    /// actor in its own run only; the report takes every touch aimed below it), and Demo cases' two
+    /// labelled conditions.
     private static func isControl(_ action: WaveAction, of top: WaveOverlay) -> Bool {
         switch (top, action) {
         case (_, .closeOverlay(let which)): return which.kind == top.kind
@@ -794,10 +961,8 @@ final class WaveDemoTests: XCTestCase {
             XCTAssertNotEqual(eligible.screen, .blocked, "\(action)")
             for (name, facts) in ineligible {
                 var attempt = menu
-                XCTAssertTrue(attempt.apply(action, central: facts, nextID: next), "\(action) \(name)")
-                XCTAssertEqual(attempt.screen, .blocked, "\(action) \(name): the generic blocked state")
-                XCTAssertNil(attempt.invitation, "\(action) \(name): no identity")
-                XCTAssertNil(attempt.visibleCounterpart)
+                XCTAssertFalse(attempt.apply(action, central: facts, nextID: next), "\(action) \(name): disabled")
+                XCTAssertEqual(attempt, menu, "\(action) \(name): nothing starts and no identity is issued")
             }
             for (name, facts) in inactive {
                 var attempt = menu
@@ -811,16 +976,15 @@ final class WaveDemoTests: XCTestCase {
             var run = WaveFixture.menu(intent)
             XCTAssertTrue(run.perform(.startIncoming))
             XCTAssertTrue(run.perform(.openSafety(from: .incomingReview)))
-            XCTAssertTrue(run.perform(.blockCounterpart))
+            XCTAssertTrue(run.perform(run.waveBlock))
             XCTAssertTrue(run.perform(.backToMenu(from: .blocked)))
             let starts = run.waveStarts
+            let menu = run
             for round in 0..<3 {
                 for action in [WaveAction.startOutgoing, .startIncoming, .showNoAllowance] {
-                    XCTAssertTrue(run.perform(action), "\(intent) round \(round) \(action)")
-                    XCTAssertEqual(run.wave?.screen, .blocked)
-                    XCTAssertNil(run.wave?.invitation)
+                    XCTAssertFalse(run.perform(action), "\(intent) round \(round) \(action): disabled")
+                    XCTAssertEqual(run, menu, "\(intent) round \(round) \(action): the menu stays")
                     XCTAssertEqual(run.wave?.allowance, .available, "\(action): nothing but a start was judged")
-                    XCTAssertTrue(run.perform(.backToMenu(from: .blocked)))
                 }
             }
             XCTAssertEqual(run.waveStarts, starts, "no identity after the block")
@@ -890,7 +1054,7 @@ final class WaveDemoTests: XCTestCase {
                     { .accept($0.invitation!.id) }, { .openChatInformation($0.invitation!.id) },
                     { _ in .closeOverlay(.chatInformation) }, { _ in .openSafety(from: .incomingAccepted) },
                     { _ in .previewReport }, { _ in .selectReportReason(.harassment) },
-                    { _ in .closeOverlay(.report(.harassment)) }, { _ in .blockCounterpart },
+                    { _ in .closeOverlay(.report(.harassment)) }, { .blockCounterpart($0.counterpart, run: run) },
                     { _ in .backToMenu(from: .blocked) },
                 ]
                 for step in journey {
@@ -899,7 +1063,14 @@ final class WaveDemoTests: XCTestCase {
                     XCTAssertEqual(session.flow, flow, "\(action) wrote to the flow")
                 }
                 XCTAssertTrue(Self.holdsNoFlowState(session.room as Any), "the Room and Wave copy nothing of the flow")
-                XCTAssertEqual(session.roomOuterBack(), .closedLevel, "the menu back to the filtered People")
+                // The menu's visible Back and its outer Back are one action: each approach takes one of them.
+                if approach == ApproachSignal.allCases.first {
+                    XCTAssertTrue(session.closeWaveDemo(run), "the menu's visible Back to the filtered People")
+                } else {
+                    XCTAssertEqual(session.roomOuterBack(), .closedLevel, "the menu back to the filtered People")
+                }
+                XCTAssertNil(session.wave)
+                XCTAssertEqual(session.flow, flow, "the menu's Back wrote to the flow")
                 XCTAssertTrue(session.updateRoomRun(run) { $0.leave() })
                 XCTAssertEqual(session.flow, flow)
                 XCTAssertEqual(session.roomOuterBack(), .alreadyEnded, "ended: the outer Back returns to Places")
@@ -989,8 +1160,19 @@ final class WaveDemoTests: XCTestCase {
             XCTAssertNil(session.wave)
             XCTAssertFalse(session.updateRoomRun(run) { $0.leave() })
             XCTAssertFalse(session.openWaveDemo(run))
+            XCTAssertFalse(session.closeWaveDemo(run), "\(name): the menu's Back has no Room to return to")
             XCTAssertEqual(session.roomOuterBack(), .none)
             XCTAssertFalse(session.returnToPlacesFromRoom())
+            // The same from the bare menu: its visible Back after the Room preview is invalidated.
+            var menu = WaveSessionMirror(flow: WaveFixture.explanation(.social, approach: .chatFirst, name: "Sam"))
+            menu.previewRoomDemo()
+            guard let menuRun = menu.enterRoomDemo() else { return XCTFail("no run") }
+            menu.updateRoomRun(menuRun) { $0.showPopulatedExample() && $0.openProfile(.maya) }
+            XCTAssertTrue(menu.openWaveDemo(menuRun))
+            XCTAssertEqual(menu.wave?.screen, .menu)
+            menu.changeFlow(invalidate)
+            XCTAssertFalse(menu.closeWaveDemo(menuRun), "\(name): the menu's Back after invalidation")
+            XCTAssertNil(menu.room, "\(name): the Room is dropped, and the Wave with it")
         }
         var session = WaveSessionMirror(flow: WaveFixture.explanation(.social, approach: .okayToSayHello, name: "Alex"))
         session.previewRoomDemo()
@@ -1010,6 +1192,13 @@ final class WaveDemoTests: XCTestCase {
         XCTAssertFalse(session.performWave(first, .startIncoming), "the old run's callback")
         XCTAssertFalse(session.openWaveDemo(second), "waiting first")
         session.updateRoomRun(second) { $0.showPopulatedExample() && $0.openProfile(.maya) }
+        XCTAssertTrue(session.openWaveDemo(second))
+        // The menu's visible Back acts only for the run it was drawn in.
+        XCTAssertFalse(session.closeWaveDemo(first), "the old run's Back")
+        XCTAssertEqual(session.wave?.screen, .menu)
+        XCTAssertTrue(session.closeWaveDemo(second), "this run's Back")
+        XCTAssertNil(session.wave)
+        XCTAssertEqual(session.room?.run?.route, [.profile(.maya)], "back to the profile that opened it")
         XCTAssertTrue(session.openWaveDemo(second))
         XCTAssertTrue(session.performWave(second, .startIncoming))
         XCTAssertFalse(session.performWave(second, .accept(old)), "an invitation of the old run")
@@ -1064,6 +1253,8 @@ final class WaveDemoTests: XCTestCase {
         XCTAssertTrue(open.contains("updateRoomRun(id){$0.openWaveDemo(viewerName:name)}"), open)
         XCTAssertEqual(try body("func performWave(_ id: RoomRunID, _ action: WaveAction) -> Bool"),
                        "{updateRoomRun(id){$0.perform(action)}}")
+        XCTAssertEqual(try body("func closeWaveDemo(_ id: RoomRunID) -> Bool"),
+                       "{updateRoomRun(id){$0.closeWaveDemo()}}")
         XCTAssertTrue(try body("func updateRoomRun(")
             .hasPrefix("{guardreconcileRoom(),varpreview=roomelse{returnfalse}"))
         let reconcile = try body("func reconcileRoom() -> Bool")
@@ -1148,7 +1339,9 @@ final class WaveDemoTests: XCTestCase {
                 guard let screen = WaveScreen(rawValue: row.key) else { XCTFail("no screen \(row.key)"); continue }
                 XCTAssertEqual(screen.figmaNode, row.node, row.key)
                 XCTAssertEqual("\(screen.rings)", row.rings, row.key)
-                XCTAssertEqual(chrome[screen.chrome], row.chrome, row.key)
+                // The menu wears the 75:119 Back pattern instead of 75:111: its visible Back returns to the Room
+                // (founder decision, 30 September 2026). Every other screen keeps its ledger chrome.
+                XCTAssertEqual(chrome[screen.chrome], row.key == "demo-menu" ? "75:119" : row.chrome, row.key)
                 XCTAssertEqual(screen.safety.flatMap { safety[$0] }, row.safety, row.key)
                 XCTAssertEqual(screen.showsCounterpart, row.visibleActors.contains("maya"), row.key)
                 XCTAssertEqual(screen.isClosed, ["invalid", "blocked", "unavailable"].contains(row.phase), row.key)
@@ -1158,7 +1351,7 @@ final class WaveDemoTests: XCTestCase {
                 // What the screen actually shows: the viewer's name on the menu and in the four active
                 // invitations (never on a closed one), and the counterpart only while an invitation is active.
                 let viewerShown = screen == .menu
-                    || WaveCopy.directionLine(screen, viewer: wave.viewerName, counterpart: counterpart) != nil
+                    || WaveTestCopy.line(screen, wave.viewerName, counterpart) != nil
                 let shown = (viewerShown ? ["alex"] : []) + (wave.visibleCounterpart != nil ? ["maya"] : [])
                 XCTAssertEqual(shown, row.visibleActors, "\(intent) \(row.key)")
                 let invitation = wave.invitation
@@ -1185,7 +1378,7 @@ final class WaveDemoTests: XCTestCase {
                     XCTAssertEqual(invitation?.sender, names[sender], "\(intent) \(row.key)")
                     XCTAssertEqual(invitation?.recipient, names[recipient], "\(intent) \(row.key)")
                 } else {
-                    XCTAssertNil(WaveCopy.directionLine(screen, viewer: "Alex", counterpart: counterpart),
+                    XCTAssertNil(WaveTestCopy.line(screen, "Alex", counterpart),
                                  "\(row.key) names no direction")
                 }
             }
@@ -1375,7 +1568,7 @@ final class WaveDemoTests: XCTestCase {
         case "showExpired": return run.perform(.showExpired(id))
         case "showSenderWithdrawn": return run.perform(.showSenderWithdrawn(id))
         case "backToMenu": return run.perform(.backToMenu(from: wave.screen))
-        case "block": return run.perform(.blockCounterpart)
+        case "block": return run.perform(run.waveBlock)
         case "previewReport": return run.perform(.previewReport)
         case "close":
             guard let top = wave.overlay else { return false }
@@ -1519,7 +1712,7 @@ final class WaveDemoTests: XCTestCase {
             ("I75:320;75:137", WaveCopy.session),
             ("I75:320;75:138", WaveCopy.viewerPreference(viewer: name, intent: wave.intent, approach: wave.approach)),
             ("75:326", WaveCopy.stateContext(.outgoing, viewer: name)),
-            ("I75:327;75:163", WaveCopy.directionLine(.outgoingConfirm, viewer: name, counterpart: them)),
+            ("I75:327;75:163", WaveTestCopy.line(.outgoingConfirm, name, them)),
             ("I75:327;75:164", WaveCopy.invitationTitle(.outgoingConfirm, counterpart: them)),
             ("I75:327;75:165", WaveCopy.invitationPurpose(.outgoingConfirm, counterpart: them)),
             ("I75:327;75:166", them.line),
@@ -1537,7 +1730,7 @@ final class WaveDemoTests: XCTestCase {
             ("75:484", WaveCopy.closedBoundary),
             ("75:486", WaveCopy.backToMenu),
             ("75:401", WaveCopy.stateContext(.incoming, viewer: name)),
-            ("I75:405;75:189", WaveCopy.directionLine(.incomingReview, viewer: name, counterpart: them)),
+            ("I75:405;75:189", WaveTestCopy.line(.incomingReview, name, them)),
             ("I75:405;75:190", WaveCopy.invitationTitle(.incomingReview, counterpart: them)),
             ("I75:405;75:191", WaveCopy.invitationPurpose(.incomingReview, counterpart: them)),
             ("75:418", WaveCopy.boundary(.incomingReview)),
@@ -1545,7 +1738,7 @@ final class WaveDemoTests: XCTestCase {
             ("75:423", WaveCopy.decline),
             ("75:506", lines(WaveCopy.closedHeadline(.incomingDeclined))),
             ("75:507", WaveCopy.closedExplanation(.incomingDeclined)),
-            ("I75:447;75:202", WaveCopy.directionLine(.incomingAccepted, viewer: name, counterpart: them)),
+            ("I75:447;75:202", WaveTestCopy.line(.incomingAccepted, name, them)),
             ("I75:447;75:203", WaveCopy.invitationTitle(.incomingAccepted, counterpart: them)),
             ("I75:447;75:204", WaveCopy.invitationPurpose(.incomingAccepted, counterpart: them)),
             ("75:460", WaveCopy.boundary(.incomingAccepted)),
@@ -1621,12 +1814,12 @@ final class WaveDemoTests: XCTestCase {
                        [0x59, 0x6F, 0x75, 0x2019, 0x76, 0x65], "You’ve")
         // The uppercase lines use the actual name, uppercased as written; the sentence lines keep it as typed.
         XCTAssertEqual(WaveCopy.stateContext(.incoming, viewer: "Zoë"), "INCOMING · YOU ARE ZOË")
-        XCTAssertEqual(WaveCopy.directionLine(.incomingAccepted, viewer: "Zoë", counterpart: .jules),
+        XCTAssertEqual(WaveTestCopy.line(.incomingAccepted, "Zoë", .jules),
                        "JULES + ZOË · INCOMING DEMO")
         XCTAssertEqual(WaveCopy.roleExplanation(viewer: "Zoë"), "You are Zoë in both examples.")
         // Per-screen copy exists exactly where the design draws it.
         for screen in WaveScreen.allCases {
-            XCTAssertEqual(WaveCopy.directionLine(screen, viewer: "Alex", counterpart: .maya) != nil,
+            XCTAssertEqual(WaveTestCopy.line(screen, "Alex", .maya) != nil,
                            screen.showsCounterpart, "\(screen)")
             XCTAssertEqual(WaveCopy.invitationTitle(screen, counterpart: .maya) != nil, screen.showsCounterpart)
             XCTAssertEqual(WaveCopy.invitationPurpose(screen, counterpart: .maya) != nil, screen.showsCounterpart)
@@ -1765,7 +1958,7 @@ enum WaveFixture {
         case .unavailable:
             run.perform(.startIncoming); run.perform(.openConditions(id())); run.perform(.showExpired(id()))
         case .blocked:
-            run.perform(.startOutgoing); run.perform(.openSafety(from: .outgoingConfirm)); run.perform(.blockCounterpart)
+            run.perform(.startOutgoing); run.perform(.openSafety(from: .outgoingConfirm)); run.perform(run.waveBlock)
         case .allowanceUnavailable: run.perform(.showNoAllowance)
         case .sessionEnded: run.leave()
         }
@@ -1807,7 +2000,9 @@ enum WaveFixture {
         let stale = WaveInvitationID(run: run.id, sequence: max(id.sequence - 1, 0))
         let foreign = WaveInvitationID(run: RoomRunID(run.id.value + 1000), sequence: id.sequence)
         return invitationActions(id) + invitationActions(stale) + invitationActions(foreign)
-            + [.startOutgoing, .startIncoming, .showNoAllowance, .previewReport, .blockCounterpart]
+            + [.startOutgoing, .startIncoming, .showNoAllowance, .previewReport, run.waveBlock]
+            + [.blockCounterpart(run.wave?.counterpart ?? .maya, run: RoomRunID(run.id.value + 1000))]
+            + RoomActor.allCases.filter { $0 != run.wave?.counterpart }.map { .blockCounterpart($0, run: run.id) }
             + RoomReportReason.allCases.map { .selectReportReason($0) }
             + WaveScreen.allCases.flatMap { [WaveAction.backToMenu(from: $0), .openSafety(from: $0)] }
             + allOverlays.map { .closeOverlay($0) }
@@ -1962,7 +2157,7 @@ enum WaveFixture {
         case 24: run.perform(.previewReport)
         case 25: run.perform(.selectReportReason(reason))
         case 26: run.perform(.closeOverlay(overlays[Int(generator.next() % 5)]))
-        case 27: run.perform(.blockCounterpart)
+        case 27: run.perform(run.waveBlock)
         case 28: run.backToPeople()
         default: if generator.next() % 12 == 0 { run.leave() }
         }
@@ -2095,5 +2290,28 @@ struct WaveSessionMirror {
     @discardableResult
     mutating func performWave(_ id: RoomRunID, _ action: WaveAction) -> Bool {
         updateRoomRun(id) { $0.perform(action) }
+    }
+
+    @discardableResult
+    mutating func closeWaveDemo(_ id: RoomRunID) -> Bool {
+        updateRoomRun(id) { $0.closeWaveDemo() }
+    }
+}
+
+extension RoomRun {
+    /// The Wave's Block as the counterpart's safety draws it: this run's own identity and this Wave's own
+    /// counterpart.
+    var waveBlock: WaveAction {
+        .blockCounterpart(wave?.counterpart ?? .maya, run: id)
+    }
+}
+
+/// The direction line of `screen` with the participants that screen's direction implies: the viewer sends
+/// the outgoing ones and receives the incoming ones.
+enum WaveTestCopy {
+    static func line(_ screen: WaveScreen, _ viewer: String, _ counterpart: RoomActor) -> String? {
+        let outgoing = screen == .outgoingConfirm || screen == .outgoingPending
+        return WaveCopy.directionLine(screen, sender: outgoing ? .viewer : .sample(counterpart),
+                                      recipient: outgoing ? .sample(counterpart) : .viewer, viewer: viewer)
     }
 }

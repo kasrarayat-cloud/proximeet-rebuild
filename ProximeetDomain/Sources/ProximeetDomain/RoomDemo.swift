@@ -48,6 +48,8 @@ public enum RoomCopy {
     public static let profileTitle = "Room"
     public static let profileLabel = "FICTIONAL PROFILE"
     public static let previewWaveDemo = "Preview Wave demo"
+    /// VoiceOver's hint on "Preview Wave demo" (founder decision, 30 September 2026).
+    public static let previewWaveDemoHint = "Opens a fictional Wave demo. Nothing is sent."
     public static let backToPeople = "Back to people"
     /// The incompatible actor's last line: Waves stay within the guest's own intent.
     public static let sameIntentExplanation = "Waves stay within your selected intent."
@@ -466,8 +468,10 @@ public struct RoomRun: Equatable, Sendable {
         return true
     }
 
-    /// Leaves the Wave for its Room caller: only from the menu with nothing open (an outer Back). The
-    /// profile below shows again, or the filtered People once the counterpart is blocked.
+    /// Leaves the Wave for its Room caller: only from the menu with nothing open, by the menu's visible
+    /// Back (the 75:119 chrome pattern, founder decision of 30 September 2026) or the same outer Back. The
+    /// run's identity, phase, blocks and closed invitations are kept; the profile below shows again, or the
+    /// filtered People once the counterpart is blocked.
     @discardableResult
     public mutating func closeWaveDemo() -> Bool {
         guard isActive, route.last == .waveDemo, let wave, wave.screen == .menu, wave.overlays.isEmpty
@@ -483,9 +487,13 @@ public struct RoomRun: Equatable, Sendable {
     @discardableResult
     public mutating func perform(_ action: WaveAction) -> Bool {
         guard isActive, phase == .populated, route.last == .waveDemo, var current = wave else { return false }
-        if action == .blockCounterpart {
-            let actor = current.counterpart
-            guard current.overlays.contains(.counterpartSafety), !blocked.contains(actor) else { return false }
+        if case .blockCounterpart(let actor, let run) = action {
+            // A queued Block affects only the actor it was drawn for, in the run it was drawn in, while that
+            // actor's safety is still open (under the report preview too, which has no Block of its own and
+            // takes every touch aimed below it).
+            guard run == id, actor == current.counterpart, current.overlays.contains(.counterpartSafety),
+                  !blocked.contains(actor)
+            else { return false }
             blocked.insert(actor)
             current.invalidateForBlock()
             wave = current
@@ -509,6 +517,12 @@ public struct RoomRun: Equatable, Sendable {
               !closedInvitations.contains(where: { $0.id == shown.id })
         else { return }
         closedInvitations.append(shown)
+    }
+
+    /// Whether the Wave's counterpart is in the run's blocked set: the menu then shows its three choices
+    /// disabled, with one generic explanation that names nobody (`WaveCopy.menuBlocked`).
+    public var waveCounterpartBlocked: Bool {
+        wave.map { blocked.contains($0.counterpart) } ?? false
     }
 
     /// The first acceptance guard that would refuse Accept for `waveID` now (nil: Accept may commit). With

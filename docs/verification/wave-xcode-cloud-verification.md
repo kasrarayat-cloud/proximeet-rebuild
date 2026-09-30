@@ -1,172 +1,192 @@
-# Wave verification in Xcode Cloud: the proposal
+# Wave verification in Xcode Cloud: the authorized run
 
-**Status: PROPOSAL. No run is authorized.** Nothing in this document has been run on an Apple system, and
-nothing here is a result. The Wave (chapter 09) is implemented in source and checked on Linux only; a Linux
-type-check is not a native compile. Every Apple-side outcome stays **PENDING FOUNDER** until the founder
-reports it or the lead reads it on GitHub.
+**Status: AUTHORIZED, NOT RUN.** On 30 September 2026 the founder authorized pushing only this Wave
+feature branch, creating a manual **Wave Verification** workflow, and starting **one** Xcode Cloud
+verification build of at most **160 compute minutes across its actions**, with no automatic retry, no
+Codemagic, no billing change, no archive and no TestFlight distribution. Nothing in this document has run
+on an Apple system, and nothing here is a result. The Wave (chapter 09) is implemented in source and checked
+on Linux only; a Linux type-check is not a native compile.
+
+**What holds it.** The founder asked for the App Store Connect start conditions to be inspected before the
+push. This machine has no App Store Connect access (no API key, no Apple sign-in, no connector), and the
+standing rules forbid signing in or requesting Apple credentials, so neither that inspection nor creating the
+workflow, starting or cancelling the build, nor downloading its artifacts can be done from here. The push is
+held until the start conditions are confirmed (§5). Every Apple-side outcome stays **PENDING FOUNDER** until
+the founder reports it or the lead reads it on GitHub.
 
 - **Candidate:** branch `wave/approved-20260930T173856Z`, commit `<CANDIDATE_SHA>`: the branch tip whose
-  full SHA the lead gives in the handoff. A document cannot contain its own commit's SHA. At the time of
-  writing the branch exists only on the VPS; Xcode Cloud builds branches from GitHub, so it must be pushed
-  first, and that push needs its own authorization (step 1 of §5).
+  full SHA the lead gives in the report of this chapter's second candidate. A document cannot contain its
+  own commit's SHA. Until the push the branch exists only on the VPS.
 - **Base:** the verified Room commit `1a5f97e0fe73168e5f63e392182507e457209964`
   (`room-repair/xcode-checks-20260930`). Its Room Verification run is the model for this one (§4).
 - **Rows:** `docs/verification/wave-xcode-cloud-manifest.tsv`, one per required execution.
 - **Plans:** `TestPlans/WaveVerificationMain.xctestplan` and `TestPlans/WaveVerificationSmall.xctestplan`,
   listed in the scheme after the two Room plans. `RoomVerificationMain` stays the scheme's default.
 
-## 1. The bound proposed
+## 1. The bound
 
-| | What | Apple compute (estimate, §4) | Authorized? |
+| | What | Apple compute | Authorized? |
 | --- | --- | --- | --- |
-| **Run 1** | One build of a new manual-start **Wave Verification** workflow: its two Test actions, side by side, at `<CANDIDATE_SHA>` | **about 105–160 compute minutes** | no |
-| **Contingency** | At most one more build, only under the rules of §6 | at most the same again | no |
-| **Archive** | Not part of this proposal. After a sufficient pass it is asked for separately (§9) | about 6 min (the Room's archive took 5 min 37 s) | no |
+| **The build** | One build of the manual-start **Wave Verification** workflow: its two Test actions, side by side, at `<CANDIDATE_SHA>` | estimated about 107–161 compute minutes (§4); the compute guard caps the UI tests at 104 + 36 min, and the rest is only estimated at 600 s an action, so 160 is a target the guard aims at, not a guarantee | **yes** (30 September 2026) |
+| **A second build** | None. There is no automatic retry and no contingency build: any further build, for any reason, needs a new authorization (§6) | – | no |
+| **Archive and delivery** | Not authorized (§9) | – | no |
 
-Nothing else is proposed: no Codemagic, no TestFlight delivery, no change to the **Room Verification** or
-**Proximeet TestFlight** workflows, no paid compute. Buying compute is a founder decision outside this
-proposal.
+No Codemagic, no TestFlight delivery, no change to the **Room Verification** or **Proximeet TestFlight**
+workflows, and no paid compute.
 
 ## 2. The test inventory
 
 | Plan | Destination | UI tests | Domain tests | Executed in total | Rows |
 | --- | --- | --- | --- | --- | --- |
-| `WaveVerificationMain` | iPhone 17 Pro Max (440 × 956) | **30**: 14 Wave, 13 Room, 3 Places | **246** | **276** | W1–W10, W11a, W11b, W12, W13, R1–R13, P1, P4, C1, D1 |
+| `WaveVerificationMain` | iPhone 17 Pro Max (440 × 956) | **30**: 14 Wave, 13 Room, 3 Places | **250** | **280** | W1–W10, W11a, W11b, W12, W13, R1–R13, P1, P4, C1, D1 |
 | `WaveVerificationSmall` | iPhone 17e (390 × 844) | **7**: 2 Wave, 1 Room, 4 Places | none | **7** | W14a, W14b, R14, C15, P9, C12, C11 |
 | none (the VPS) | Linux, `swift test` | none | 8 | 8 | D2 |
 
+**The count, reconciled.** The first candidate (`124c6a4`) expected **283** native executions: Main 30 UI + 246
+domain = 276, and Small 7. The founder's decisions of 30 September 2026 added four domain tests
+(`testAQueuedBlockAffectsOnlyItsActorInItsRun`, `testEveryInvitationControlRevalidatesTheRun`,
+`testTheMenuBackReturnsToTheStillValidRoom`, `testTheFixedViewerIdentityIsDistinctAndNameIndependent`) and no UI
+test method (their UI checks went into the existing 14 Wave methods). So this candidate expects **287** native
+executions: Main 30 UI + 250 domain = **280**, Small **7**. The domain target has **258** tests: the 250 that
+run on the simulator, and the **8** source-reading tests (D2) that both Main plans skip and that run once, on
+the VPS (§8). The 8 are not among the 250, so nothing is counted twice.
+
 **Why these rows, and no others.** Every row here runs code that the Wave changed, and the Wave changed
 only these product files: `RoomDemo.swift` and the new `WaveDemo.swift` (domain), `RoomView.swift` (the
-profile's action is now "Preview Wave demo", the Wave information panel 66:134 is gone, the components are
-internal, and a run with a Wave draws the new `WaveView.swift`), `DemoSession.swift` (three additions) and
-`DebugFixtures.swift` (the Wave fixtures, `-ProximeetFixtureName`, and the name threaded through the shared
-fixture path).
+profile's action is now "Preview Wave demo" with its spoken hint, the Wave information panel 66:134 is gone,
+the components are internal, and a run with a Wave draws the new `WaveView.swift`), `DemoSession.swift`
+(four additions) and `DebugFixtures.swift` (the Wave fixtures, `-ProximeetFixtureName`, and the name threaded
+through the shared fixture path).
 - **Wave:** every `WaveReviewTests` method; all 14 run on the 440-pt phone (W1–W13, W11 being two rows,
   W11a and W11b). The largest-text checks are two methods, `testLargestTextKeepsWaveScreensReachable`
-  (the 12 screens and the two real Leaves) and `testLargestTextKeepsWavePanelsReachable` (the 7
-  overlays), split from the one `testLargestTextKeepsWaveReachable` with every check kept (§4). Both run
-  on whichever phone runs them, so, like the Room's R7 and R14, they run on the 390-pt phone as well (W14a,
-  W14b). `testCaptureApprovedScreensAndOverlays` and
+  (the 12 screens, the blocked menu and the two real Leaves) and `testLargestTextKeepsWavePanelsReachable`
+  (the 7 overlays). Both run on whichever phone runs them, so, like the Room's R7 and R14, they run on the
+  390-pt phone as well (W14a, W14b). `testCaptureApprovedScreensAndOverlays` and
   `testReduceMotionPreviewAcceptJoinsWithoutAMove` read 440-pt geometry and stay on the larger phone.
 - **Room:** all 13 `RoomReviewTests` methods on the 440-pt phone and the largest-text one on the 390-pt
   phone, as in the Room plans. The removal of the Wave information panel changed the tests' shared
-  helpers (`assertShown`, `assertProfile`, `checkSameIntent`, `panelID`, `sampleLeaks` and others) and the
-  `RoomText`, `Panel` and `Shown` enums, and every one of the 13 tests goes through them. The Room's
-  overlays fall from 8 to 7 reachable.
-- **Places:** every Places UI test that goes into the Room, on the phone its Room plan ran it on. They were
-  found by reading the test sources: the callers of `returnToNowThroughRoom` (Preview room demo, Enter
-  room demo, Leave and disappear, Return to Places), and `testBackRoutesKeepTheCategoryAndTheDraft`, which
-  opens the Room entry and leaves it by its Back. That is P1, P4 and C1 on the larger phone and C15, P9,
-  C12 and C11 on the smaller one. **P4 and P9 are added to the lead's list** (P1, C1; C15, C12, C11): they
-  go through the Room the same way.
-- **Left out, with the reason.** The other 16 regression rows of the Room plans (C2, C3, P2, C9, C4–C8 on
-  the larger phone; P10–P13, C10, C13, C14 on the smaller one) never open the Room. They reach the changed
-  fixture code only through its shared path, with no `-ProximeetFixtureName`, which every Room and Wave
-  fixture launch above runs as well. Leaving them out is the one deliberate residual risk of this bound.
-  To remove it, the founder can add both Room plans to the same build (about 77 more compute minutes, as
-  measured on 1a5f97e).
+  helpers and enums, and every one of the 13 tests goes through them. The Room's overlays fall from 8 to 7.
+- **Places:** every Places UI test that goes into the Room, on the phone its Room plan ran it on: P1, P4
+  and C1 on the larger phone and C15, P9, C12 and C11 on the smaller one.
+- **Left out, with the justification the founder asked for.** The 16 older regression rows C2, C3, P2, C9,
+  C4, C5, C6, C7, C8 (440-pt phone) and P10, P11, P12, P13, C10, C13, C14 (390-pt phone) stay out of both
+  Wave plans because the Wave change set does not reach anything they run (an independent read of every
+  row, 30 September 2026):
+  - None of them opens the Room, so none can reach the Wave. The Room exists only after
+    `DemoSession.previewRoomDemo()`, which the app calls only from Places' "Preview room demo"
+    (`explanation.primary`); `RoomView` is built only while `session.room != nil`, and `WaveView` only
+    inside `RoomView` while the run has a Wave. The only tests that press "Preview room demo" are P1, P4,
+    P9, C15, C1, C12 and C11, and all of them are in the Wave plans. The excluded rows check that button's
+    label, frame or hittability and never tap it.
+  - They launch only the fixtures `welcome`, `wristband`, `signal`, `signal-selected`, `places`,
+    `place-detail` and `place-explanation`, never `-ProximeetFixtureName`. With that argument absent,
+    every changed shared fixture function returns exactly what it returned at 1a5f97e: the name is nil,
+    `session(…)` and `flow(…)` receive their default `name: nil`, `exampleIntroduction(named: nil)`
+    returns the unchanged "Alex" example, and the new Wave and Room branches match only `wave-*` and
+    `room-*` stages.
+  - `DemoSession.swift` only gained members; the `RoomDemo` and `WaveDemo` changes are read only while a
+    Room exists; `RoomView`'s private components became internal but are used nowhere outside
+    `RoomView.swift` and `WaveView.swift`. No Places, Signal, Wristband, component, design-system or
+    app-entry file changed.
+  - Their test bodies and helpers are unchanged. The only edit to their classes is
+    `try RunBudget.begin(self)` as the first line of `setUpWithError` in `PlacesReviewTests` and
+    `PlacesCorrectionTests`, which returns at once, with no effect, unless `PROXIMEET_RUN_BUDGET_SECONDS`
+    is set, and only the two Wave plans set it (validator check 7).
+
+  Their shared dependencies are therefore unaffected. Their last results stay those of the Room chapter
+  and are not re-run here. To remove even this residual risk, both Room plans could be added to a later
+  build (about 77 more compute minutes, as measured on 1a5f97e); that is not authorized.
 - **Domain:** the whole `ProximeetDomainTests` target on the simulator, minus the eight tests that read the
-  repository's files (D1): the Room Main plan's six, and the two that chapter 09 adds
-  (`RoomDemoTests/testTheRetiredWaveInformationPanelIsGone`, `WaveDemoTests/testTheSessionMirrorMatchesTheAppWiring`),
-  which both Main plans now skip as well. Those eight run on the VPS (D2, §8). Each of the two also skips
-  itself when it finds no source tree, which is a safety net rather than the plan: a skip on Xcode Cloud
-  would break criterion 3 of §7.
+  repository's files (D1). Each of the two chapter-09 source readers also skips itself when it finds no
+  source tree, a safety net rather than the plan: a skip on Xcode Cloud would break criterion 3 of §7.
 
 ## 3. Devices, Xcode and the workflow
 
 - **Devices.** Main on **iPhone 17 Pro Max**. Small on **iPhone 17e**, or **iPhone 16e** if 17e is not
   offered: both are 390 × 844. Choose no other model, and record which one was used. Both actions use the
-  same iOS: the one the Room Verification run on 1a5f97e used (read with its Xcode version, below),
-  or, if that is no longer offered, the latest iOS 26.x offered with that Xcode; record it.
+  same iOS: the one the Room Verification run on 1a5f97e used, or, if that is no longer offered, the latest
+  iOS 26.x offered with that Xcode; record it.
 - **Xcode: the one the Room Verification workflow used for its successful run on 1a5f97e** (App Store
   Connect build `29af42f6-f5c7-49ad-bd33-9d69d4ead089`), so that the Room and the Wave results come from
-  one toolchain. The Room runbook set that workflow to **Xcode 26.6**, and the Room's Codemagic builds
-  compiled on Xcode 26.6 (17F113). The GitHub check runs of that build do not name the Xcode version (the
-  lead read both summaries), so the version actually used is **PENDING FOUNDER**: read it on the Room
-  Verification workflow's Environment, or in build 29af42f6's log, and use exactly that. Do not upgrade
-  Xcode for this run.
-- **The workflow.** A new manual-start workflow, **Wave Verification**, with the Room Verification
-  workflow's Environment (§5). The Room Verification and Proximeet TestFlight workflows are only read.
-- **Expected GitHub check runs.** On 1a5f97e the Room's appeared as
-  `Proximeet | Room Verification | RoomVerificationMain - iOS (Proximeet)` and
-  `Proximeet | Room Verification | RoomVerificationSmall - iOS (Proximeet)`. The Wave's are expected as
-  `Proximeet | Wave Verification | WaveVerificationMain - iOS (Proximeet)` and
-  `… | WaveVerificationSmall - iOS (Proximeet)`. That naming is an expectation, not a fact, until the run.
+  one toolchain. The Room runbook set that workflow to **Xcode 26.6**; the check runs do not name the
+  version actually used, so it is **PENDING FOUNDER**: read it on the Room Verification workflow's
+  Environment and use exactly that. Do not upgrade Xcode for this run.
+- **Expected GitHub check runs:** `Proximeet | Wave Verification | WaveVerificationMain - iOS (Proximeet)` and
+  `… | WaveVerificationSmall - iOS (Proximeet)`, as the Room's appeared on 1a5f97e. An expectation, not a
+  fact, until the run.
 
-## 4. Compute estimate
+## 4. Compute, and the guard that aims to hold it at 160 minutes
 
-**Measured, Room Verification on 1a5f97e** (GitHub check runs, both `success`, 0 test failures):
+**Measured, Room Verification on 1a5f97e** (GitHub check runs, both `success`, 0 test failures): Main
+14:51:12–15:42:07 (50.92 min), Small 14:51:10–15:17:38 (26.47 min), **77.38 compute minutes** for the build.
+A build-only action on 062ea35 took 2.28 min. Xcode Cloud took about **1.04–1.18 times** the
+Codemagic-measured test time per action, build, simulator and runner start included.
 
-| Action | Check run | Start–end (UTC, 30 Sep) | Wall time | Its UI tests' Codemagic-measured time |
+**Estimated for the Wave**, from the manifest's per-row times (the Wave rows never ran, so theirs are
+estimates, now including the checks added for the 30 September decisions):
+
+| Action | Room and Places rows | Wave rows (estimate) | Test time, Codemagic pace | Action time at 1.04–1.18 |
 | --- | --- | --- | --- | --- |
-| RoomVerificationMain | 109967416420 | 14:51:12–15:42:07 | 50 min 55 s | 2,607–2,787 s (25 tests; R7 taken as 420–600 s) + 204 domain tests |
-| RoomVerificationSmall | 109956469075 | 14:51:10–15:17:38 | 26 min 28 s | 1,350–1,530 s (12 tests; R14 taken as 420–600 s) |
+| WaveVerificationMain | 2,072–2,232 s | 2,597–3,943 s | 4,669–6,175 s | **about 81–121 min** |
+| WaveVerificationSmall | 681–841 s | 815–1,190 s | 1,496–2,031 s | **about 26–40 min** |
 
-Xcode Cloud therefore took **1.04–1.18 times** the Codemagic-measured test time per action, build, simulator
-and runner start included. The earlier run on 062ea35 (Main 41 min 12 s with 3 failures, Small 26 min 52 s)
-agrees. Per-test times on Xcode Cloud are not visible on GitHub.
+So the build is estimated at **about 107–161 compute minutes**: the upper end slightly exceeds the authorized
+160, which is why the guard below exists.
 
-**Scaled to the Wave inventory:** the Codemagic-measured times in the manifest, times the measured 1.04–1.18.
-The Wave tests have never run, so their times are estimates. The two largest-text tests state their own:
-`testLargestTextKeepsWaveScreensReachable` 520–740 s and `testLargestTextKeepsWavePanelsReachable`
-240–380 s (together 760–1,120 s, the one test's 780–1,120 s before the split). The others are taken from
-the Room test of the same shape, scaled by the number of launches and contexts.
-
-| Action | Room and Places rows | Wave rows (estimate) | Test time | Wall-time estimate |
-| --- | --- | --- | --- | --- |
-| WaveVerificationMain | 2,072–2,232 s (R1–R13, P1, P4, C1) | 2,460–3,760 s (W1–W13, W11a and W11b) | 4,532–5,992 s | **about 80–120 min** |
-| WaveVerificationSmall | 681–841 s (R14, C15, P9, C12, C11) | 760–1,120 s (W14a, W14b) | 1,441–1,961 s | **about 25–40 min** |
-
-- The two actions run side by side, so run 1 takes about 80–120 minutes and uses **about 105–160 compute
-  minutes** (Xcode Cloud counts each action's time; the Room run used about 77 compute minutes).
-- C15 and P9 were measured only as a run of six (614 s) and C12 as a run of four (253 s); they are taken
-  as equal shares. R7 and R14 never passed on Codemagic. Since chapter 09 the Room test's own comment
-  estimates 350–510 s (six checks instead of seven).
-- **The largest-text timing risk is estimated to be within limits after a split; this is unverified**
-  until a native run times it. The one largest-text Wave test's upper
-  estimate (1,120 s) times Xcode Cloud's measured 1.18 was about 1,320 s, beyond the 1,200-s maximum the
-  plans take from the Room plans, so W11 or W14 could have been stopped by its allowance rather than by a
-  defect. It is now two methods, sharing one check runner, each with its own list of checks, and no
-  check dropped:
-
-  | Rows | Method | Checks | Codemagic pace | × 1.04–1.18 | Allowance |
-  | --- | --- | --- | --- | --- | --- |
-  | W11a, W14a | `testLargestTextKeepsWaveScreensReachable` | 12 screens (92 texts and buttons), then the two real Leaves (the incoming review's bar, inside the report preview) | 520–740 s | about 540–875 s | asks for 1,200 s: its upper figure is within 25 s of the 900-s default |
-  | W11b, W14b | `testLargestTextKeepsWavePanelsReachable` | 7 overlays (44 texts and buttons), the report with a reason selected | 240–380 s | about 250–450 s | the plans' 900-s default |
-
-  The estimates come from the Room's six largest-text checks (229–322 s for six launches and 45 texts
-  and buttons in builds 6abc1b80–6abc3ebe), fitted, not measured, as about 12–16 s a launch and 3.5–5 s a
-  text or button; each range also covers 38–54 s a check, the Room's own spread. The split is not even: the screens carry 12 of
-  the 19 launches, 92 of the 136 texts and buttons and both Leaves, and a screen at the largest text is
-  the longer page to scroll, so the screens method stays the longest Wave test and the one to watch. Its
-  upper figure at Xcode Cloud's pace leaves about 325 s under its 1,200-s allowance. The split needed no
-  change to the plans' options (still the Room plans' 900 s and 1,200 s).
-- Main's upper estimate is more than twice the Room's longest action (51 min). This VPS cannot know
-  whether Xcode Cloud limits how long a single action may run.
-- Each test may take 900 s, and 1,200 s if it asks for more, so no single test can hold an action open
-  indefinitely.
-- The remaining Xcode Cloud allowance is visible only in App Store Connect: **PENDING FOUNDER**.
+**The guard.** Nothing on this machine can cancel an Xcode Cloud build, so the tests stop themselves
+(`ProximeetUITests/RunBudget.swift`). Each Wave plan gives its UI tests a budget in
+`PROXIMEET_RUN_BUDGET_SECONDS`: **Main 6,240 s (104 min)** and **Small 2,160 s (36 min)**. Validator check 7
+holds them to Main + Small + 2 × 600 s ≤ 9,600 s (160 min), the 600 s per action standing for the time
+outside the UI tests (build for testing, simulator start, the domain tests, result upload), which the Room's
+build suggests is about 4–6 min an action (the 2.28-min build action, and the Room actions' overhead over
+their test time), so the allowance carries a few minutes of headroom each.
+- The clock starts when the first UI test of the action begins. A test starting with less than 60 s left
+  is designed to fail at once, before it launches anything, and print `RUN_BUDGET_SPENT`; every other test's
+  allowance is lowered to the whole minutes left (never below one minute), so that a hanging test is
+  stopped near the budget. The start is kept in the runner's temporary directory, so that a runner
+  restarted after an overrun does not get the budget again. All of this is unverified until the run, and
+  an overrun adds XCTest's own timeout handling (a process dump, then a runner restart) on top.
+- **What it stops first.** XCTest runs classes and methods alphabetically by default (neither plan randomizes the order): Places, then Room, then Wave.
+  At the upper estimates the guard would stop the last Wave tests of each action first: on Main
+  `testRealJourneyFromTheRoomProfileThroughTheWaveAndBack` (W1, the recorded walkthrough),
+  `testReduceMotionPreviewAcceptJoinsWithoutAMove` and `testRolesNeverChange`; on Small
+  `testLargestTextKeepsWaveScreensReachable` (W14a). A stopped test is a failure of the run, not of the
+  product, and makes the run insufficient (§7).
+- **What it does not cover.** The time outside the UI tests is bounded only by the estimate above, and
+  Apple's own usage meter may count differently (queueing, set-up, rounding). The lead reads each action's
+  start and end on GitHub as it runs (§5, step 6); only the founder can see Apple's meter or cancel.
 
 ## 5. Steps, and who can do each
 
 | # | Step | Who | Reachable from the VPS? |
 | --- | --- | --- | --- |
-| 1 | Push `wave/approved-20260930T173856Z` at `<CANDIDATE_SHA>` to GitHub (a new branch; no force, no merge), then prove it with `git ls-remote` | lead | yes, **once authorized** |
-| 2 | Before that push, confirm that no Xcode Cloud workflow has a Branch Changes, Pull Request or Tag start condition that the new branch would match (otherwise the push itself would start a build) | founder | no: App Store Connect only |
-| 3 | Create **Wave Verification** (below) | founder | no |
-| 4 | Start Build on the branch, and confirm the built commit is `<CANDIDATE_SHA>` | founder | no; the lead also checks the check runs' `head_sha` |
-| 5 | Read the check runs: `gh api repos/kasrarayat-cloud/proximeet-rebuild/commits/<CANDIDATE_SHA>/check-runs` | lead | yes, read-only |
-| 6 | Download each action's artifacts (§7) and hand them to the lead | founder | no |
-| 7 | Run D2 at the candidate (§8) | lead | yes |
+| 1 | Confirm that no existing Xcode Cloud workflow (Room Verification, Proximeet TestFlight, any other) has a Branch Changes, Pull Request or Tag start condition that `wave/approved-20260930T173856Z` would match, for example "any branch", `*` or `wave/*` | founder | **no**: App Store Connect only. GitHub's record is indirect evidence (below) |
+| 2 | Create **Wave Verification** (below) | founder | no |
+| 3 | Push `wave/approved-20260930T173856Z` at `<CANDIDATE_SHA>` (a new branch; no force, no merge), prove it with `git ls-remote`, and watch GitHub for ten minutes to confirm that no Xcode Cloud run started by itself | lead, after step 1 | yes (authorized) |
+| 4 | Start Build on the branch, at `<CANDIDATE_SHA>` | founder | no |
+| 5 | Confirm the built commit: the check runs' `head_sha` is `<CANDIDATE_SHA>` | lead | yes, read-only |
+| 6 | Watch both actions' check runs to completion (start, end, conclusion, the summary's failures), and add up the compute minutes | lead | yes, read-only |
+| 7 | Download each action's artifacts (§7) and hand them to the lead | founder | no |
 | 8 | The manual checks (§10) | founder, on a device | no |
 
-**Creating Wave Verification (step 3), in App Store Connect → Apps → Proximeet Demo → Xcode Cloud →
+**GitHub's record of the start conditions (read-only, 30 September 2026 22:13Z).** None of the 11 pushes
+or branch creations since Xcode Cloud was connected (28 September, between 18:48 and 19:31Z) started a
+build within five minutes. Nine never got an Xcode Cloud run at all, among them three new branches
+(`room-repair/verification-…`, `room-repair/xcode-checks-…`, `verification/room-d2-…`); the two that did
+started 18 minutes to nearly 2 hours after the push, which fits a manual Start Build. The repository has no
+pull requests and no tags. This contradicts an any-branch Branch Changes condition on either existing
+workflow, but it cannot rule out a condition scoped to a pattern never pushed since (such as `wave/*` or
+`testflight/*`), or any change in App Store Connect after the last Xcode Cloud activity (16:22:28Z). It is
+evidence, not the inspection the founder asked for, which is why step 1 comes first.
+
+**Creating Wave Verification (step 2), in App Store Connect → Apps → Proximeet Demo → Xcode Cloud →
 Manage Workflows.** If the editor offers to duplicate **Room Verification**, duplicate it; otherwise
 create a workflow with the same settings.
 1. **General:** name `Wave Verification`; the existing product and repository.
 2. **Environment:** the Room Verification workflow's Xcode and macOS, unchanged (§3). **Clean** on.
-3. **Start Conditions:** only **Manual Start**, branch `wave/approved-20260930T173856Z`. No Branch
-   Changes, Pull Request, Tag or Schedule condition.
+3. **Start Conditions:** only **Manual Start**, for the branch `wave/approved-20260930T173856Z` (or, if the
+   editor offers only existing branches before the push, for any branch: a manual start never starts by
+   itself). No Branch Changes, Pull Request, Tag or Schedule condition.
 4. **Actions:** exactly two **Test** actions, and no Build or Archive action:
 
    | | Test action 1 | Test action 2 |
@@ -177,103 +197,93 @@ create a workflow with the same settings.
    | OS | the Room Verification run's iOS (§3), else the latest 26.x offered | the same as action 1 |
    | Required to pass (if shown) | on | on |
 
-   If the Test Plan menu does not list both Wave plans, stop, save nothing and tell the lead; do not pick
-   another plan, because no other plan sets `PROXIMEET_WAVE_REVIEW`.
+   One destination per action: the compute guard counts per action and assumes one device each. If the
+   Test Plan menu does not list both Wave plans, stop, save nothing and tell the lead; no other plan sets
+   `PROXIMEET_WAVE_REVIEW` or the budget.
 5. **Post-Actions:** none.
 6. Save. Change nothing in Room Verification or Proximeet TestFlight.
 
-## 6. When to stop, and the contingency
+## 6. When to stop
 
-**Stop before starting, and tell the lead, if:** the plans are not offered; a workflow would start by
-itself on the push (step 2); the built commit is not `<CANDIDATE_SHA>` (that run does not count, and no
-other is started).
+**Before starting, stop and tell the lead if:** the plans are not offered; any workflow would start by itself
+on the push (step 1); the built commit is not `<CANDIDATE_SHA>`.
 
-**During the run.** An action still running at twice its estimate may be cancelled by the founder. A
-cancelled action is not a result, and the build still counts as the run.
+**During the run.** The guard is designed to hold the UI tests to their budgets (unverified until the run); the time outside them is only estimated. If Apple's usage meter shows the build
+nearing 160 compute minutes for any other reason, the founder may cancel it; a cancelled action is not a
+result, and the build still counts as the one authorized build.
 
-**After run 1.**
-- Every criterion of §7 holds → verification is complete. **Stop.** No further Apple run.
-- Anything else → no rerun until the lead has diagnosed it from the check run and the result bundle and
-  reported it word for word. One run's failure stands; it is not rerun until it passes.
-
-**The one contingency run,** only after that diagnosis and the founder's go:
-- **The runner failed before a test ran** (runner not initialized, simulator not found, an infrastructure
-  error with no test result): the same action again on the same commit. No test result exists, so this is
-  not a retry.
-- **A test or the product was wrong:** the fix makes a new candidate, and the contingency runs, at that
-  commit, every action with a row the fix could touch. If any product file changed (`Proximeet/`,
-  `ProximeetDomain/Sources/`, the project or the assets), that is **both actions, in full**: every row
-  must pass on the commit that is delivered. If only test code changed, it is each action that runs the
-  changed test code. Rerunning single rows would need a third plan in the scheme, which would itself
-  change the candidate, so it is not proposed.
-- **After the contingency, stop whatever the outcome** and report. Any further run needs a new
-  authorization.
+**After the build.** Every criterion of §7 holds → verification is complete; stop. Anything else → the lead
+diagnoses it from the check runs and the artifacts and reports it word for word. **No retry, no second build
+and no contingency without a new authorization**, whatever the cause (a runner failure, a product defect, a
+test defect, or a test the guard stopped).
 
 ## 7. Evidence, and what counts as a pass
 
 **Read by the lead, on GitHub (read-only):** the check suite on `<CANDIDATE_SHA>`, one check run per action:
 conclusion, start and end, `head_sha`, and the summary's errors, test failures and warnings. The summary
-does not give executed or skipped counts.
+does not give executed or skipped counts, per-test times, screenshots or recordings.
 
 **Downloaded by the founder** (build page → each Test action → Artifacts), all handed to the lead:
 - **the result bundle** (`.xcresult`): every test's outcome and count, the tests' own captures and notes,
-  and the screen recording of each test, kept whatever the outcome (`keepAlways`). The recording was
-  expected but unverified in the Room runbook, and it still is;
+  and the screen recording of each test, kept whatever the outcome (`keepAlways`). The recordings are
+  expected but unverified. The motion walkthrough is W1's recording (the whole real route, full holds) with,
+  for the menu's Back and the blocked menu, the recordings and captures of W2, W8 and W10;
 - **Test Products** and **the logs**. The Wave class prints `WAVE_REVIEW_FLAG_SEEN` when the plan's flag
-  reaches its runner, so the logs prove the flag arrived.
-
-The VPS has no Xcode, so if the lead cannot read the counts from the bundle, the founder reads them on the
-build's Tests page and sends them. The captures show the simulator's real clock; no test reads it.
+  reaches its runner; the guard prints `RUN_BUDGET` lines, and `RUN_BUDGET_SPENT` for any test it stopped.
 
 **A pass needs all of these:**
 1. Both actions `success` on `<CANDIDATE_SHA>`, and the built commit is `<CANDIDATE_SHA>`.
-2. Main executed exactly **276** tests (30 UI + 246 domain) and Small exactly **7**, every one passed.
-   Those counts assume the tests at `<CANDIDATE_SHA>`; the lead re-counts them there before the run.
-3. Nothing was skipped, expected to fail, repeated or retried. A Wave, Room or Places test skipped with
-   "runs only with …PROXIMEET_…" means the plan's settings were not applied: that is a failed run.
+2. Main executed exactly **280** tests (30 UI + 250 domain) and Small exactly **7**, every one passed:
+   **287** native executions. The lead re-counts them at `<CANDIDATE_SHA>` before the run.
+3. Nothing was skipped, expected to fail, repeated or retried, and no `RUN_BUDGET_SPENT` appears. A Wave,
+   Room or Places test skipped with "runs only with …PROXIMEET_…" means the plan's settings were not
+   applied: that is a failed run.
 4. `WAVE_REVIEW_FLAG_SEEN` is in both actions' logs.
-5. D2 passed on the VPS at `<CANDIDATE_SHA>`.
+5. D2 passed on the VPS at `<CANDIDATE_SHA>`: exactly 8 executed, 0 failures.
+
+**One expected note.** In W5 a real tap lands where Block was while the report is open. By the panels'
+layout it should land on the report's second reason row and select "Harassment or harmful content"; the test
+allows that, records it in a note, and fails only if the report closes, the screen changes or anyone is
+blocked.
 
 ## 8. D2: the eight source-reading domain tests
 
 `DomainSourceGuardTests` (2), `PlacesBackWiringTests` (3),
 `PlacesRouteTests/testThePlacesSourceReadsNoClockCalendarOrLocation`, and chapter 09's
 `RoomDemoTests/testTheRetiredWaveInformationPanelIsGone` and `WaveDemoTests/testTheSessionMirrorMatchesTheAppWiring`
-read the repository's files while they run. Xcode Cloud's test environment has only `ci_scripts` (and this repository has none), so both Main plans
-skip them. `DomainSourceGuardTests` also covers the new `WaveDemo.swift` (no persistence, networking,
-`Codable`, clock or location).
-- **On the VPS (proposed):** export the candidate with `git archive <CANDIDATE_SHA>` into a scratch folder,
-  run `swift test --package-path ProximeetDomain --filter
+read the repository's files while they run. Xcode Cloud's test environment has only `ci_scripts` (and this
+repository has none), so both Main plans skip them. `DomainSourceGuardTests` also covers `WaveDemo.swift`
+(no persistence, networking, `Codable`, clock or location); the session mirror also pins the new
+`DemoSession.closeWaveDemo(_:)`.
+- **On the VPS:** export the candidate with `git archive <CANDIDATE_SHA>` into a scratch folder, run
+  `swift test --package-path ProximeetDomain --filter
   'DomainSourceGuardTests|PlacesBackWiringTests|PlacesRouteTests/testThePlacesSourceReadsNoClockCalendarOrLocation|RoomDemoTests/testTheRetiredWaveInformationPanelIsGone|WaveDemoTests/testTheSessionMirrorMatchesTheAppWiring'`
-  and require exactly 8 executed, 0 failures, then the whole target (254 tests). Nothing is built inside
+  and require exactly 8 executed, 0 failures, then the whole target (258 tests). Nothing is built inside
   the worktree.
-- **On GitHub Actions (optional, only if authorized):** as the Room did on
-  `verification/room-d2-1a5f97e-20260930` (tip `169cb2d` = 1a5f97e + one workflow file; run 36742192843,
-  `ubuntu-24.04`, "Executed 6 tests, with 0 failures"): a separate branch with one commit adding a
-  workflow that checks out exactly `<CANDIDATE_SHA>`. That branch is never merged: validator check 11
-  fails on any `.github/workflows` file.
 
-## 9. Delivery: not proposed here
+## 9. Delivery: not authorized
 
-After a sufficient pass, and only with a separate authorization. For reference, the Room's archive
-(`Proximeet | Proximeet TestFlight | Archive - iOS`, check run 109984548371, 16:16:45–16:22:22Z) ran on
-1a5f97e itself, while `testflight/internal-20260928` stayed at `67bf1a9` (`git ls-remote`). The route is
-decided when that authorization is given. Apple processing, availability to Founder Preview and the install
-are each **PENDING FOUNDER**. A TestFlight build is a signed Release build for devices, not the simulator
-build tested here.
+No archive and no TestFlight distribution were authorized. After a sufficient pass, delivery is proposed
+separately, with its own route. Apple processing, availability to Founder Preview and the install would each
+be **PENDING FOUNDER**. A TestFlight build is a signed Release build for devices, not the simulator build
+tested here.
 
 ## 10. Manual checks, kept apart from every automated row
 
-No automated row covers any of these, and a green run says nothing about them:
-- **VoiceOver:** the reading order, focus after a panel closes, the modal panels, and the decorative rings
-  staying silent. The tests check the accessibility tree, not speech.
+No automated row covers any of these, and a green run says nothing about them; each is **PENDING FOUNDER**:
+- **VoiceOver:** the reading order, focus after a panel closes and after the menu's Back, the modal panels,
+  the decorative rings staying silent, "you (name)" in the direction line, and the hints (on "Preview Wave
+  demo", on the menu's Back and on the disabled choices). The tests check the accessibility tree, not speech,
+  and XCUITest cannot read hints.
 - **The system Reduce Motion setting:** the tests use the app's own preview flag
   (`-ProximeetReduceMotionPreview`), not the setting.
-- **Motion quality:** the 800 ms ring join on Accept and the 240 ms dissolves, judged on video.
+- **Motion quality:** the 800 ms ring join on Accept and the 240 ms dissolves (the menu's Back included),
+  judged on video.
 - **The device:** the install, performance and feel on the founder's iPhone, and the founder's visual
-  approval of the native Wave.
-
-Each is **PENDING FOUNDER**.
+  approval of the native Wave, including the two visible changes the decisions brought: the menu's header
+  (Back and "Wave" instead of the "Proximeet" wordmark) and the blocked menu (its disabled choices, the
+  disabled outline having no approved reference, and its generic line, which may wrap to three lines on the
+  390-pt phone).
 
 ## 11. What the plans set
 
@@ -281,22 +291,23 @@ Each is **PENDING FOUNDER**.
 - **The same options as the Room plans on 1a5f97e:** coverage off; 900 s per test by default and 1,200 s at
   most, with timeouts on; language `en`, region `US`; automatic captures kept for every test
   (`uiTestingScreenshotsLifetime` `keepAlways`); `parallelizable` false on every target; no repetition
-  mode. Configuration `Wave Verification`, with an ID derived from the plan's name as the Room plans'
-  were.
+  mode. Configuration `Wave Verification`, with an ID derived from the plan's name as the Room plans' were.
 - **Environment:** the Room plans' nine variables (`PROXIMEET_ROOM_REVIEW`, `…_PLACES_…`, `…_SIGNAL_…`,
   `…_WRISTBAND_…`, `…_GUEST_LIST_…`, `…_PASS_…`, `…_BIRTHDAY_…`, `…_WELCOME_REVIEW` and
-  `PROXIMEET_SHORT_HOLDS`), plus **`PROXIMEET_WAVE_REVIEW`**, all `"1"`. The two recorded journeys, R1
+  `PROXIMEET_SHORT_HOLDS`), plus **`PROXIMEET_WAVE_REVIEW`**, all `"1"`, and
+  **`PROXIMEET_RUN_BUDGET_SECONDS`**: `"6240"` in Main, `"2160"` in Small. The two recorded journeys, R1
   and W1, keep full holds whatever `PROXIMEET_SHORT_HOLDS` says; every other test uses short holds.
 - **Targets:** `ProximeetUITests` (object ID `A8309941D6B07785FF53BCEC`) with explicit `selectedTests`;
   Main only: `ProximeetDomainTests` in `container:ProximeetDomain`, skipping the eight D2 tests.
-- **What check 7 now also enforces:** the Room plans stay first, with `RoomVerificationMain` the default;
-  every plan has `RoomVerificationMain`'s options apart from its environment, and may only add
-  variables; any plan selecting `WaveReviewTests` or `RoomReviewTests` sets its flag, and the class reads
-  it; every `WaveReviewTests` and `RoomReviewTests` method is selected by some plan. Check 11 now also
-  scans `WaveDemo.swift` for dishonest copy, and holds `WaveView.swift` and `WaveDemo.swift` to a Wave-only
-  list (no clock, scheduling, notification or logging API; no delivery or presence copy), with a known-answer
-  fixture. No approved Wave string needed an exception.
-- **Command-line default:** `xcodebuild test -scheme Proximeet` without `-testPlan` still
-  runs `RoomVerificationMain`, and the Room Verification workflow is unchanged (its App Store Connect
-  settings; at this commit `RoomVerificationMain` skips two more tests and runs 246 domain tests, 204 at
-  1a5f97e).
+- **What check 7 enforces:** the Room plans stay first, with `RoomVerificationMain` the default; every plan
+  has `RoomVerificationMain`'s options apart from its environment, and may only add variables; any plan
+  selecting `WaveReviewTests` or `RoomReviewTests` sets its flag, and the class reads it; every
+  `WaveReviewTests` and `RoomReviewTests` method is selected by some plan; each Wave plan sets the budget,
+  no Room plan does, the budgets fit 160 minutes as above, `RunBudget.swift` exists, and every UI test class a
+  Wave plan selects calls `RunBudget.begin` first in `setUpWithError` and sets no allowance directly. Check
+  11 scans `WaveDemo.swift` for dishonest copy, and holds `WaveView.swift` and `WaveDemo.swift` to a
+  Wave-only list (no clock, scheduling, notification or logging API; no delivery or presence copy), with a
+  known-answer fixture.
+- **Command-line default:** `xcodebuild test -scheme Proximeet` without `-testPlan` still runs
+  `RoomVerificationMain`. At this commit it skips the same eight source readers and runs 250 domain tests
+  (204 at 1a5f97e); the Room Verification workflow's App Store Connect settings are unchanged.

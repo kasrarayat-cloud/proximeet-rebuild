@@ -36,6 +36,7 @@
 		7E294903C0C1CE50B44A2249 /* WristbandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0F93D4AD9E51DA2E0553E8 /* WristbandView.swift */; };
 		8549C33A12CA73367B951E2B /* GuestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBF4AD5F388E4A893AA059C /* GuestListView.swift */; };
 		8F2C1F71C845D1B4CF3503FD /* Manrope.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351651C609FD65199E5C4CA /* Manrope.swift */; };
+		9337C78DED8EF4ECBD6F532E /* RunBudget.swift in UISources */ = {isa = PBXBuildFile; fileRef = 303BF33E5B6CA1B7BBD66478 /* RunBudget.swift */; };
 		96926943F2EFA30ABE1B1089 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C808A64B77F06AC2C52124A /* Controls.swift */; };
 		A697A2EAD95A7DC28B40A188 /* SignatureStudio.skybox in Resources */ = {isa = PBXBuildFile; fileRef = A0FD7C6FA5E70188F98C8BE0 /* SignatureStudio.skybox */; };
 		A7AAF815BE2863E203C7ECCD /* DemoSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56510F116CB0A2C325F396E0 /* DemoSession.swift */; };
@@ -74,6 +75,7 @@
 		1158A2EB143832C9ECF157FD /* PassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassView.swift; sourceTree = "<group>"; };
 		26260C95BB498A2DFED925E1 /* BirthdayWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayWheels.swift; sourceTree = "<group>"; };
 		29FA62256BD7E4755C13781C /* IntentStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentStyle.swift; sourceTree = "<group>"; };
+		303BF33E5B6CA1B7BBD66478 /* RunBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunBudget.swift; sourceTree = "<group>"; };
 		3C808A64B77F06AC2C52124A /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 		3F481FA9F7E9D734B89E7DAA /* BandSignalInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandSignalInteractionTests.swift; sourceTree = "<group>"; };
 		3FC2D6B016804A7082CC2DC1 /* RoomReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomReviewTests.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */,
 				C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */,
 				3FC2D6B016804A7082CC2DC1 /* RoomReviewTests.swift */,
+				303BF33E5B6CA1B7BBD66478 /* RunBudget.swift */,
 				50A5C3A70DB9F979B11AA344 /* SignalReviewTests.swift */,
 				78F76570E3831012D0307BD9 /* WaveReviewTests.swift */,
 				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
@@ -382,6 +385,7 @@
 				F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */,
 				F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */,
 				ABB887D0441BA7D39FA9A024 /* RoomReviewTests.swift in UISources */,
+				9337C78DED8EF4ECBD6F532E /* RunBudget.swift in UISources */,
 				2C4569A07025A8AA82A26E01 /* SignalReviewTests.swift in UISources */,
 				FC40C26B8ACD55F576F37553 /* WaveReviewTests.swift in UISources */,
 				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,

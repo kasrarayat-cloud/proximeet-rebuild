@@ -84,6 +84,7 @@ final class PlacesReviewTests: XCTestCase {
     }
 
     override func setUpWithError() throws {
+        try RunBudget.begin(self)
         continueAfterFailure = false
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment[Self.reviewFlag] == "1",

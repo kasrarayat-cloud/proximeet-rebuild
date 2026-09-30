@@ -19,7 +19,12 @@ import XCTest
 /// example never offers Accept and an incoming one offers it only while pending; nothing returns a sent
 /// invitation to its compose; a closed, blocked or ended screen names nobody; a block is the Room's own
 /// (the same central set its People and notes filter by); Leave ends the Room and the Wave at once; under
-/// an overlay nothing of the Wave page, the Room or Places is left in the tree. Every copy string is the
+/// an overlay nothing of the Wave page, the Room or Places is left in the tree, and no touch on an overlay
+/// reaches a control beneath it. The founder's decisions of 30 September 2026 are checked too. The menu
+/// wears the confirmation's chrome (75:119), and its visible Back returns to the still-valid Room that
+/// opened it, as the edge swipe does. Once the counterpart is blocked, the menu keeps its three choices
+/// with their own labels, disabled, beside one generic line that names nobody. The spoken direction line
+/// says "you" for the viewer's identity, never for a matching name. Every copy string is the
 /// approved `WaveCopy`, written out here (`WaveText`) rather than read from the app, with the reference
 /// fixture's "Alex" and "Maya" replaced by the actual Guest List name and the actual counterpart (Maya for
 /// Social, Jules for Business). The pixel checks run on the 440 × 956 iPhone at the default text size
@@ -50,6 +55,7 @@ final class WaveReviewTests: XCTestCase {
     private var lastTap = Date.distantPast
 
     override func setUpWithError() throws {
+        try RunBudget.begin(self)
         continueAfterFailure = false
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment[Self.reviewFlag] == "1",
@@ -220,8 +226,10 @@ final class WaveReviewTests: XCTestCase {
     /// Business counterpart is Jules. Preview Wave demo; Start incoming example ("JULES → ALEX"; the
     /// invitation shows Jules's own "Business · Okay to say hello", the ticket the guest's); Accept; Demo
     /// cases over the accepted example; Show expired example invalidates even an accepted Wave ("Wave
-    /// unavailable.", naming nobody); Back to demo menu; Start outgoing example and its chrome Back (the
-    /// unsent confirmation is discarded to the menu); Leave: the Wave's ended screen; Return to Places at
+    /// unavailable.", naming nobody); Back to demo menu; the menu's visible Back (44 × 44, hittable) to
+    /// Jules's profile with the Room run still active, and Preview Wave demo again: a fresh menu; Start
+    /// outgoing example and its chrome Back (the unsent confirmation is discarded to the menu); Leave: the
+    /// Wave's ended screen; Return to Places at
     /// Now. Then the whole approved sequence again (View place, Preview check-in, Preview room demo: the
     /// entry, not the ended run; Enter room demo: waiting; Show populated example; Jules's profile) is the
     /// only way back to a Wave: a new menu, nothing of the old example.
@@ -260,6 +268,22 @@ final class WaveReviewTests: XCTestCase {
 
         tapQuietly(ui.backToMenu, app)
         waitForScreen(.menu, ui)
+
+        // The menu's visible Back (75:119): Jules's profile, the Room run still active. Preview Wave demo
+        // again opens a fresh menu: the closed example stays closed and nothing of it comes back.
+        assertMenuBack(ui, "Business menu, after the expired example")
+        tapQuietly(ui.back, app)
+        XCTAssertTrue(waitForAbsence(ui.screen(.menu)), "The menu's Back closes the Wave.")
+        waitForLabel(room.profileName, "Jules")
+        XCTAssertTrue(room.element("room.screen").exists, "The menu's Back: the Room, still showing.")
+        XCTAssertEqual(room.profileAction.label, WaveText.previewWaveDemo,
+                       "The menu's Back: Jules's profile, the Room run still active.")
+        assertIdentifiers(absent: ["wave.", "wavePanel."], readTree(app), "After the menu's Back: no Wave")
+        capture("wave-business-menu-back-to-profile-fixture", app)
+        tapQuietly(room.profileAction, app)
+        waitForScreen(.menu, ui)
+        assertScreen(.menu, viewer, ui, "Business: Preview Wave demo again, after the menu's Back")
+
         tapQuietly(ui.startOutgoing, app)
         waitForScreen(.outConfirm, ui)
         assertScreen(.outConfirm, viewer, ui, "Business outgoing confirmation")
@@ -365,8 +389,10 @@ final class WaveReviewTests: XCTestCase {
     // MARK: - The approved screens and overlays
 
     /// Direct launches at the default text size, run on the iPhone 17 Pro Max: the 12 approved screens
-    /// (74:568–74:579), the 7 overlays (global safety over the menu, Maya's safety and her report over
-    /// the incoming review, the chat information and Demo cases over the accepted example, Demo cases over
+    /// (74:568–74:579), the menu once Maya is blocked (`wave-menu-blocked-…`: its three choices disabled
+    /// beside the generic line, founder decision of 30 September 2026), the 7 overlays (global safety over
+    /// the menu, Maya's safety and her report over the incoming review, the chat information and Demo
+    /// cases over the accepted example, Demo cases over
     /// the outgoing pending and over the incoming review) and the four report variants (75:627 none, from
     /// the report launch; 75:637, 75:647 and 75:657, each its own launch). Each is checked (copy, who is
     /// named, the controls, the column) before it is captured as `wave-<state>-<width>pt-fixture`. Under
@@ -387,7 +413,7 @@ final class WaveReviewTests: XCTestCase {
             if let overlay = fixture.overlay {
                 assertOverlay(overlay, over: fixture.screen, fixture.viewer, ui, state, softIsolation: true)
             } else {
-                assertScreen(fixture.screen, fixture.viewer, ui, state)
+                assertScreen(fixture.screen, fixture.viewer, ui, state, menuBlocked: fixture.menuBlocked)
             }
             softlyColumn(fixture, ui, state)
             capture("wave-\(fixture.key)-\(width)pt-fixture", app)
@@ -408,7 +434,10 @@ final class WaveReviewTests: XCTestCase {
     /// acceptance and opens nothing. Accept after "Show sender withdrawn" and after "Show expired
     /// example": Accept is gone from the tree, and a tap where it was cannot accept (it lands on the closed
     /// screen, or on whatever control now sits there). A back swipe on the incoming review changes
-    /// nothing; on the unsent confirmation both its visible Back and a back swipe return to the menu.
+    /// nothing. On the same launch, with Maya's report open over her safety, a real tap where her Block
+    /// was reaches nothing beneath the report: the report stays open, the review stays, nobody is blocked,
+    /// and her safety offers Block again once the report closes. On the unsent confirmation both its
+    /// visible Back and a back swipe return to the menu, and a double tap on its Back stops at the menu.
     func testDuplicateAndStaleActionsChangeNothing() throws {
         let viewer = WaveViewer.alex
 
@@ -484,6 +513,42 @@ final class WaveReviewTests: XCTestCase {
         edgeSwipe(app, completing: true)
         waitQuietly(0.6)
         assertScreen(.inReview, viewer, ui, "Review, after both back swipes")
+
+        // The same launch: the report preview takes every touch aimed below it (founder decision, 30
+        // September 2026). Maya's Block is measured on her safety, the report opened over it, and a real tap
+        // lands where Block was: it reaches nothing underneath, so nothing is blocked and the review stays.
+        let safety = WaveOverlayKind.counterpartSafety.container(viewer.counterpart)
+        let report = WaveOverlayKind.report(nil).container(viewer.counterpart)
+        tapQuietly(ui.safety, app)
+        waitForOverlay(.counterpartSafety, viewer, ui)
+        let block = ui.inPanel(safety, "wavePanel.block")
+        bringIntoView(block, app)
+        let blockFrame = block.frame
+        let blockPoint = CGPoint(x: blockFrame.midX, y: blockFrame.midY)
+        tapQuietly(ui.inPanel(safety, "wavePanel.previewReport"), app)
+        waitForOverlay(.report(nil), viewer, ui)
+        assertOverlay(.report(nil), over: .inReview, viewer, ui, "Maya's report, before a tap where her Block was")
+        let reportFrame = ui.element(report).frame
+        let under = staleTap(at: blockPoint, ui)
+        XCTAssertTrue(ui.element(report).exists, "A tap where Block was, under the report: the report is still open.")
+        XCTAssertEqual(under, .inReview, "A tap where Block was, under the report, changes the Wave screen to "
+                       + "\(under?.rawValue ?? "no Wave screen"): it must stay the review, with nobody blocked.")
+        let nodes = readTree(app)
+        XCTAssertFalse(nodes.contains { $0.identifier == safety || $0.identifier == "wavePanel.block" },
+                       "Under the report, Maya's safety and its Block are not in the tree at all.")
+        let selected = WaveText.reasons.first { ui.inPanel(report, "wave.report.reason.\($0.0)").isSelected }
+        attachNote("A tap at \(Self.point(blockPoint)), where Block was, with the report open (card "
+                   + "\(Self.rect(reportFrame))): it landed on \(reportFrame.contains(blockPoint) ? "the report card" : "the dim")"
+                   + " and \(selected.map { "selected “\($0.1)”, the report's own control there" } ?? "changed nothing").")
+        capture("wave-stale-block-under-report-fixture", app)
+        tapQuietly(ui.inPanel(report, "wavePanel.closePreview"), app)
+        XCTAssertTrue(waitForAbsence(ui.element(report)), "Close preview closes the report.")
+        waitForOverlay(.counterpartSafety, viewer, ui)
+        assertButton(ui.inPanel(safety, "wavePanel.block"), "Block Maya in demo", "Maya's safety, after the tap under her report")
+        tapQuietly(ui.inPanel(safety, "wavePanel.back"), app)
+        XCTAssertTrue(waitForAbsence(ui.element(safety)), "Back closes Maya's safety.")
+        waitForScreen(.inReview, ui)
+        assertScreen(.inReview, viewer, ui, "The review after a tap under the report: Maya is not blocked")
         app.terminate()
 
         // The unsent confirmation: its visible Back, and a back swipe, each return to the menu.
@@ -499,6 +564,18 @@ final class WaveReviewTests: XCTestCase {
         edgeSwipe(app, completing: true)
         waitForScreen(.menu, ui)
         assertScreen(.menu, viewer, ui, "A back swipe from the confirmation")
+        // A double tap on the confirmation's Back: the menu's Back now sits in the same place, and the
+        // second touch of a rapid multi-tap is swallowed (RepeatTapGuard), so it stops at the menu and never
+        // leaves the Wave. Two deliberate, separate taps would leave it, as a stacked Back does.
+        tapQuietly(ui.startOutgoing, app)
+        waitForScreen(.outConfirm, ui)
+        bringIntoView(ui.back, app)
+        ui.back.doubleTap()
+        lastTap = Date()
+        waitForScreen(.menu, ui)
+        waitQuietly(0.6)
+        assertScreen(.menu, viewer, ui, "After a double tap on the confirmation's Back")
+        XCTAssertFalse(app.buttons["roomProfile.action"].exists, "The second touch did not leave the Wave.")
     }
 
     // MARK: - Roles never change
@@ -508,7 +585,10 @@ final class WaveReviewTests: XCTestCase {
     /// example) or once withdrawn. Incoming: Accept while pending; none once declined; a new start is a new
     /// pending example with Accept again; none once accepted, under Demo cases (no "Show sender withdrawn"
     /// after acceptance) or once expired. The no-allowance example offers neither Send nor Accept and
-    /// states no number.
+    /// states no number. Then a second launch (fixture `wave-in-review`, `-ProximeetFixtureName Maya`): a
+    /// guest named like the counterpart is still the recipient, and the spoken direction line says "you" by
+    /// identity with the typed name kept: "From Maya to you (Maya). Incoming.", then, accepted, "Maya and
+    /// you (Maya). Incoming demo."
     func testRolesNeverChange() throws {
         let viewer = WaveViewer.alex
         let app = launchWave(WaveFixture(key: "demo-menu", screen: .menu))
@@ -570,6 +650,21 @@ final class WaveReviewTests: XCTestCase {
         waitForScreen(.allowanceUnavailable, ui)
         assertScreen(.allowanceUnavailable, viewer, ui, "The no-allowance example")
         capture("wave-roles-allowance-unavailable-fixture", app)
+        app.terminate()
+
+        // A guest who typed the counterpart's own name (Social, "Maya", meeting the sample Maya): "you" is
+        // the viewer's identity, never a matching name, and the actual Guest List name is kept as typed.
+        // The review reads "From Maya to you (Maya). Incoming."; accepted, "Maya and you (Maya). Incoming demo."
+        let namesake = WaveViewer(name: "Maya", band: "social", approach: "chatFirst")
+        let named = launchWave(WaveFixture(key: "in-review-namesake", screen: .inReview, viewer: namesake))
+        let namedUI = WaveUI(app: named)
+        waitForScreen(.inReview, namedUI, timeout: 20)
+        assertScreen(.inReview, namesake, namedUI, "A guest named Maya: the incoming review")
+        capture("wave-roles-namesake-in-review-fixture", named)
+        tapQuietly(namedUI.accept, named)
+        waitForScreen(.inAccepted, namedUI)
+        waitQuietly(0.9)
+        assertScreen(.inAccepted, namesake, namedUI, "A guest named Maya: accepted")
     }
 
     // MARK: - Interrupted acceptance
@@ -577,8 +672,9 @@ final class WaveReviewTests: XCTestCase {
     /// Direct launches (fixture `wave-in-review`). Accept Wave, then Leave and disappear at once (its
     /// point read before Accept, so the second tap needs no lookup): the Wave's ended screen, never the
     /// joined result, and nothing of Maya or the invitation left in the tree. Accept Wave, then the shield
-    /// and Block Maya in demo as fast as the panel allows: the generic blocked screen, never joined; and a
-    /// new start after it is blocked too. Each note says how long after Accept the interruption came
+    /// and Block Maya in demo as fast as the panel allows: the generic blocked screen, never joined; and
+    /// the menu after it offers no new start (its three choices disabled, naming nobody). Each note says
+    /// how long after Accept the interruption came
     /// (the join is 800 ms), because an XCUITest tap may wait for the app to settle.
     func testInterruptedAcceptanceNeverEndsJoined() throws {
         let viewer = WaveViewer.alex
@@ -632,26 +728,28 @@ final class WaveReviewTests: XCTestCase {
         attachNote(String(format: "Accept, then Block: the Block tap returned %.0f ms after Accept's (the join is 800 ms).",
                           blockGap * 1000))
         capture("wave-interrupted-accept-block-fixture", app)
-        // A new start after the block is blocked too: nothing restores Maya.
+        // Back to demo menu: no new start after the block. The three choices stay, disabled, beside one
+        // generic line naming nobody, so nothing restores Maya.
         tapQuietly(ui.backToMenu, app)
         waitForScreen(.menu, ui)
-        tapQuietly(ui.startIncoming, app)
-        waitForScreen(.blocked, ui)
-        assertScreen(.blocked, viewer, ui, "A new incoming start after the block")
+        assertScreen(.menu, viewer, ui, "The menu after Accept, then Block", menuBlocked: true)
     }
 
     // MARK: - Blocks, in both orders
 
     /// Business guest (Okay to say hello). Wave first (fixture `room-populated`, Jules's profile, then
     /// real taps): Preview Wave demo, Start incoming example, the shield, Block Jules in demo: "Connection
-    /// blocked." naming nobody; each of the three starts after it shows the same generic blocked screen
-    /// with no identity; the menu's outer Back (an edge swipe) returns to the Room's filtered People, the
+    /// blocked." naming nobody. Back to demo menu: the three choices keep their three distinct labels and
+    /// are disabled, one generic "Connection blocked." line takes the boundary's place, nothing in the tree
+    /// names Jules or Maya, and a real tap on each disabled choice changes nothing. The menu's visible Back
+    /// returns to the Room's filtered People, the
     /// profile that opened the Wave being gone: Jules's card and his public note are gone, Maya remains,
     /// the host notes stay. Room first (a fresh launch): Jules blocked from his Room profile's safety,
     /// and the same People and Room notes; the Wave can no longer be reached for him (no card, no
     /// profile), and Maya, another intent, offers Back to people only. As a fixture, `wave-menu` with
     /// `-ProximeetRoomBlocked jules` stays on the filtered People with no Wave. Mixed order for a Social
-    /// guest: Jules blocked in the Room first, then Maya from her Wave: both kept, the filtered empty card.
+    /// guest: Jules blocked in the Room first, then Maya from her Wave: both kept, the filtered empty card
+    /// (that menu's outer Back taken by an edge swipe, the same Back's other path).
     func testBlocksInBothOrdersUseTheOneRoomSet() throws {
         let viewer = WaveViewer(name: "Alex", band: "business", approach: "okayToSayHello")
 
@@ -674,17 +772,32 @@ final class WaveReviewTests: XCTestCase {
         waitForScreen(.blocked, ui)
         assertScreen(.blocked, viewer, ui, "Wave first: Jules blocked")
         capture("wave-blocks-wave-first-blocked-fixture", app)
-        for start in ["wave.menu.startOutgoing", "wave.menu.startIncoming", "wave.menu.noAllowance"] {
-            tapQuietly(ui.backToMenu, app)
-            waitForScreen(.menu, ui)
-            tapQuietly(ui.element(start), app)
-            waitForScreen(.blocked, ui)
-            assertScreen(.blocked, viewer, ui, "Wave first: \(start) after the block")
-        }
+
+        // Back to demo menu: the three choices keep their own labels, disabled, beside one generic line
+        // that names nobody, and a real tap on each (by coordinate, as a finger would land) starts nothing.
         tapQuietly(ui.backToMenu, app)
         waitForScreen(.menu, ui)
-        edgeSwipe(app, completing: true)
-        XCTAssertTrue(room.peopleFraming.waitForExistence(timeout: 10), "The menu's outer Back: the Room's filtered People.")
+        assertScreen(.menu, viewer, ui, "Wave first: the menu after the block", menuBlocked: true)
+        capture("wave-blocks-wave-first-menu-blocked-fixture", app)
+        var taps: [String] = []
+        for (id, label) in WaveText.menuChoices {
+            guard reveal(id, app) else { continue }
+            let choice = ui.element(id)
+            XCTAssertFalse(choice.isEnabled, "Wave first: “\(label)” is disabled after the block.")
+            let frame = choice.frame
+            let point = CGPoint(x: frame.midX, y: frame.midY)
+            let shown = staleTap(at: point, ui)
+            XCTAssertEqual(shown, .menu, "Wave first: a tap on the disabled “\(label)” starts nothing; the Wave shows "
+                           + "\(shown?.rawValue ?? "no Wave screen").")
+            XCTAssertTrue(ui.menuBlocked.exists, "Wave first: after a tap on “\(label)”, still the blocked menu.")
+            taps.append("“\(label)” at \(Self.point(point)): \(shown?.rawValue ?? "no Wave screen")")
+        }
+        assertScreen(.menu, viewer, ui, "Wave first: the blocked menu, after a tap on each disabled choice", menuBlocked: true)
+        attachNote("Wave first, a tap on each disabled choice of the blocked menu: " + taps.joined(separator: "; ") + ".")
+
+        // The menu's visible Back: the Room's filtered People, the profile that opened the Wave being gone.
+        tapQuietly(ui.back, app)
+        XCTAssertTrue(room.peopleFraming.waitForExistence(timeout: 10), "The menu's visible Back: the Room's filtered People.")
         XCTAssertTrue(waitForAbsence(ui.screen(.menu)))
         settle()
         assertRoomPeople(room, blocked: ["jules"], "Wave first, back in the Room")
@@ -744,6 +857,7 @@ final class WaveReviewTests: XCTestCase {
         assertScreen(.blocked, social, ui, "Mixed order: Maya blocked from her Wave")
         tapQuietly(ui.backToMenu, app)
         waitForScreen(.menu, ui)
+        assertScreen(.menu, social, ui, "Mixed order: the menu after Maya's block", menuBlocked: true)
         edgeSwipe(app, completing: true)
         XCTAssertTrue(room.peopleFraming.waitForExistence(timeout: 10))
         settle()
@@ -790,9 +904,11 @@ final class WaveReviewTests: XCTestCase {
     // MARK: - Back gestures
 
     /// Real edge swipes (the Places back gesture, which routes the Room's outer Back, and through it the
-    /// Wave's; Wave lead decision 2: the swipe follows the visible Back only, and adds no control). The
-    /// menu: a cancelled swipe stays, a completed one returns to the Room profile that opened it. The
-    /// unsent confirmation: the menu. Each of the six closed screens: the menu. Pending, review and
+    /// Wave's): the swipe follows the visible Back only. The
+    /// menu: its visible Back (founder decision, 30 September 2026) returns to the Room profile that opened
+    /// it; from the menu opened again, a cancelled swipe stays and a completed one lands on the same profile,
+    /// element for element. The unsent confirmation: the menu. Each of the six closed screens: the menu
+    /// (the blocked one's with its generic blocked line). Pending, review and
     /// accepted (no Back in the design): nothing. Overlays close one level at a time: a report to its
     /// caller's safety, the safety to the screen; the global safety to the menu, then the menu to the
     /// profile; Demo cases to its screen; the chat information to the accepted example. The ended screen:
@@ -801,12 +917,19 @@ final class WaveReviewTests: XCTestCase {
     func testEdgeSwipesFollowTheVisibleBack() throws {
         let viewer = WaveViewer.alex
 
-        // The menu → the Room profile that opened it.
+        // The menu → the Room profile that opened it: first by the menu's visible Back, then, from a menu
+        // opened again, by the swipe, which must land exactly where the Back did.
         var app = launchRoom(viewer, profile: "maya")
         var room = WaveRoomUI(app: app)
         var ui = WaveUI(app: app)
         waitForLabel(room.profileName, "Maya")
         settle()
+        tapQuietly(room.profileAction, app)
+        waitForScreen(.menu, ui)
+        tapQuietly(ui.back, app)
+        XCTAssertTrue(waitForAbsence(ui.screen(.menu)), "The menu's visible Back closes the menu.")
+        waitForLabel(room.profileName, "Maya")
+        let byBack = profileDestination(room, "The menu's visible Back")
         tapQuietly(room.profileAction, app)
         waitForScreen(.menu, ui)
         edgeSwipe(app, completing: false)
@@ -816,6 +939,9 @@ final class WaveReviewTests: XCTestCase {
         XCTAssertTrue(waitForAbsence(ui.screen(.menu)), "A completed swipe closes the menu.")
         waitForLabel(room.profileName, "Maya")
         XCTAssertEqual(room.profileAction.label, WaveText.previewWaveDemo, "Maya's profile, as it was.")
+        let bySwipe = profileDestination(room, "A completed swipe on the menu")
+        XCTAssertEqual(bySwipe, byBack, "The swipe lands where the menu's visible Back does.")
+        attachNote("The menu's Back and its swipe both land on: \(byBack).")
         capture("wave-gesture-menu-to-profile-fixture", app)
         app.terminate()
 
@@ -840,6 +966,8 @@ final class WaveReviewTests: XCTestCase {
             waitForScreen(.menu, ui)
             XCTAssertFalse(ui.screen(closed).exists, "\(closed.rawValue): a completed swipe returns to the menu.")
             assertText(ui.menuRole, WaveText.role(viewer.name), "The menu, after a swipe from \(closed.rawValue)")
+            XCTAssertEqual(ui.menuBlocked.exists, closed == .blocked,
+                           "\(closed.rawValue): the menu's generic blocked line shows only once the counterpart is blocked.")
             app.terminate()
         }
 
@@ -925,6 +1053,7 @@ final class WaveReviewTests: XCTestCase {
         waitForScreen(.blocked, ui)
         tapQuietly(ui.backToMenu, app)
         waitForScreen(.menu, ui)
+        assertScreen(.menu, viewer, ui, "A blocked counterpart's menu, before the swipe", menuBlocked: true)
         edgeSwipe(app, completing: true)
         XCTAssertTrue(room.peopleFraming.waitForExistence(timeout: 10), "A blocked counterpart's menu: the filtered People.")
         settle()
@@ -936,10 +1065,13 @@ final class WaveReviewTests: XCTestCase {
 
     /// Direct launches at the largest accessibility text size, on whichever iPhone runs it (the captures
     /// name its width), each with the long Guest List name "Alexandria-Josephine"
-    /// (`-ProximeetFixtureName`): all twelve Wave screens, checked by `checkAtLargestText` (every text
-    /// grows, never a fixed or clipped box: at least 1.3 times its Figma box and 30 pt, and stays in its
-    /// column; every button, Leave included, can be brought into view below the status bar and above the
-    /// bar, tapped, and is at least 44 pt tall; the first element at rest sits below the status bar). The
+    /// (`-ProximeetFixtureName`): all twelve Wave screens and the blocked menu, checked by
+    /// `checkAtLargestText` (every text grows, never a fixed or clipped box: at least 1.3 times its Figma
+    /// box and 30 pt, and stays in its column; every button, Leave and the menu's 44 × 44 Back included,
+    /// can be brought into view below the status bar and above the bar, tapped, and is at least 44 pt
+    /// tall; the first element at rest sits below the status bar). On the blocked menu the generic
+    /// "Connection blocked." line grows like any text, and the three disabled choices are brought into
+    /// view and measured (present, disabled, at least 44 pt tall) but never tapped. The
     /// six closed screens share one layout, so the closed paper's two lines are checked on the withdrawn
     /// and ended screens and every closed screen's own headline, explanation and buttons on all six. Then
     /// two real Leaves at the largest text, each a fresh launch: from the incoming review's bar and from
@@ -951,16 +1083,19 @@ final class WaveReviewTests: XCTestCase {
     ///
     /// Time, estimated (nothing of this has run yet): the Room's six largest-text checks took 229-322 s in
     /// builds 6abc1b80-6abc3ebe, 45 texts and buttons between them. Split, as a fit and not a measurement,
-    /// into about 12-16 s a launch and 3.5-5 s a text or button, these twelve launches and 92 texts and
-    /// buttons take about 460-650 s (38-54 s a check, the Room's own spread, gives the same), and the two
-    /// Leaves about 60-90 s: about 520-740 s at Codemagic's pace, and up to about 875 s at Xcode Cloud's
-    /// measured 1.04-1.18 times. That is within 25 s of the plans' 900-s default, so this test still asks
-    /// for their 1,200-s maximum. The screens run first and the Leaves last, each soft, so a slow run
-    /// still reports every check it reached.
+    /// into about 12-16 s a launch and 3.5-5 s a text or button, these thirteen launches and 102 texts and
+    /// buttons (the blocked menu's launch and nine items, and the menu's Back, came with the founder's
+    /// decisions of 30 September 2026) take about 515-720 s (38-54 s a check, the Room's own spread, gives
+    /// about the same), and the two Leaves about 60-90 s: about 575-810 s at Codemagic's pace, and up to
+    /// about 955 s at Xcode Cloud's measured 1.04-1.18 times. That is past the plans' 900-s default, so
+    /// this test asks for their 1,200-s maximum, which a Wave plan's compute budget may lower (`RunBudget`).
+    /// The screens run first and the Leaves last, each soft, so a slow run still reports every check it
+    /// reached.
     func testLargestTextKeepsWaveScreensReachable() throws {
         // The test plans cap tests at 900 s unless a test asks for more (their maximum is 1,200 s); this
-        // one's upper estimate at Xcode Cloud's pace is about 875 s, too close to 900 to go without.
-        executionTimeAllowance = 1200
+        // one's upper estimate at Xcode Cloud's pace is about 955 s. Under a Wave plan it gets no more than
+        // what is left of that run's compute budget.
+        RunBudget.allow(1200, self)
         let viewer = Self.largestViewer
         checkAtLargestText(Self.largestScreenChecks(viewer))
         softly {
@@ -1026,6 +1161,8 @@ final class WaveReviewTests: XCTestCase {
                         assertUnclipped(id, grownFrom: figma, within: bounds, ui, state)
                     case .button(let id):
                         assertReachableButton(id, ui, state)
+                    case .disabledButton(let id, let label):
+                        assertReachableDisabledButton(id, label, ui, state)
                     }
                 }
             }
@@ -1220,11 +1357,12 @@ final class WaveReviewTests: XCTestCase {
 
     // MARK: - Fixture tables
 
-    /// The 12 screens, the 7 overlays and the three selected report variants, each a direct launch
-    /// (Social, Chat first, "Alex").
+    /// The 12 screens, the blocked menu, the 7 overlays and the three selected report variants, each a
+    /// direct launch (Social, Chat first, "Alex").
     private static var approvedCaptures: [WaveFixture] {
         var fixtures = WaveScreenKey.allCases.map { WaveFixture(key: $0.rawValue, screen: $0) }
         fixtures += [
+            blockedMenuFixture(key: "menu-blocked"),
             WaveFixture(key: "global-safety", screen: .menu, overlay: .globalSafety),
             WaveFixture(key: "maya-safety", screen: .inReview, overlay: .counterpartSafety),
             WaveFixture(key: "report-maya", screen: .inReview, overlay: .report(nil)),
@@ -1257,7 +1395,7 @@ final class WaveReviewTests: XCTestCase {
 
     /// The largest-text screen checks: each screen's texts (with the height of its Figma box, which the
     /// text must outgrow) and its buttons, in one list from the top of the screen down, so the reveals run
-    /// one way. Twelve screens, 92 texts and buttons.
+    /// one way. Twelve screens and the blocked menu, 102 texts and buttons.
     private static func largestScreenChecks(_ viewer: WaveViewer) -> [WaveLargestCheck] {
         let ticket: [WaveLargestItem] = [.text("wave.venue.preference", 22), .text("wave.invitation.context", 24)]
         let slip: [WaveLargestItem] = [
@@ -1273,10 +1411,16 @@ final class WaveReviewTests: XCTestCase {
         }
         var checks: [WaveLargestCheck] = [
             WaveLargestCheck(name: "demo-menu", fixture: fixture(.menu), items: [
-                .button("wave.safety"), .text("wave.menu.headline", 112), .text("wave.menu.role", 26),
+                .button("wave.back"), .button("wave.safety"), .text("wave.menu.headline", 112), .text("wave.menu.role", 26),
                 .text("wave.menu.boundary", 52), .button("wave.menu.startOutgoing"), .button("wave.menu.startIncoming"),
                 .button("wave.menu.noAllowance"), .button("wave.leave"),
             ]),
+            // The menu once the counterpart is blocked: the generic line in the boundary's box (52), and the
+            // three choices, disabled, measured but never tapped.
+            WaveLargestCheck(name: "demo-menu-blocked", fixture: blockedMenuFixture(viewer: viewer), items: [
+                .button("wave.back"), .button("wave.safety"), .text("wave.menu.headline", 112), .text("wave.menu.role", 26),
+                .text("wave.menu.blocked", 52),
+            ] + WaveText.menuChoices.map { WaveLargestItem.disabledButton($0.0, $0.1) } + [.button("wave.leave")]),
             WaveLargestCheck(name: "out-confirm", fixture: fixture(.outConfirm),
                              items: [.button("wave.back"), .button("wave.safety")] + ticket + slip
                                 + [.button("wave.send"), .button("wave.leave")]),
@@ -1341,6 +1485,12 @@ final class WaveReviewTests: XCTestCase {
     private static func largestFixture(_ screen: WaveScreenKey, _ overlay: WaveOverlayKind? = nil,
                                        viewer: WaveViewer) -> WaveFixture {
         WaveFixture(key: screen.rawValue, screen: screen, overlay: overlay, viewer: viewer)
+    }
+
+    /// The menu once the counterpart is blocked (fixture `wave-blocked`, then `-ProximeetWaveAfterBlock
+    /// menu`: Back to demo menu), for `viewer`.
+    private static func blockedMenuFixture(key: String = "demo-menu-blocked", viewer: WaveViewer = .alex) -> WaveFixture {
+        WaveFixture(key: key, screen: .menu, viewer: viewer, afterBlock: "menu")
     }
 
     // MARK: - Launching
@@ -1513,12 +1663,15 @@ final class WaveReviewTests: XCTestCase {
 
     // MARK: - What each state shows
 
-    /// The element that shows once a fixture is ready: its overlay's container, or its screen's.
+    /// The element that shows once a fixture is ready: its overlay's container, the blocked menu's generic
+    /// line, or its screen's.
     private func readyElement(_ fixture: WaveFixture, _ ui: WaveUI) -> XCUIElement {
         if let overlay = fixture.overlay {
             return ui.element(overlay.container(fixture.viewer.counterpart))
         }
-        return ui.screen(fixture.screen)
+        // The blocked menu's fixture passes through the menu before the block: only its generic line says
+        // the fixture has arrived.
+        return fixture.menuBlocked ? ui.menuBlocked : ui.screen(fixture.screen)
     }
 
     @discardableResult
@@ -1538,28 +1691,30 @@ final class WaveReviewTests: XCTestCase {
     }
 
     /// Everything one Wave screen shows for `viewer`, with no overlay open, from one snapshot where the
-    /// claim is about the whole tree: exactly this screen; its chrome (75:111, the confirmation's 75:119
-    /// with Back and "Wave", the ended screen's 75:130 with no Safety); Leave (or, once ended, only Return
-    /// to Places); the rings hidden from accessibility (decoration); no overlay; nothing of the Room page
-    /// or Places below the Wave; and the screen's own words, controls and people.
+    /// claim is about the whole tree: exactly this screen; its chrome (75:111; the menu's and the
+    /// confirmation's 75:119 with Back and "Wave"; the ended screen's 75:130 with no Safety); Leave (or,
+    /// once ended, only Return to Places); the rings hidden from accessibility (decoration); no overlay;
+    /// nothing of the Room page or Places below the Wave; and the screen's own words, controls and people.
+    /// `menuBlocked`: the menu once its counterpart is blocked (three disabled choices, one generic line).
     private func assertScreen(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI, _ state: String,
-                              file: StaticString = #filePath, line: UInt = #line) {
+                              menuBlocked: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
         let nodes = readTree(ui.app, file: file, line: line)
         let ids = Set(nodes.map { $0.identifier })
         let screens = nodes.map { $0.identifier }.filter { $0.hasPrefix("wave.screen.") }
         XCTAssertEqual(screens, ["wave.screen.\(screen.rawValue)"], "\(state): exactly this screen (\(screen.figma)).",
                        file: file, line: line)
-        assertText(ui.brand, screen == .outConfirm ? WaveText.composeBrand : WaveText.brand, state, file: file, line: line)
+        assertText(ui.brand, screen.hasBack ? WaveText.composeBrand : WaveText.brand, state, file: file, line: line)
         assertTextIgnoringCase(ui.demoBadge, WaveText.demoBadge, state, file: file, line: line)
         if screen == .sessionEnded {
             XCTAssertFalse(ids.contains("wave.safety"), "\(state): the ended chrome (75:130) has no Safety.", file: file, line: line)
         } else {
             assertIconButton(ui.safety, containing: "safety", state, file: file, line: line)
         }
-        if screen == .outConfirm {
+        if screen.hasBack {
             assertIconButton(ui.back, containing: "back", state, file: file, line: line)
         } else {
-            XCTAssertFalse(ids.contains("wave.back"), "\(state): only the unsent confirmation has a Back.", file: file, line: line)
+            XCTAssertFalse(ids.contains("wave.back"), "\(state): only the menu and the unsent confirmation have a Back "
+                           + "(75:119).", file: file, line: line)
         }
         if screen == .sessionEnded {
             XCTAssertFalse(ids.contains("wave.leave"), "\(state): the ended screen has no Leave.", file: file, line: line)
@@ -1575,7 +1730,7 @@ final class WaveReviewTests: XCTestCase {
         assertIdentifiers(absent: Self.belowTheWave, nodes, except: Self.containers,
                           "\(state): the Wave replaces the Room page; nothing of it or of Places is left", file: file, line: line)
         if screen == .menu {
-            assertMenu(viewer, ui, nodes, state, file: file, line: line)
+            assertMenu(viewer, ui, nodes, blocked: menuBlocked, state, file: file, line: line)
         } else if screen.isActive {
             assertInvitation(screen, viewer, ui, nodes, state, file: file, line: line)
         } else {
@@ -1583,16 +1738,35 @@ final class WaveReviewTests: XCTestCase {
         }
     }
 
-    /// The menu (74:568): the approved headline, the role line with the actual Guest List name, the
-    /// boundary and the three explicit choices; nothing started and nobody but the viewer named.
-    private func assertMenu(_ viewer: WaveViewer, _ ui: WaveUI, _ nodes: [WaveNode], _ state: String,
+    /// The menu (74:568): the approved headline, the role line with the actual Guest List name, its
+    /// visible Back ("Back", to the Room that opened it), the boundary and the three explicit choices;
+    /// nothing started and nobody but the viewer named anywhere in the tree. Once the counterpart is
+    /// blocked (`blocked`): the three choices keep their three distinct labels and are disabled, and the
+    /// one generic "Connection blocked." line takes the boundary's place.
+    private func assertMenu(_ viewer: WaveViewer, _ ui: WaveUI, _ nodes: [WaveNode], blocked: Bool, _ state: String,
                             file: StaticString, line: UInt) {
+        let ids = Set(nodes.map { $0.identifier })
         assertText(ui.menuHeadline, WaveText.menuHeadline, state, file: file, line: line)
         assertText(ui.menuRole, WaveText.role(viewer.name), state, file: file, line: line)
-        assertText(ui.menuBoundary, WaveText.menuBoundary, state, file: file, line: line)
-        assertButton(ui.startOutgoing, WaveText.startOutgoing, state, file: file, line: line)
-        assertButton(ui.startIncoming, WaveText.startIncoming, state, file: file, line: line)
-        assertButton(ui.noAllowance, WaveText.showNoAllowance, state, file: file, line: line)
+        assertButton(ui.back, WaveText.back, "\(state): the menu's visible Back", file: file, line: line)
+        if blocked {
+            assertText(ui.menuBlocked, WaveText.menuBlocked, state, file: file, line: line)
+            XCTAssertFalse(ids.contains("wave.menu.boundary"), "\(state): the generic blocked line takes the boundary's "
+                           + "place.", file: file, line: line)
+            for (id, label) in WaveText.menuChoices {
+                assertDisabledChoice(ui.element(id), label, state, file: file, line: line)
+            }
+            let labels = WaveText.menuChoices.compactMap { choice in nodes.first { $0.identifier == choice.0 }?.label }
+            XCTAssertEqual(Set(labels).count, WaveText.menuChoices.count,
+                           "\(state): the disabled choices keep three distinct labels: \(labels).", file: file, line: line)
+        } else {
+            assertText(ui.menuBoundary, WaveText.menuBoundary, state, file: file, line: line)
+            XCTAssertFalse(ids.contains("wave.menu.blocked"), "\(state): nobody is blocked, so no blocked line.",
+                           file: file, line: line)
+            assertButton(ui.startOutgoing, WaveText.startOutgoing, state, file: file, line: line)
+            assertButton(ui.startIncoming, WaveText.startIncoming, state, file: file, line: line)
+            assertButton(ui.noAllowance, WaveText.showNoAllowance, state, file: file, line: line)
+        }
         assertIdentifiers(absent: ["wave.invitation", "wave.venue", "wave.closed.", "wave.backToMenu", "wave.demoCases"]
                           + Self.invitationActions, nodes, "\(state): the menu starts nothing", file: file, line: line)
         let leaks = sampleLeaks(nodes, of: WaveCounterpart.all)
@@ -1601,9 +1775,11 @@ final class WaveReviewTests: XCTestCase {
     }
 
     /// An active invitation (74:569 / 74:570 / 74:572 / 74:574): the ticket with the viewer's own values,
-    /// the state and direction lines (read in sentence case, naming both people, lead decision 8), the
-    /// approved title, purpose and boundary for the actual counterpart, the counterpart's own intent and
-    /// approach on the invitation, Demo cases where the design has it, and exactly this screen's actions:
+    /// the state and direction lines (read in sentence case, lead decision 8; the direction line spoken
+    /// exactly as `WaveText.direction`, sender first, "you" by the viewer's identity with the Guest List
+    /// name after it), the approved title, purpose and boundary for the actual counterpart, the
+    /// counterpart's own intent and approach on the invitation, Demo cases where the design has it, and
+    /// exactly this screen's actions:
     /// Accept only on the recipient's pending review, anywhere in the tree.
     private func assertInvitation(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI, _ nodes: [WaveNode],
                                   _ state: String, file: StaticString, line: UInt) {
@@ -1612,11 +1788,15 @@ final class WaveReviewTests: XCTestCase {
         assertText(ui.venuePreference, viewer.preference, state, file: file, line: line)
         let direction = screen.isOutgoing ? "outgoing" : "incoming"
         assertMentions(ui.context, [direction, viewer.name], state, file: file, line: line)
-        assertMentions(ui.direction, [direction, viewer.name, counterpart.name], state, file: file, line: line)
-        // Sender before recipient in the spoken line: the guest first when outgoing, the counterpart first when
-        // incoming (review and accepted), so a swapped sender and recipient cannot pass.
-        assertOrder(ui.direction, first: screen.isOutgoing ? viewer.name : counterpart.name,
-                    then: screen.isOutgoing ? counterpart.name : viewer.name, state, file: file, line: line)
+        // The spoken direction line, exactly (founder decision, 30 September 2026): sender before recipient,
+        // "you" for the viewer's identity with the actual name after it, so a swapped sender and recipient, or
+        // a "you" chosen by matching names, cannot pass.
+        if ui.direction.exists {
+            XCTAssertEqual(ui.direction.label, WaveText.direction(screen, viewer: viewer.name, counterpart: counterpart.name),
+                           "\(state): the spoken direction line.", file: file, line: line)
+        } else {
+            XCTFail("\(state): the direction line is not showing.", file: file, line: line)
+        }
         softly {
             if ui.venue.exists {
                 let label = ui.venue.label
@@ -1846,6 +2026,18 @@ final class WaveReviewTests: XCTestCase {
         return "People: " + people.joined(separator: ", ") + "; Room notes: " + notes.joined(separator: ", ")
     }
 
+    /// Where a Back from the menu landed, as one line to compare two ways back by: every `roomProfile.*`
+    /// element and its words, with no Wave left in the tree.
+    private func profileDestination(_ room: WaveRoomUI, _ state: String,
+                                    file: StaticString = #filePath, line: UInt = #line) -> String {
+        let nodes = readTree(room.app, file: file, line: line)
+        assertIdentifiers(absent: ["wave.", "wavePanel."], nodes, "\(state): the Wave is closed", file: file, line: line)
+        let profile = nodes.filter { $0.identifier.hasPrefix("roomProfile.") }
+            .map { "\($0.identifier) “\(Self.normalized($0.label))”" }.sorted()
+        XCTAssertFalse(profile.isEmpty, "\(state): the Room profile is showing.", file: file, line: line)
+        return profile.joined(separator: ", ")
+    }
+
     /// People or Room notes, selected once the model has it and its content shows alone.
     private func selectTab(_ key: String, _ room: WaveRoomUI, file: StaticString = #filePath, line: UInt = #line) {
         let tab = room.tab(key)
@@ -2068,17 +2260,6 @@ final class WaveReviewTests: XCTestCase {
         }
     }
 
-    /// `first` is named before `then` in the element's label.
-    private func assertOrder(_ element: XCUIElement, first: String, then: String, _ state: String,
-                             file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else { return }
-        let label = element.label
-        guard let a = label.range(of: first, options: .caseInsensitive),
-              let b = label.range(of: then, options: .caseInsensitive) else { return }
-        XCTAssertTrue(a.lowerBound < b.lowerBound,
-                      "\(state): \(element.identifier) names “\(first)” before “\(then)”: “\(label)”.", file: file, line: line)
-    }
-
     private func assertButton(_ element: XCUIElement, _ label: String, _ state: String,
                               file: StaticString = #filePath, line: UInt = #line) {
         guard element.exists else {
@@ -2089,6 +2270,27 @@ final class WaveReviewTests: XCTestCase {
         XCTAssertTrue(element.isEnabled, "\(state): “\(label)” is enabled.", file: file, line: line)
         XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
                                     file: file, line: line)
+    }
+
+    /// A choice that is shown but disabled (the blocked menu's): its own label, not enabled, and still at
+    /// least 44 pt tall. Never tapped here.
+    private func assertDisabledChoice(_ element: XCUIElement, _ label: String, _ state: String,
+                                      file: StaticString = #filePath, line: UInt = #line) {
+        guard element.exists else {
+            XCTFail("\(state): “\(label)” is not shown.", file: file, line: line)
+            return
+        }
+        XCTAssertEqual(element.label, label, "\(state): the choice keeps its own label.", file: file, line: line)
+        XCTAssertFalse(element.isEnabled, "\(state): “\(label)” is disabled.", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
+                                    file: file, line: line)
+    }
+
+    /// The menu's visible Back (75:119): shown, named "Back", enabled, at least 44 × 44, and hittable where it is.
+    private func assertMenuBack(_ ui: WaveUI, _ state: String, file: StaticString = #filePath, line: UInt = #line) {
+        assertButton(ui.back, WaveText.back, "\(state): the menu's visible Back", file: file, line: line)
+        assertIconButton(ui.back, containing: "back", state, file: file, line: line)
+        XCTAssertTrue(ui.back.isHittable, "\(state): the menu's Back can be tapped where it is.", file: file, line: line)
     }
 
     /// A 44 × 44 chrome icon (the shield, the Back chevron), named for what it does.
@@ -2147,6 +2349,17 @@ final class WaveReviewTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(frame.minX, bounds.lowerBound - 1, "\(state): \(id) starts inside its column (\(Self.rect(frame))).")
         XCTAssertLessThanOrEqual(frame.maxX, bounds.upperBound + 1, "\(state): \(id) ends inside its column (\(Self.rect(frame))).")
+    }
+
+    /// A disabled choice (the blocked menu's), brought into view but never tapped: its own label, disabled,
+    /// at least 44 pt tall and on screen. Whether a disabled control reports itself hittable is not asked.
+    private func assertReachableDisabledButton(_ id: String, _ label: String, _ ui: WaveUI, _ state: String) {
+        guard reveal(id, ui.app) else { return }
+        let button = ui.element(id)
+        XCTAssertEqual(button.label, label, "\(state): \(id) keeps its own label.")
+        XCTAssertFalse(button.isEnabled, "\(state): \(id) is disabled.")
+        XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget, "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
+        XCTAssertLessThanOrEqual(button.frame.maxY, ui.app.frame.maxY, "\(state): \(id) is on screen.")
     }
 
     /// A button, brought into view: it can be tapped and is at least 44 pt tall.
@@ -2609,9 +2822,17 @@ private enum WaveText {
     static let menuHeadline = "Every hello\nneeds a choice."
     static func role(_ name: String) -> String { "You are \(name) in both examples." }
     static let menuBoundary = "Choose a new, independent demo.\nNo invitation is sent to anyone."
+    /// `WaveCopy.menuBlocked`: in the boundary's place once the counterpart is blocked; it names nobody.
+    static let menuBlocked = "Connection blocked.\nNew examples are unavailable in this demo."
     static let startOutgoing = "Start outgoing example"
     static let startIncoming = "Start incoming example"
     static let showNoAllowance = "Show no-allowance example"
+    /// The menu's three choices, top down: identifier and label.
+    static let menuChoices = [
+        ("wave.menu.startOutgoing", startOutgoing),
+        ("wave.menu.startIncoming", startIncoming),
+        ("wave.menu.noAllowance", showNoAllowance),
+    ]
     static let leave = "Leave and disappear"
     static let venueName = "Common Ground"
     static let demoCases = "Demo cases"
@@ -2621,6 +2842,17 @@ private enum WaveText {
     static let decline = "Decline Wave"
     static let aboutChat = "About private chat"
     static let back = "Back"
+
+    /// The direction line as VoiceOver reads it (`WaveCopy.directionSpoken`): the sender, then the
+    /// recipient, with "you" for the viewer's identity and the Guest List name, trimmed, after it.
+    static func direction(_ screen: WaveScreenKey, viewer: String, counterpart: String) -> String {
+        let you = "you (\(viewer.trimmingCharacters(in: .whitespacesAndNewlines)))"
+        switch screen {
+        case .outConfirm, .outPending: return "From \(you) to \(counterpart). Outgoing."
+        case .inReview: return "From \(counterpart) to \(you). Incoming."
+        default: return "\(counterpart) and \(you). Incoming demo."
+        }
+    }
 
     static func title(_ screen: WaveScreenKey, _ counterpart: WaveCounterpart) -> String {
         switch screen {
@@ -2751,6 +2983,10 @@ private enum WaveScreenKey: String, CaseIterable {
 
     var isOutgoing: Bool { [.outConfirm, .outPending, .outWithdrawn].contains(self) }
 
+    /// The 75:119 chrome (Back and "Wave"): the unsent confirmation and, by the founder's decision of 30
+    /// September 2026, the menu, whose Back returns to the Room.
+    var hasBack: Bool { self == .menu || self == .outConfirm }
+
     /// "Demo cases" (75:363 / 75:402 / 75:444): pending, review and accepted only.
     var hasDemoCases: Bool { [.outPending, .inReview, .inAccepted].contains(self) }
 }
@@ -2845,15 +3081,25 @@ private struct WaveFixture {
     var overlay: WaveOverlayKind? = nil
     var viewer = WaveViewer.alex
     var roomBlocked: String? = nil
+    /// `-ProximeetWaveAfterBlock` (with the `wave-blocked` fixture): "menu" presses Back to demo menu and
+    /// stops on the menu whose choices are disabled; `screen` is then the menu.
+    var afterBlock: String? = nil
+
+    /// The menu once its counterpart is blocked.
+    var menuBlocked: Bool { afterBlock == "menu" }
 
     var arguments: [String] {
-        var arguments = ["-ProximeetFixture", screen.fixture, "-ProximeetFixtureBand", viewer.band,
+        let launched = afterBlock == nil ? screen : .blocked
+        var arguments = ["-ProximeetFixture", launched.fixture, "-ProximeetFixtureBand", viewer.band,
                          "-ProximeetFixtureSignal", viewer.approach]
         if viewer.name != "Alex" {
             arguments += ["-ProximeetFixtureName", viewer.name]
         }
         if let roomBlocked {
             arguments += ["-ProximeetRoomBlocked", roomBlocked]
+        }
+        if let afterBlock {
+            arguments += ["-ProximeetWaveAfterBlock", afterBlock]
         }
         if let overlay {
             arguments += ["-ProximeetWavePanel", overlay.fixture]
@@ -2865,10 +3111,12 @@ private struct WaveFixture {
     }
 }
 
-/// One item of a largest-text check: a text (with its Figma box height, which it must outgrow) or a button.
+/// One item of a largest-text check: a text (with its Figma box height, which it must outgrow), a button,
+/// or a disabled button with its label (measured, never tapped).
 private enum WaveLargestItem {
     case text(String, CGFloat)
     case button(String)
+    case disabledButton(String, String)
 }
 
 /// One largest-text state and its items from the top down, and the overlay they sit in, if any.
@@ -2991,6 +3239,7 @@ private struct WaveUI {
     var menuHeadline: XCUIElement { element("wave.menu.headline") }
     var menuRole: XCUIElement { element("wave.menu.role") }
     var menuBoundary: XCUIElement { element("wave.menu.boundary") }
+    var menuBlocked: XCUIElement { element("wave.menu.blocked") }
     var startOutgoing: XCUIElement { element("wave.menu.startOutgoing") }
     var startIncoming: XCUIElement { element("wave.menu.startIncoming") }
     var noAllowance: XCUIElement { element("wave.menu.noAllowance") }

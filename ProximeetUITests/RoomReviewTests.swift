@@ -75,6 +75,7 @@ final class RoomReviewTests: XCTestCase {
     }
 
     override func setUpWithError() throws {
+        try RunBudget.begin(self)
         continueAfterFailure = false
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment[Self.reviewFlag] == "1",
@@ -183,8 +184,9 @@ final class RoomReviewTests: XCTestCase {
         hold(0.6)
 
         // Maya's profile; Preview Wave demo: the Wave's menu (74:568) for the typed name, nothing started
-        // (the Wave-information panel 66:134 left the app with chapter 09). The menu has no visible Back:
-        // its outer Back, an edge swipe, returns to her profile (Wave lead decision 2).
+        // (the Wave-information panel 66:134 left the app with chapter 09). The menu's visible Back (the
+        // 75:119 pattern, used for the founder's decision of 30 September 2026) and its outer Back both return
+        // to her profile; this journey takes the edge swipe (WaveReviewTests covers the visible Back).
         openProfile(Self.maya, room)
         assertProfile(room, Self.maya, userIntent: "social", "Journey Maya")
         hold(1.5)
@@ -787,8 +789,9 @@ final class RoomReviewTests: XCTestCase {
     func testLargestTextKeepsRoomReachable() throws {
         // The test plans cap tests at 900 s unless a test asks for more (their maximum is 1,200 s). This
         // one has six checks and six fresh-launch proofs at the largest text, estimated at 350-510 s
-        // at Codemagic's pace; Xcode Cloud's is unmeasured, so it asks for the plans' maximum.
-        executionTimeAllowance = 1200
+        // at Codemagic's pace; Xcode Cloud's is unmeasured, so it asks for the plans' maximum (under a Wave
+        // plan, no more than what is left of that run's compute budget: `RunBudget`).
+        RunBudget.allow(1200, self)
         for check in Self.largestChecks {
             let app = launchRoom(check.state, band: check.band, approach: check.approach, extra: Self.largestText)
             let room = RoomUI(app: app)
@@ -1871,7 +1874,8 @@ final class RoomReviewTests: XCTestCase {
     }
 
     /// A same-intent sample: Preview Wave demo opens the Wave's menu (74:568) for the fixture's Guest
-    /// List name; the menu's outer Back (an edge swipe; it has no visible Back) returns to the profile;
+    /// List name; the menu's outer Back (an edge swipe, the same action as its visible Back, which
+    /// WaveReviewTests covers) returns to the profile;
     /// then the profile's Back to People.
     private func checkSameIntent(_ actor: SampleActor, _ room: RoomUI, userIntent: String, named key: String) {
         let state = "\(key): \(actor.name)"

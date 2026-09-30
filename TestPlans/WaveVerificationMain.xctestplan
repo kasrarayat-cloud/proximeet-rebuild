@@ -49,6 +49,10 @@
       {
         "key" : "PROXIMEET_SHORT_HOLDS",
         "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_RUN_BUDGET_SECONDS",
+        "value" : "6240"
       }
     ],
     "language" : "en",

@@ -48,6 +48,7 @@ final class PlacesCorrectionTests: XCTestCase {
     private static let minimumTarget: CGFloat = 44 - 1e-6
 
     override func setUpWithError() throws {
+        try RunBudget.begin(self)
         continueAfterFailure = false
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment[Self.reviewFlag] == "1",

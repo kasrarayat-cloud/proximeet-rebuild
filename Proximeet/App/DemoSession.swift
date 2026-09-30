@@ -328,6 +328,13 @@ final class DemoSession {
         updateRoomRun(id) { $0.perform(action) }
     }
 
+    /// The Wave menu's visible Back (and the same outer Back): to the still-valid Room that opened it, with
+    /// its identity, phase, blocks and closed invitations kept. A stale run changes nothing.
+    @discardableResult
+    func closeWaveDemo(_ id: RoomRunID) -> Bool {
+        updateRoomRun(id) { $0.closeWaveDemo() }
+    }
+
     #if DEBUG
     /// DEBUG fixtures only: open the next Guest List on its card, as if Preview my card had been
     /// pressed. Read once.

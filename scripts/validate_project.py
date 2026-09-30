@@ -55,6 +55,17 @@ REQUIRED_PLAN_FLAGS = {"RoomReviewTests": "PROXIMEET_ROOM_REVIEW", "WaveReviewTe
 # Classes whose every test method must be selected by at least one scheme plan: the chapter's own native
 # verification leaves none of them out (docs/verification/wave-xcode-cloud-manifest.tsv, check 7).
 COMPLETE_PLAN_CLASSES = ("RoomReviewTests", "WaveReviewTests")
+# The Wave verification run's compute guard (founder authorisation of 30 September 2026: one Xcode Cloud build,
+# at most 160 compute minutes across its two test actions, and nothing here can cancel it). Each Wave plan gives
+# its UI tests a budget in seconds, read by ProximeetUITests/RunBudget.swift; with a stated allowance per action
+# for the build, the simulator's start and the domain tests, the two must fit in the 160 minutes. No Room plan
+# sets it, so the Room and Places plans run exactly as before. Every UI test class a Wave plan selects must start
+# its setUpWithError with `try RunBudget.begin(self)` and may not set its own executionTimeAllowance (check 7).
+RUN_BUDGET_VARIABLE = "PROXIMEET_RUN_BUDGET_SECONDS"
+RUN_BUDGET_PLANS = ("TestPlans/WaveVerificationMain.xctestplan", "TestPlans/WaveVerificationSmall.xctestplan")
+RUN_BUDGET_LIMIT_S = 160 * 60
+RUN_BUDGET_ACTION_ALLOWANCE_S = 600
+RUN_BUDGET_SOURCE = ROOT / "ProximeetUITests" / "RunBudget.swift"
 APP_TARGET = "Proximeet"
 UI_TEST_TARGET = "ProximeetUITests"
 EXPECTED_BUNDLE_ID = "com.goseng.proximeet"
@@ -752,6 +763,90 @@ def check_test_plan(c: Check, reference: str, targets: dict[str, dict],
     return testables
 
 
+def _setup_body(text: str) -> str | None:
+    """The body of the class's `override func setUpWithError() throws { … }`, braces balanced, or None."""
+    match = re.search(r"override\s+func\s+setUpWithError\(\)\s*throws\s*\{", text)
+    if match is None:
+        return None
+    depth, start = 1, match.end()
+    for index in range(start, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index]
+    return None
+
+
+def check_run_budget(c: Check, plan_paths: list[str]) -> None:
+    """The Wave run's compute guard: the budgets, their sum, the Room plans' absence, and the guard's callers."""
+    budgets: dict[str, int] = {}
+    guarded: set[str] = set()
+    default_allowances: set[object] = set()
+    for relative in plan_paths:
+        path = ROOT / relative
+        try:
+            plan = json.loads(v_read_text(path))
+        except (OSError, ValueError):
+            continue  # already reported by check_test_plan
+        options = plan.get("defaultOptions", {})
+        entries = [entry for entry in options.get("environmentVariableEntries", [])
+                   if entry.get("key") == RUN_BUDGET_VARIABLE]
+        if relative not in RUN_BUDGET_PLANS:
+            c.require(not entries, f"{path.name}: sets {RUN_BUDGET_VARIABLE}, which only the Wave plans may set")
+            continue
+        default_allowances.add(options.get("defaultTestExecutionTimeAllowance"))
+        value = entries[0].get("value") if len(entries) == 1 else None
+        enabled = len(entries) == 1 and entries[0].get("enabled", True) is True
+        if c.require(enabled and isinstance(value, str) and re.fullmatch(r"[1-9][0-9]*", value) is not None,
+                     f"{path.name}: {RUN_BUDGET_VARIABLE} must be set once, enabled, to a positive whole number of "
+                     f"seconds (found {[entry.get('value') for entry in entries]})"):
+            budgets[path.name] = int(value)
+        for entry in plan.get("testTargets", []):
+            if entry.get("target", {}).get("containerPath") != "container:Proximeet.xcodeproj":
+                continue
+            for test in entry.get("selectedTests", []):
+                guarded.add(test.split("/")[0])
+    missing = [name for name in RUN_BUDGET_PLANS if (ROOT / name).name not in budgets]
+    if c.require(not missing, f"{RUN_BUDGET_VARIABLE} is missing or invalid in {missing}"):
+        total = sum(budgets.values()) + RUN_BUDGET_ACTION_ALLOWANCE_S * len(budgets)
+        c.require(total <= RUN_BUDGET_LIMIT_S,
+                  f"the Wave run's budgets {budgets} plus {RUN_BUDGET_ACTION_ALLOWANCE_S} s per action come to {total} s, "
+                  f"over the authorised {RUN_BUDGET_LIMIT_S} s")
+        c.note("Wave compute budget: " + " + ".join(f"{name.removesuffix('.xctestplan')} {seconds} s"
+                                                     for name, seconds in budgets.items())
+               + f" + {len(budgets)} x {RUN_BUDGET_ACTION_ALLOWANCE_S} s (build, simulator start and domain tests, per "
+               f"action) = {total} s <= {RUN_BUDGET_LIMIT_S} s ({RUN_BUDGET_LIMIT_S // 60} min)")
+    if not c.require(v_is_file(RUN_BUDGET_SOURCE), f"{rel(RUN_BUDGET_SOURCE)} missing"):
+        return
+    source = RUN_BUDGET_SOURCE.read_text(encoding="utf-8")
+    c.require(f'"{RUN_BUDGET_VARIABLE}"' in source, f"{rel(RUN_BUDGET_SOURCE)} does not read {RUN_BUDGET_VARIABLE}")
+    c.require(re.search(r"\benum\s+RunBudget\b", source) is not None
+              and re.search(r"\bstatic\s+func\s+begin\(_\s+test:\s*XCTestCase\)\s*throws", source) is not None
+              and re.search(r"\bstatic\s+func\s+allow\(_\s+seconds:\s*TimeInterval,\s*_\s+test:\s*XCTestCase\)",
+                            source) is not None,
+              f"{rel(RUN_BUDGET_SOURCE)} does not declare RunBudget.begin(_:) throws and RunBudget.allow(_:_:)")
+    stated = re.search(r"\bplanDefaultAllowance:\s*TimeInterval\s*=\s*([0-9]+)", source)
+    c.require(stated is not None and default_allowances == {int(stated.group(1))},
+              f"RunBudget.planDefaultAllowance ({stated.group(1) if stated else 'missing'}) must equal the Wave plans' "
+              f"defaultTestExecutionTimeAllowance ({sorted(map(str, default_allowances))})")
+    texts = {source_path: source_path.read_text(encoding="utf-8")
+             for source_path in _test_sources("container:Proximeet.xcodeproj", "")}
+    for owner in sorted(guarded):
+        declared = [text for text in texts.values() if re.search(rf"\bclass\s+{owner}\s*:", text)]
+        if not c.require(len(declared) == 1, f"class {owner} is not declared once in {UI_TEST_TARGET}"):
+            continue
+        body = _setup_body(declared[0])
+        first = body.strip().splitlines()[0].strip() if body and body.strip() else ""
+        c.require(first == "try RunBudget.begin(self)",
+                  f"{owner}: a Wave plan selects it, so setUpWithError must start with `try RunBudget.begin(self)` "
+                  f"(found {first!r})")
+        c.require(re.search(r"(?<![\w.])executionTimeAllowance\s*=", declared[0]) is None,
+                  f"{owner}: sets executionTimeAllowance itself; a Wave-selected class asks through RunBudget.allow")
+    c.note(f"RunBudget.begin opens setUpWithError in every Wave-selected UI test class: {', '.join(sorted(guarded))}")
+
+
 @check(7, "shared scheme references the app and UI tests; its test plans select existing tests")
 def check_scheme(ctx: Context, c: Check) -> None:
     for path in (WORKSPACE_DATA, WORKSPACE_CHECKS):
@@ -845,6 +940,7 @@ def check_scheme(ctx: Context, c: Check) -> None:
         missing = sorted(methods - selected.get(owner, set()))
         c.require(not missing, f"{owner}: no test plan selects {missing}")
         c.note(f"{owner}: all {len(methods)} test methods selected by the plans")
+    check_run_budget(c, [reference[len("container:"):] for reference, _ in plans])
     c.require((PACKAGE_TEST_TARGET, f"container:{PACKAGE_NAME}") in testables,
               f"no test plan includes {PACKAGE_TEST_TARGET}")
     c.require((UI_TEST_TARGET, "container:Proximeet.xcodeproj") in testables,
