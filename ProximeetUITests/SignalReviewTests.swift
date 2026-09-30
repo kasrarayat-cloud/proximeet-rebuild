@@ -61,7 +61,7 @@ final class SignalReviewTests: XCTestCase {
         guest.primary.tap()
         waitForLabel(guest.headline, "Your first hello.")
         hold(0.6)
-        guest.primary.tap()
+        tapDistinctPrimary(guest.primary, label: "Continue preview")
         let band = Wristband(app: app)
         waitForLabel(band.headline, "Choose your kind of hello.")
         band.tile("social").tap()
@@ -130,7 +130,7 @@ final class SignalReviewTests: XCTestCase {
         waitForLabel(guest.headline, "Your first hello.")
         XCTAssertEqual(guest.card.label, "Alex. Up for coffee. Or tea. Interests: Coffee", "The edit shows on the card.")
         hold(0.8)
-        guest.primary.tap()
+        tapDistinctPrimary(guest.primary, label: "Continue preview")
         waitForLabel(band.headline, "Choose your kind of hello.")
         XCTAssertTrue(band.tile("dating").isSelected, "The intent is kept through the edit.")
         hold(0.6)
@@ -559,6 +559,22 @@ final class SignalReviewTests: XCTestCase {
 
     // MARK: - Route helpers
 
+    /// A new choice on the same physical button, not the second touch of a rapid double tap.
+    /// Pass/Guest List deliberately swallow UIKit repeat taps. Match PassReviewTests' far-side
+    /// tap so this journey makes one distinct input without changing that product protection.
+    private func tapDistinctPrimary(_ element: XCUIElement, label: String,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        waitForLabel(element, label)
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND label == %@ AND isEnabled == true AND isHittable == true", label),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed,
+                       "The intended primary action must be enabled and hittable before its single tap.",
+                       file: file, line: line)
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: 0.5)).tap()
+    }
+
     private func launchWelcome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ProximeetFixture", "welcome"]
@@ -594,7 +610,7 @@ final class SignalReviewTests: XCTestCase {
         waitForLabel(pass.headline, "Your next chapter.")
         pass.primary.tap()
         waitForLabel(pass.headline, "Demo in progress.")
-        pass.primary.tap()
+        tapDistinctPrimary(pass.primary, label: "Finish preview")
         waitForLabel(pass.headline, "Demo complete.")
         return pass
     }

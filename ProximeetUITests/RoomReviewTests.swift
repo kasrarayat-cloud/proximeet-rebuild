@@ -115,7 +115,7 @@ final class RoomReviewTests: XCTestCase {
         guest.primary.tap()
         waitForLabel(guest.headline, "Your first hello.")
         hold(0.4)
-        guest.primary.tap()
+        tapDistinctPrimary(guest.primary, label: "Continue preview")
         let band = RoomWristband(app: app)
         waitForLabel(band.headline, "Choose your kind of hello.")
         band.tile("social").tap()
@@ -1257,6 +1257,22 @@ final class RoomReviewTests: XCTestCase {
 
     // MARK: - Route helpers
 
+    /// A new choice on the same physical button, not the second touch of a rapid double tap.
+    /// Pass/Guest List deliberately swallow UIKit repeat taps. Match PassReviewTests' far-side
+    /// tap so this journey makes one distinct input without changing that product protection.
+    private func tapDistinctPrimary(_ element: XCUIElement, label: String,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        waitForLabel(element, label)
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND label == %@ AND isEnabled == true AND isHittable == true", label),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed,
+                       "The intended primary action must be enabled and hittable before its single tap.",
+                       file: file, line: line)
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: 0.5)).tap()
+    }
+
     private func launchWelcome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ProximeetFixture", "welcome"]
@@ -1301,7 +1317,7 @@ final class RoomReviewTests: XCTestCase {
         waitForLabel(pass.headline, "Your next chapter.")
         pass.primary.tap()
         waitForLabel(pass.headline, "Demo in progress.")
-        pass.primary.tap()
+        tapDistinctPrimary(pass.primary, label: "Finish preview")
         waitForLabel(pass.headline, "Demo complete.")
         return pass
     }
