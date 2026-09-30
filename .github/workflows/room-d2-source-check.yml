@@ -1,0 +1,83 @@
+name: Room D2 source checks for 1a5f97e
+
+on:
+  push:
+    branches:
+      - verification/room-d2-1a5f97e-20260930
+    paths:
+      - .github/workflows/room-d2-source-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    # This uniquely named temporary workflow permits only its first attempt.
+    if: github.run_number == 1 && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the exact repaired candidate
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: 1a5f97e0fe73168e5f63e392182507e457209964
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Record candidate and preinstalled Swift
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 1a5f97e0fe73168e5f63e392182507e457209964
+          git log -1 --format='%H %s'
+          printf 'Runner image: %s %s\n' "${ImageOS:-unknown}" "${ImageVersion:-unknown}"
+          swift --version
+
+      - name: Run exactly the six D2 source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift test \
+            --package-path ProximeetDomain \
+            --scratch-path "$RUNNER_TEMP/room-d2-build" \
+            --filter 'DomainSourceGuardTests|PlacesBackWiringTests|PlacesRouteTests/testThePlacesSourceReadsNoClockCalendarOrLocation' \
+            2>&1 | tee "$RUNNER_TEMP/room-d2.log"
+          python3 - "$RUNNER_TEMP/room-d2.log" <<'PY'
+          import collections
+          import pathlib
+          import re
+          import sys
+
+          text = pathlib.Path(sys.argv[1]).read_text()
+          expected = collections.Counter({
+              "DomainSourceGuardTests.testDomainSourcesHaveNoSideEffectAPIs": 1,
+              "DomainSourceGuardTests.testDomainImportsOnlyFoundation": 1,
+              "PlacesBackWiringTests.testEscapeIsHandledOnTheScreensContainerThroughTheSharedBack": 1,
+              "PlacesBackWiringTests.testNoControlGoesBackAroundTheSharedRoute": 1,
+              "PlacesBackWiringTests.testEveryBackControlUsesTheSharedBack": 1,
+              "PlacesRouteTests.testThePlacesSourceReadsNoClockCalendarOrLocation": 1,
+          })
+          events = re.findall(
+              r"^Test Case '([^']+)' (started|passed|failed|skipped)(?= |$)",
+              text, re.MULTILINE,
+          )
+          def observed(status):
+              return collections.Counter(
+                  ".".join(name.split(".")[-2:])
+                  for name, result in events if result == status
+              )
+          assert observed("started") == expected, "Expected exactly the six D2 tests to start once"
+          assert observed("passed") == expected, "Expected exactly the six D2 tests to pass once"
+          assert not observed("failed"), "A test failed"
+          assert not observed("skipped"), "A test was skipped"
+          summaries = re.findall(
+              r"Executed (\d+) tests?, with (?:(\d+) tests? skipped and )?(\d+) failures?",
+              text,
+          )
+          assert any(n == "6" and not int(skipped or 0) and failed == "0"
+                     for n, skipped, failed in summaries), "Missing six-test success summary"
+          assert all(not int(skipped or 0) and failed == "0"
+                     for _, skipped, failed in summaries), "Failure or skip in summary"
+          print("D2 VERIFIED: 6 tests executed once, 0 failures, 0 skipped")
+          PY
+          git diff --exit-code
