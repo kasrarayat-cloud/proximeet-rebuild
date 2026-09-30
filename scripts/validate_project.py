@@ -45,7 +45,8 @@ PACKAGE_NAME = "ProximeetDomain"
 PACKAGE_TEST_TARGET = "ProximeetDomainTests"
 APP_TARGET = "Proximeet"
 UI_TEST_TARGET = "ProximeetUITests"
-EXPECTED_BUNDLE_ID = "com.proximeet.demo"
+EXPECTED_BUNDLE_ID = "com.goseng.proximeet"
+EXPECTED_DEVELOPMENT_TEAM = "2G437MAN6W"
 EXPECTED_RESOURCES = {
     "Proximeet/Resources/Assets.xcassets",
     "Proximeet/Resources/PrivacyInfo.xcprivacy",
@@ -618,7 +619,7 @@ def configurations(ctx: Context, owner: dict) -> dict[str, dict]:
     return result
 
 
-@check(6, "target build settings: bundle ID, no team, iOS 17, generated Info.plist, no entitlements")
+@check(6, "target build settings: Goseng bundle ID and automatic signing, iOS 17, generated Info.plist, no entitlements")
 def check_settings(ctx: Context, c: Check) -> None:
     project_configs = configurations(ctx, ctx.root)
     _, target = ctx.app_target()
@@ -631,10 +632,15 @@ def check_settings(ctx: Context, c: Check) -> None:
         effective = {**project_settings, **target_settings}
         c.require(target_settings.get("PRODUCT_BUNDLE_IDENTIFIER") == EXPECTED_BUNDLE_ID,
                   f"{name}: PRODUCT_BUNDLE_IDENTIFIER is {target_settings.get('PRODUCT_BUNDLE_IDENTIFIER')!r}")
+        c.require(target_settings.get("DEVELOPMENT_TEAM") == EXPECTED_DEVELOPMENT_TEAM,
+                  f"{name}: DEVELOPMENT_TEAM must match Goseng LLC")
+        c.require(effective.get("CODE_SIGN_STYLE") == "Automatic",
+                  f"{name}: CODE_SIGN_STYLE must be Automatic")
         for level, settings in (("project", project_settings), ("target", target_settings)):
             team = [key for key, value in settings.items()
-                    if key.split("[")[0] == "DEVELOPMENT_TEAM" and value not in ("", None)]
-            c.require(not team, f"{name}/{level}: DEVELOPMENT_TEAM is set")
+                    if key.split("[")[0] == "DEVELOPMENT_TEAM"
+                    and value not in ("", None, EXPECTED_DEVELOPMENT_TEAM)]
+            c.require(not team, f"{name}/{level}: unexpected DEVELOPMENT_TEAM in {team}")
             entitlements = [key for key in settings if key.split("[")[0] == "CODE_SIGN_ENTITLEMENTS"]
             c.require(not entitlements, f"{name}/{level}: CODE_SIGN_ENTITLEMENTS present")
             usage = [key for key in settings
@@ -981,7 +987,9 @@ COPY_SOURCES = ("ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift",)
 # Built by concatenation so this file does not match its own repository scan.
 REPOSITORY_PATTERNS = (
     ("legacy bundle identifier", re.compile(re.escape("app.projecthalo" + ".lab"))),
-    ("development team assigned", re.compile("DEVELOPMENT_TEAM" + r'\s*=\s*"?[A-Z0-9]')),
+    ("unexpected development team", re.compile(
+        "DEVELOPMENT_TEAM" + r'\s*=\s*"?(?!' + re.escape(EXPECTED_DEVELOPMENT_TEAM)
+        + r'(?:[";\s]|$))[A-Z0-9]+')),
     ("CI workflow reference", re.compile(re.escape(".github" + "/workflows"))),
 )
 REPOSITORY_SKIP_DIRS = {".git", ".build", ".claude-run", "docs", "__pycache__"}
@@ -1252,9 +1260,12 @@ def check_ui_tests(ctx: Context, c: Check) -> None:
                   f"{name}: TEST_TARGET_NAME must name the demo app")
         c.require(settings.get("GENERATE_INFOPLIST_FILE") == "YES",
                   f"{name}: UI test Info.plist must be generated")
-        c.require(settings.get("PRODUCT_BUNDLE_IDENTIFIER") == "com.proximeet.demo.uitests",
+        c.require(settings.get("PRODUCT_BUNDLE_IDENTIFIER") == f"{EXPECTED_BUNDLE_ID}.uitests",
                   f"{name}: unexpected UI test bundle identifier")
-        c.require(not settings.get("DEVELOPMENT_TEAM"), f"{name}: UI runner has a signing team")
+        c.require(settings.get("DEVELOPMENT_TEAM") == EXPECTED_DEVELOPMENT_TEAM,
+                  f"{name}: UI runner DEVELOPMENT_TEAM must match Goseng LLC")
+        c.require(settings.get("CODE_SIGN_STYLE") == "Automatic",
+                  f"{name}: UI runner CODE_SIGN_STYLE must be Automatic")
     c.note(f"{len(on_disk)} UI test source(s); real taps are separate from fixture captures")
 
 
