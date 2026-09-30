@@ -1,0 +1,118 @@
+{
+  "configurations" : [
+    {
+      "id" : "D41FDE3F-68A0-517D-AE1C-302E683F95DE",
+      "name" : "Wave Verification",
+      "options" : {}
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "defaultTestExecutionTimeAllowance" : 900,
+    "environmentVariableEntries" : [
+      {
+        "key" : "PROXIMEET_WAVE_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_ROOM_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_PLACES_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_SIGNAL_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_WRISTBAND_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_GUEST_LIST_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_PASS_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_BIRTHDAY_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_WELCOME_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_SHORT_HOLDS",
+        "value" : "1"
+      }
+    ],
+    "language" : "en",
+    "maximumTestExecutionTimeAllowance" : 1200,
+    "region" : "US",
+    "testTimeoutsEnabled" : true,
+    "uiTestingScreenshotsLifetime" : "keepAlways"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "selectedTests" : [
+        "PlacesCorrectionTests\/testDetailAndExplanationStartAtTheirBeginning()",
+        "PlacesReviewTests\/testRapidTapsAndInterruptedMotionReconcile()",
+        "PlacesReviewTests\/testWalkthroughRealJourney()",
+        "RoomReviewTests\/testBackGesturesInTheRoom()",
+        "RoomReviewTests\/testBusinessCompatibility()",
+        "RoomReviewTests\/testCaptureApprovedStatesAndOverlays()",
+        "RoomReviewTests\/testEntryNeedsBothDeliberateGates()",
+        "RoomReviewTests\/testIneligibleAndStaleEntryIsRefused()",
+        "RoomReviewTests\/testLargestTextKeepsRoomReachable()",
+        "RoomReviewTests\/testLeaveFromEveryContext()",
+        "RoomReviewTests\/testNotesFilteringAndBothBlockOrders()",
+        "RoomReviewTests\/testRealJourneyFromTheExplanationThroughTheRoomAndBack()",
+        "RoomReviewTests\/testReduceMotionPreviewRoom()",
+        "RoomReviewTests\/testReportPreviewIsLocalAndRestoresItsCaller()",
+        "RoomReviewTests\/testSocialCompatibilityAndBothApproaches()",
+        "RoomReviewTests\/testTerminalReentryResetsTheDemo()",
+        "WaveReviewTests\/testBlocksInBothOrdersUseTheOneRoomSet()",
+        "WaveReviewTests\/testBothApproachesForEachIntent()",
+        "WaveReviewTests\/testBusinessJulesJourneyAndReentry()",
+        "WaveReviewTests\/testCaptureApprovedScreensAndOverlays()",
+        "WaveReviewTests\/testDuplicateAndStaleActionsChangeNothing()",
+        "WaveReviewTests\/testEdgeSwipesFollowTheVisibleBack()",
+        "WaveReviewTests\/testIneligibleAndOtherIntentNeverReachTheWave()",
+        "WaveReviewTests\/testInterruptedAcceptanceNeverEndsJoined()",
+        "WaveReviewTests\/testLargestTextKeepsWavePanelsReachable()",
+        "WaveReviewTests\/testLargestTextKeepsWaveScreensReachable()",
+        "WaveReviewTests\/testLeaveFromEveryWaveContext()",
+        "WaveReviewTests\/testRealJourneyFromTheRoomProfileThroughTheWaveAndBack()",
+        "WaveReviewTests\/testReduceMotionPreviewAcceptJoinsWithoutAMove()",
+        "WaveReviewTests\/testRolesNeverChange()"
+      ],
+      "target" : {
+        "containerPath" : "container:Proximeet.xcodeproj",
+        "identifier" : "A8309941D6B07785FF53BCEC",
+        "name" : "ProximeetUITests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "skippedTests" : [
+        "DomainSourceGuardTests",
+        "PlacesBackWiringTests",
+        "PlacesRouteTests\/testThePlacesSourceReadsNoClockCalendarOrLocation()",
+        "RoomDemoTests\/testTheRetiredWaveInformationPanelIsGone()",
+        "WaveDemoTests\/testTheSessionMirrorMatchesTheAppWiring()"
+      ],
+      "target" : {
+        "containerPath" : "container:ProximeetDomain",
+        "identifier" : "ProximeetDomainTests",
+        "name" : "ProximeetDomainTests"
+      }
+    }
+  ],
+  "version" : 1
+}

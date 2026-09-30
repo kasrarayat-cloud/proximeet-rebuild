@@ -89,7 +89,8 @@ final class RoomReviewTests: XCTestCase {
     /// Chat first; Places at Now; Common Ground's detail and its explanation, where the recording's trim
     /// starts (`ROOM_WALKTHROUGH_START`). Preview room demo: the entry, with the actual preference and
     /// nothing started. Enter room demo: waiting, with no sample anywhere in the tree. Show populated
-    /// example: People; Room notes; Maya's profile; How Waves work and Back to profile; Maya's safety;
+    /// example: People; Room notes; Maya's profile; Preview Wave demo (the Wave's menu, 74:568, chapter 09)
+    /// and the menu's outer Back, an edge swipe, to her profile; Maya's safety;
     /// Preview report, a reason, Close preview (her safety again) and Back (her profile); Block Maya in
     /// demo: the filtered People; Leave and disappear: the ended screen; Return to Places: browsing at
     /// Now; Back: Signal with the same intent and approach, so the draft was never touched.
@@ -181,18 +182,19 @@ final class RoomReviewTests: XCTestCase {
         selectTab("people", room)
         hold(0.6)
 
-        // Maya's profile; How Waves work; Back to profile.
+        // Maya's profile; Preview Wave demo: the Wave's menu (74:568) for the typed name, nothing started
+        // (the Wave-information panel 66:134 left the app with chapter 09). The menu has no visible Back:
+        // its outer Back, an edge swipe, returns to her profile (Wave lead decision 2).
         openProfile(Self.maya, room)
         assertProfile(room, Self.maya, userIntent: "social", "Journey Maya")
         hold(1.5)
         capture("room-journey-06-maya-profile", app)
         room.profileAction.tap()
-        waitForPanel(Panel.waveInfo, room)
-        assertWaveInfo(room, "Journey Wave information")
+        assertWaveMenu(room, name: "Alex", "Journey Wave menu")
         hold(1.5)
-        capture("room-journey-07-wave-info", app)
-        room.inPanel(Panel.waveInfo, "roomPanel.backToProfile").tap()
-        XCTAssertTrue(waitForAbsence(room.element(Panel.waveInfo)), "Back to profile closes the Wave information.")
+        capture("room-journey-07-wave-menu", app)
+        edgeSwipe(app, completing: true)
+        XCTAssertTrue(waitForAbsence(room.waveMenu), "The menu's outer Back closes the Wave.")
         waitForLabel(room.profileName, "Maya")
         hold(0.8)
 
@@ -330,8 +332,8 @@ final class RoomReviewTests: XCTestCase {
 
     /// Direct launches (fixture `room-populated`, Social; once with Chat first and once with Okay to
     /// say hello). The venue ticket carries the actual preference. Maya shares the Social intent: her
-    /// profile's line is her own approach and its action is How Waves work, whose information panel
-    /// (66:134) returns to her profile. Jules is Business: his profile says "Waves stay within your
+    /// profile's line is her own approach and its action is Preview Wave demo, which opens the Wave's
+    /// menu (74:568), whose outer Back returns to her profile. Jules is Business: his profile says "Waves stay within your
     /// selected intent." and its action is Back to people. The approach never changes either action.
     func testSocialCompatibilityAndBothApproaches() throws {
         for approach in ["chatFirst", "okayToSayHello"] {
@@ -349,7 +351,7 @@ final class RoomReviewTests: XCTestCase {
     }
 
     /// Direct launch (fixture `room-populated`, Business, Okay to say hello): the mirror image. Jules
-    /// shares the Business intent: How Waves work, and his line "Open to a brief hello. No pressure to
+    /// shares the Business intent: Preview Wave demo, and his line "Open to a brief hello. No pressure to
     /// continue."; Maya is Social: Back to people, and the same-intent explanation.
     func testBusinessCompatibility() throws {
         let app = launchRoom(.populated, band: "business", approach: "okayToSayHello")
@@ -519,10 +521,11 @@ final class RoomReviewTests: XCTestCase {
     // MARK: - Leave
 
     /// Direct launches, one per context: waiting, waiting's global safety, People, People's global
-    /// safety, Room notes, a profile, Wave information, an actor's safety, a report preview with a
-    /// reason, and a public note's safety. Each time the visible "Leave and disappear" ends the run at
-    /// once, with no confirmation: the ended screen (66:114) and no sample, note, profile or panel
-    /// anywhere in the tree. Return to Places then lands on browsing at Now.
+    /// safety, Room notes, a profile, an actor's safety, a report preview with a reason, and a public
+    /// note's safety. Each time the visible "Leave and disappear" ends the run at once, with no
+    /// confirmation: the ended screen (66:114) and no sample, note, profile or panel anywhere in the
+    /// tree. Return to Places then lands on browsing at Now. (Leave from inside the Wave shows the
+    /// Wave's own ended screen, 74:578: `WaveReviewTests.testLeaveFromEveryWaveContext`.)
     func testLeaveFromEveryContext() throws {
         var table: [String] = []
         for context in Self.leaveContexts {
@@ -681,9 +684,9 @@ final class RoomReviewTests: XCTestCase {
     /// Direct launches. The Room fixture `room-waiting` with Dating and with Activity (Okay to say
     /// hello): the app refuses at the explanation's own guard, so Common Ground's detail shows with its
     /// primary disabled ("Not available for …"), a tap on it opens nothing, and no Room element exists.
-    /// A deeper stale route (`room-populated` with a profile and its Wave information, Dating) is
-    /// refused the same way. Without an approach there is no Room fixture at all: the app opens at
-    /// Welcome.
+    /// A deeper stale route (`room-populated` with a profile and its safety, Dating; until chapter 09 it
+    /// was the profile's Wave information, which left the app) is refused the same way. Without an
+    /// approach there is no Room fixture at all: the app opens at Welcome.
     func testIneligibleAndStaleEntryIsRefused() throws {
         for band in ["dating", "activity"] {
             let app = launchRoom(.waiting, band: band, approach: "okayToSayHello")
@@ -704,13 +707,13 @@ final class RoomReviewTests: XCTestCase {
             app.terminate()
         }
 
-        let deep = launchRoom(RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info",
-                                        shown: .waveInfo), band: "dating", approach: "chatFirst")
+        let deep = launchRoom(RoomState(key: "maya-safety-0", stage: "room-populated", profile: "maya", panel: "actor-safety",
+                                        shown: .actorSafety(actor: "maya", blocked: [])), band: "dating", approach: "chatFirst")
         let refused = RoomPlaces(app: deep)
         waitForLabel(refused.placeName, "Common Ground")
         settle()
         XCTAssertEqual(refused.placePrimary.label, "Not available for Dating")
-        assertNoRoom(deep, "Dating, a stale profile and Wave information")
+        assertNoRoom(deep, "Dating, a stale profile and its safety")
         deep.terminate()
 
         let missing = XCUIApplication()
@@ -725,10 +728,11 @@ final class RoomReviewTests: XCTestCase {
 
     /// Direct launches at the default text size, run on the iPhone 17 Pro Max: the 15 approved screens
     /// (entry, waiting, ended, People and Room notes for each of the four block sets, the four profile
-    /// states), the 8 overlays (global safety, the four actor safeties, both reports, Wave information)
-    /// and the four report selections (67:816 none, from the report-maya launch; 67:826, 67:836 and
-    /// 67:846, each its own launch). Each is checked (copy, the samples shown or absent, the column)
-    /// before it is captured as `room-<state>-<width>pt-fixture`. Under every overlay (the 8, and the
+    /// states), the 7 overlays still in the app (global safety, the four actor safeties, both reports;
+    /// the Wave information, 66:134, left it with chapter 09) and the four report selections (67:816
+    /// none, from the report-maya launch; 67:826, 67:836 and 67:846, each its own launch). Each is
+    /// checked (copy, the samples shown or absent, the column) before it is captured as
+    /// `room-<state>-<width>pt-fixture`. Under every overlay (the 7, and the
     /// three reason variants of Maya's report) nothing of the Room page or of Places is left in the tree
     /// (`assertUnderlayAbsent`), checked softly so one leak still leaves every capture taken.
     func testCaptureApprovedStatesAndOverlays() throws {
@@ -760,28 +764,29 @@ final class RoomReviewTests: XCTestCase {
 
     /// Direct launches at the largest accessibility text size, on whichever iPhone runs it (the
     /// captures name its width): the entry, a long profile (Jules for a Business guest, the longest
-    /// approach line), Room notes, the global safety (over People), an actor's safety, a report with a
-    /// reason selected and the Wave information. Every text grows (never a fixed or clipped box) and
+    /// approach line), Room notes, the global safety (over People), an actor's safety and a report with
+    /// a reason selected (the Wave information, 66:134, left the app with chapter 09; the Wave's own
+    /// largest-text checks are `WaveReviewTests`'). Every text grows (never a fixed or clipped box) and
     /// stays in its column or panel; every button, Leave included, can be brought into view and tapped,
     /// and is at least 44 pt tall; under each panel nothing of the Room page or of Places is left in
     /// the tree.
     ///
     /// Then real taps, each on a fresh launch of its panel (rows R7 on the iPhone 17 Pro Max and R14 on
     /// the smaller iPhone): every panel's way back (Jules's safety's Back to his profile, Maya's report's
-    /// Close preview to her safety and a new unselected preview, the Wave information's Back to profile,
-    /// the global safety's Close to People), and every panel's Leave and disappear, each proved to end
+    /// Close preview to her safety and a new unselected preview, the global safety's Close to People),
+    /// and every panel's Leave and disappear, each proved to end
     /// the run, to shrug off a stale tap where the way back was and a cancelled back swipe, and to lead
     /// through Return to Places to Places at Now and Back to Signal with the draft intact. Each control
     /// is brought into view by `reveal`, proved hittable where it is, and only then tapped.
     ///
     /// Time, estimated (nothing of this has run yet): the six checks took 229-322 s in builds
-    /// 6abc1b80-6abc3ebe (253 s in 6abc3ebe's R14, six of their reveals failing after dead drags), so the
-    /// seven about 260-360 s; the four ways back about 60-90 s; the four Leaves, each a launch, a reveal,
+    /// 6abc1b80-6abc3ebe (253 s in 6abc3ebe's R14, six of their reveals failing after dead drags), so these
+    /// six about 230-320 s; the three ways back about 45-70 s; the three Leaves, each a launch, a reveal,
     /// five snapshots, a swipe and three screens (R8's ten plain Leaves took 126.9 s in 6abc3654), about
-    /// 100-150 s. About 420-600 s per iPhone: inside a 900-s allowance, and at the edge of a 600-s one.
+    /// 75-115 s. About 350-510 s per iPhone: inside a 900-s allowance, and inside a 600-s one.
     func testLargestTextKeepsRoomReachable() throws {
         // The test plans cap tests at 900 s unless a test asks for more (their maximum is 1,200 s). This
-        // one has seven checks and eight fresh-launch proofs at the largest text, estimated at 420-600 s
+        // one has six checks and six fresh-launch proofs at the largest text, estimated at 350-510 s
         // at Codemagic's pace; Xcode Cloud's is unmeasured, so it asks for the plans' maximum.
         executionTimeAllowance = 1200
         for check in Self.largestChecks {
@@ -1020,7 +1025,8 @@ final class RoomReviewTests: XCTestCase {
     /// between the entry (y 410) and the header (y 128), which a plain crossfade never draws (read at
     /// x 38–66, y 306–386 on the 440-pt iPhone: ground on both screens). Then the tabs and the profiles
     /// still change: Show populated example, Room notes, People, Maya's profile and Back, Jules's
-    /// profile and Back to people, Maya's Wave information and Back to profile.
+    /// profile and Back to people, the global safety and Close (where Maya's Wave information and Back to
+    /// profile were until that panel left the app with chapter 09), and Maya's profile again.
     func testReduceMotionPreviewRoom() throws {
         let app = launchRoom(.entry, extra: Self.reduceMotionPreview)
         let room = RoomUI(app: app)
@@ -1080,20 +1086,23 @@ final class RoomReviewTests: XCTestCase {
         room.profileAction.tap()
         XCTAssertTrue(room.card("maya").waitForExistence(timeout: 10), "Back to people, under Reduce Motion.")
         settle()
+        room.safety.tap()
+        waitForPanel(Panel.globalSafety, room)
+        assertGlobalSafety(room, "Reduce Motion, the global safety")
+        room.inPanel(Panel.globalSafety, "roomPanel.close").tap()
+        XCTAssertTrue(waitForAbsence(room.element(Panel.globalSafety)))
+        settle()
+        assertPeople(room, blocked: [], "Reduce Motion, People after the global safety")
         openProfile(Self.maya, room)
-        room.profileAction.tap()
-        waitForPanel(Panel.waveInfo, room)
-        assertWaveInfo(room, "Reduce Motion, Wave information")
-        room.inPanel(Panel.waveInfo, "roomPanel.backToProfile").tap()
-        XCTAssertTrue(waitForAbsence(room.element(Panel.waveInfo)))
-        waitForLabel(room.profileName, "Maya")
+        assertProfile(room, Self.maya, userIntent: "social", "Reduce Motion, Maya again")
         capture("room-reduce-motion-profile-fixture", app)
     }
 
     // MARK: - Fixture tables
 
-    /// The 15 approved screens, the 8 overlays and the three selected report variants, each a direct
-    /// launch. The blocks are applied in the order named, through each sample's profile safety.
+    /// The 15 approved screens, the 7 overlays still in the app (66:134, the Wave information, left it
+    /// with chapter 09) and the three selected report variants, each a direct launch. The blocks are
+    /// applied in the order named, through each sample's profile safety.
     private static var approvedStates: [RoomState] {
         [
             RoomState(key: "entry", stage: "room-entry", shown: .entry),
@@ -1127,7 +1136,6 @@ final class RoomReviewTests: XCTestCase {
                       shown: .report(actor: "maya", reason: nil)),
             RoomState(key: "report-jules", stage: "room-populated", profile: "jules", panel: "report",
                       shown: .report(actor: "jules", reason: nil)),
-            RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info", shown: .waveInfo),
             RoomState(key: "report-reason-attention", stage: "room-populated", profile: "maya", panel: "report",
                       reason: "unwantedAttention", shown: .report(actor: "maya", reason: "unwantedAttention")),
             RoomState(key: "report-reason-harassment", stage: "room-populated", profile: "maya", panel: "report",
@@ -1146,7 +1154,6 @@ final class RoomReviewTests: XCTestCase {
             RoomState(key: "people-global-safety", stage: "room-populated", panel: "global-safety", shown: .globalSafety),
             RoomState(key: "room-notes", stage: "room-populated", tab: "notes", shown: .notes(blocked: [])),
             RoomState(key: "profile", stage: "room-populated", profile: "maya", shown: .profile(actor: "maya", blocked: [])),
-            RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info", shown: .waveInfo),
             RoomState(key: "actor-safety", stage: "room-populated", profile: "jules", panel: "actor-safety",
                       shown: .actorSafety(actor: "jules", blocked: [])),
             RoomState(key: "report", stage: "room-populated", profile: "maya", panel: "report", reason: "harassment",
@@ -1207,19 +1214,10 @@ final class RoomReviewTests: XCTestCase {
                 buttons: ["room.report.reason.unwantedAttention", "room.report.reason.harassment",
                           "room.report.reason.somethingElse", "roomPanel.closePreview", "roomPanel.leave"]
             ),
-            LargestCheck(
-                name: "wave-info",
-                state: RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info",
-                                 shown: .waveInfo),
-                container: Panel.waveInfo,
-                texts: [("roomPanel.label", 22), ("roomPanel.title", 82), ("roomPanel.explanation", 72),
-                        ("roomPanel.scope", 52)],
-                buttons: ["roomPanel.backToProfile", "roomPanel.leave"]
-            ),
         ]
     }
 
-    /// The four panels whose ways back and Leave are tapped at the largest text, each with its way
+    /// The three panels whose ways back and Leave are tapped at the largest text, each with its way
     /// back and the caller that way back returns to (`RoomRun.closeLevel`: the level below).
     private static var largestPanels: [LargestPanel] {
         [
@@ -1234,12 +1232,6 @@ final class RoomReviewTests: XCTestCase {
                 state: RoomState(key: "report-maya", stage: "room-populated", profile: "maya", panel: "report",
                                  reason: "harassment", shown: .report(actor: "maya", reason: "harassment")),
                 panel: Panel.report("maya"), wayBack: "roomPanel.closePreview", caller: .actorSafety("maya")
-            ),
-            LargestPanel(
-                name: "wave-info",
-                state: RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info",
-                                 shown: .waveInfo),
-                panel: Panel.waveInfo, wayBack: "roomPanel.backToProfile", caller: .profile("maya")
             ),
             LargestPanel(
                 name: "global-safety",
@@ -1441,7 +1433,6 @@ final class RoomReviewTests: XCTestCase {
         case .globalSafety: return room.element(Panel.globalSafety)
         case .actorSafety(let actor, _): return room.element(Panel.actorSafety(actor))
         case .report(let actor, _): return room.element(Panel.report(actor))
-        case .waveInfo: return room.element(Panel.waveInfo)
         }
     }
 
@@ -1451,7 +1442,6 @@ final class RoomReviewTests: XCTestCase {
         case .globalSafety: return Panel.globalSafety
         case .actorSafety(let actor, _): return Panel.actorSafety(actor)
         case .report(let actor, _): return Panel.report(actor)
-        case .waveInfo: return Panel.waveInfo
         default: return nil
         }
     }
@@ -1490,8 +1480,6 @@ final class RoomReviewTests: XCTestCase {
             assertSampleAbsent(room, blocked, state)
         case .report(let actor, let reason):
             assertReport(room, Self.actor(actor), selected: reason, state)
-        case .waveInfo:
-            assertWaveInfo(room, state)
         }
     }
 
@@ -1639,8 +1627,9 @@ final class RoomReviewTests: XCTestCase {
     }
 
     /// A fictional profile (66:117 / 66:124 / 66:118 / 66:121): the profile chrome, the sample's own
-    /// words and line, and, for the actual guest, How Waves work with the sample's own approach when
-    /// the intents match, otherwise Back to people with the same-intent explanation. No tabs or cards.
+    /// words and line, and, for the actual guest, Preview Wave demo (chapter 09) with the sample's own
+    /// approach when the intents match, otherwise Back to people with the same-intent explanation. No
+    /// tabs or cards.
     private func assertProfile(_ room: RoomUI, _ actor: SampleActor, userIntent: String, _ state: String,
                                file: StaticString = #filePath, line: UInt = #line) {
         waitForLabel(room.profileName, actor.name)
@@ -1657,7 +1646,7 @@ final class RoomReviewTests: XCTestCase {
         assertText(room.profileInterests, "Interests: " + actor.interests.joined(separator: ", "), state, file: file, line: line)
         let same = actor.intent == userIntent
         assertText(room.profileBoundary, same ? actor.approach : RoomText.sameIntent, state, file: file, line: line)
-        assertButton(room.profileAction, same ? RoomText.howWavesWork : RoomText.backToPeople, state, file: file, line: line)
+        assertButton(room.profileAction, same ? RoomText.previewWaveDemo : RoomText.backToPeople, state, file: file, line: line)
         assertButton(room.leave, RoomText.leave, state, file: file, line: line)
         XCTAssertFalse(room.tabs.exists, "\(state): the profile replaces the tabs.", file: file, line: line)
         for other in Self.actors {
@@ -1779,15 +1768,22 @@ final class RoomReviewTests: XCTestCase {
         assertNothingSubmits(readTree(room.app), state)
     }
 
-    /// The Wave information (66:134): information only, with Back to profile.
-    private func assertWaveInfo(_ room: RoomUI, _ state: String) {
-        let panel = Panel.waveInfo
-        assertPanel(room, panel, state)
-        assertText(room.inPanel(panel, "roomPanel.title"), RoomText.waveTitle, state)
-        assertText(room.inPanel(panel, "roomPanel.explanation"), RoomText.waveExplanation, state)
-        assertText(room.inPanel(panel, "roomPanel.scope"), RoomText.waveScope, state)
-        assertButton(room.inPanel(panel, "roomPanel.backToProfile"), RoomText.backToProfile, state)
-        assertNothingSubmits(readTree(room.app), state)
+    /// The Wave's menu (74:568, chapter 09), opened by a same-intent profile's Preview Wave demo: the
+    /// approved headline, the role line with the actual Guest List name, the three explicit starts, and
+    /// nothing started or left of the Room below it (WaveView replaces the Room page). The Wave's own
+    /// states are `WaveReviewTests`'; this only proves the Room's action opens it.
+    private func assertWaveMenu(_ room: RoomUI, name: String, _ state: String,
+                                file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(room.waveMenu.waitForExistence(timeout: 10), "\(state): Preview Wave demo opens the Wave's menu.",
+                      file: file, line: line)
+        settle()
+        assertText(room.element("wave.menu.headline"), RoomText.waveMenuHeadline, state, file: file, line: line)
+        assertText(room.element("wave.menu.role"), RoomText.waveRole(name), state, file: file, line: line)
+        assertButton(room.element("wave.menu.startOutgoing"), RoomText.waveStartOutgoing, state, file: file, line: line)
+        assertButton(room.element("wave.menu.startIncoming"), RoomText.waveStartIncoming, state, file: file, line: line)
+        assertIdentifiers(absent: ["roomProfile.", "room.card.", "room.tab", "room.leave", "roomPanel.", "wave.invitation",
+                                   "wavePanel."], readTree(room.app), "\(state): only the menu, nothing started",
+                          file: file, line: line)
     }
 
     /// Places browsing at Now, with no Room left and no run showing.
@@ -1874,20 +1870,20 @@ final class RoomReviewTests: XCTestCase {
         selectTab("people", room)
     }
 
-    /// A same-intent sample: How Waves work, its information panel, Back to profile, then the profile's
-    /// Back to People.
+    /// A same-intent sample: Preview Wave demo opens the Wave's menu (74:568) for the fixture's Guest
+    /// List name; the menu's outer Back (an edge swipe; it has no visible Back) returns to the profile;
+    /// then the profile's Back to People.
     private func checkSameIntent(_ actor: SampleActor, _ room: RoomUI, userIntent: String, named key: String) {
         let state = "\(key): \(actor.name)"
         openProfile(actor, room)
         assertProfile(room, actor, userIntent: userIntent, state)
-        XCTAssertEqual(room.profileAction.label, RoomText.howWavesWork, "\(state): the same intent offers How Waves work.")
+        XCTAssertEqual(room.profileAction.label, RoomText.previewWaveDemo, "\(state): the same intent offers Preview Wave demo.")
         capture("room-compat-\(key)-\(actor.key)-profile-fixture", room.app)
         room.profileAction.tap()
-        waitForPanel(Panel.waveInfo, room)
-        assertWaveInfo(room, "\(state), Wave information")
-        capture("room-compat-\(key)-\(actor.key)-wave-info-fixture", room.app)
-        room.inPanel(Panel.waveInfo, "roomPanel.backToProfile").tap()
-        XCTAssertTrue(waitForAbsence(room.element(Panel.waveInfo)), "\(state): Back to profile closes the Wave information.")
+        assertWaveMenu(room, name: RoomText.fixtureName, "\(state), the Wave menu")
+        capture("room-compat-\(key)-\(actor.key)-wave-menu-fixture", room.app)
+        edgeSwipe(room.app, completing: true)
+        XCTAssertTrue(waitForAbsence(room.waveMenu), "\(state): the menu's outer Back closes the Wave.")
         assertProfile(room, actor, userIntent: userIntent, "\(state), back on the profile")
         room.profileBack.tap()
         XCTAssertTrue(room.card(actor.key).waitForExistence(timeout: 10), "\(state): the profile's Back returns to People.")
@@ -1895,7 +1891,7 @@ final class RoomReviewTests: XCTestCase {
         settle()
     }
 
-    /// Another intent's sample: Back to people and the same-intent explanation; no Wave information.
+    /// Another intent's sample: Back to people and the same-intent explanation; no Wave.
     private func checkOtherIntent(_ actor: SampleActor, _ room: RoomUI, userIntent: String, named key: String) {
         let state = "\(key): \(actor.name)"
         openProfile(actor, room)
@@ -1907,7 +1903,7 @@ final class RoomReviewTests: XCTestCase {
         XCTAssertTrue(room.card(actor.key).waitForExistence(timeout: 10), "\(state): Back to people returns to People.")
         XCTAssertTrue(waitFor(room.tab("people"), selected: true))
         XCTAssertTrue(waitForAbsence(room.profileCard))
-        XCTAssertFalse(room.element(Panel.waveInfo).exists, "\(state): no Wave information for another intent.")
+        assertIdentifiers(absent: ["wave."], readTree(room.app), "\(state): no Wave for another intent")
         settle()
         assertPeople(room, blocked: [], "\(state), People again")
     }
@@ -1977,10 +1973,12 @@ final class RoomReviewTests: XCTestCase {
         return found
     }
 
-    /// Identifiers that only the populated example (or a sample's panel) has.
+    /// Identifiers that only the populated example (or a sample's panel) has; since chapter 09 that
+    /// includes the Wave, which only a populated run's same-intent profile opens (its Wave-information
+    /// panel, `roomPanel.waveInfo`, left the app).
     private static let sampleStructure = [
         "room.tabs", "room.tab.", "room.card.", "room.note", "room.peopleFraming", "room.empty", "room.boundary",
-        "roomProfile.", "roomPanel.actorSafety", "roomPanel.report", "roomPanel.waveInfo", "room.report.reason",
+        "roomProfile.", "roomPanel.actorSafety", "roomPanel.report", "room.report.reason", "wave.", "wavePanel.",
     ]
 
     private static func mentionsCount(_ text: String) -> Bool {
@@ -2074,7 +2072,7 @@ final class RoomReviewTests: XCTestCase {
             case .ended: wide = [room.returnToPlaces]
             case .people, .notes: wide = [room.leave]
             case .profile: wide = [room.profileAction, room.leave]
-            case .globalSafety, .actorSafety, .report, .waveInfo: wide = []
+            case .globalSafety, .actorSafety, .report: wide = []
             }
             for element in wide where element.exists {
                 XCTAssertEqual(element.frame.minX, margin, accuracy: 1.5, "\(state): \(element.identifier) starts at the column.")
@@ -2326,8 +2324,8 @@ final class RoomReviewTests: XCTestCase {
     /// container above it; the edge of what covers the lower part of its viewport, and which element
     /// set it; and the controls of its layer.
     ///
-    /// - In a panel (its container is `roomPanel.globalSafety`, `roomPanel.actorSafety.<actor>`,
-    ///   `roomPanel.report.<actor>` or `roomPanel.waveInfo`, `RoomView.panelIdentifier`): only that same
+    /// - In a panel (its container is `roomPanel.globalSafety`, `roomPanel.actorSafety.<actor>` or
+    ///   `roomPanel.report.<actor>`, `RoomView.panelIdentifier`): only that same
     ///   panel's elements outside the target's scroll view, in its lower half, cover it. There are none
     ///   today (the card scrolls whole inside its full-screen scroll view); nothing outside the panel ever
     ///   counts, whatever the tree still holds of the dimmed page or of Places.
@@ -2410,7 +2408,7 @@ final class RoomReviewTests: XCTestCase {
     /// A panel's container (the card `RoomView.panelCard` names), as opposed to a control inside one
     /// (`roomPanel.back`, `roomPanel.leave`, …).
     private static func isPanelContainer(_ identifier: String) -> Bool {
-        identifier == Panel.globalSafety || identifier == Panel.waveInfo
+        identifier == Panel.globalSafety
             || identifier.hasPrefix("roomPanel.actorSafety.") || identifier.hasPrefix("roomPanel.report.")
     }
 
@@ -2714,7 +2712,8 @@ private enum RoomText {
     static let icebreaker = "What’s a small place that feels like home?"
     static let profileTitle = "Room"
     static let profileLabel = "FICTIONAL PROFILE"
-    static let howWavesWork = "How Waves work"
+    /// The same-intent profile action since chapter 09 (Figma 67:687 / 67:728 re-titled by the Wave handoff).
+    static let previewWaveDemo = "Preview Wave demo"
     static let backToPeople = "Back to people"
     static let sameIntent = "Waves stay within your selected intent."
     static let overlayLabel = "DEMO PREVIEW"
@@ -2727,10 +2726,13 @@ private enum RoomText {
     static let actorSafetyBack = "Back"
     static let reportExplanation = "Choose a sample reason.\nExample only — nothing is submitted."
     static let closePreview = "Close preview"
-    static let waveTitle = "A Wave is\nan invitation."
-    static let waveExplanation = "Chat opens only after the other person accepts."
-    static let waveScope = "Sending Waves comes in the next preview."
-    static let backToProfile = "Back to profile"
+    /// The fixtures' Guest List name (`PreviewFixtures.exampleIntroduction`); R1 types the same name.
+    static let fixtureName = "Alex"
+    /// The Wave's menu (74:568; `WaveCopy`), for the one check that the profile action opens it.
+    static let waveMenuHeadline = "Every hello\nneeds a choice."
+    static func waveRole(_ name: String) -> String { "You are \(name) in both examples." }
+    static let waveStartOutgoing = "Start outgoing example"
+    static let waveStartIncoming = "Start incoming example"
     static let endedStatus = "DEMO SESSION ENDED"
     static let endedHeadline = "You’ve left\nthe room."
     static let endedExplanation = "Sample cards and notes are now hidden.\nA new demo requires an explicit restart."
@@ -2763,7 +2765,6 @@ private struct ReportReason {
 /// The panel containers' identifiers.
 private enum Panel {
     static let globalSafety = "roomPanel.globalSafety"
-    static let waveInfo = "roomPanel.waveInfo"
 
     static func actorSafety(_ actor: String) -> String { "roomPanel.actorSafety.\(actor)" }
     static func report(_ actor: String) -> String { "roomPanel.report.\(actor)" }
@@ -2780,7 +2781,6 @@ private enum Shown {
     case globalSafety
     case actorSafety(actor: String, blocked: Set<String>)
     case report(actor: String, reason: String?)
-    case waveInfo
 }
 
 /// One Room fixture launch (`DebugFixtures.RoomFixture`): the stage, then the blocks in the order
@@ -2826,7 +2826,7 @@ private struct LargestCheck {
 private struct LargestPanel {
     /// Where a panel's way back returns (the level below it).
     enum Caller {
-        /// That sample's profile (an actor's safety opened from it; the Wave information).
+        /// That sample's profile (an actor's safety opened from it).
         case profile(String)
         /// That sample's safety (its report preview's caller).
         case actorSafety(String)
@@ -2837,7 +2837,7 @@ private struct LargestPanel {
     var name: String
     var state: RoomState
     var panel: String
-    /// Back, Close preview, Back to profile or Close.
+    /// Back, Close preview or Close.
     var wayBack: String
     var caller: Caller
 }
@@ -2950,6 +2950,9 @@ private struct RoomUI {
     var profileInterests: XCUIElement { element("roomProfile.interests") }
     var profileBoundary: XCUIElement { element("roomProfile.boundary") }
     var profileAction: XCUIElement { element("roomProfile.action") }
+
+    /// The Wave's menu screen (chapter 09), which a same-intent profile's Preview Wave demo opens.
+    var waveMenu: XCUIElement { element("wave.screen.demo-menu") }
 
     func reason(_ key: String) -> XCUIElement { element("room.report.reason.\(key)") }
 

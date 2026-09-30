@@ -50,9 +50,11 @@
 		D4A4409D3A5DBBBDC8822D3B /* RepeatTapGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */; };
 		DBDE63CD1A82675CE1423C90 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */; };
 		F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */; };
+		F1442D9D2AECBE5EF87BAD62 /* WaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96962722D76B8F0E74958F48 /* WaveView.swift */; };
 		F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */; };
 		F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B9055BE62D6166F7331A15 /* Fabric.swift */; };
 		FAD66E8A0A87BB1C4BE92EFB /* BirthdayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */; };
+		FC40C26B8ACD55F576F37553 /* WaveReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 78F76570E3831012D0307BD9 /* WaveReviewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,10 +90,12 @@
 		68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatTapGuard.swift; sourceTree = "<group>"; };
 		6CBCC9927A389B44BBE4DDFB /* RoomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomView.swift; sourceTree = "<group>"; };
 		746B8699332625989FCA280E /* BandOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandOption.swift; sourceTree = "<group>"; };
+		78F76570E3831012D0307BD9 /* WaveReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveReviewTests.swift; sourceTree = "<group>"; };
 		7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7CE467721E15337452098FA6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugFixtures.swift; sourceTree = "<group>"; };
 		8DA8AE8523FCF080E183C3DB /* ScreenScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenScaffold.swift; sourceTree = "<group>"; };
+		96962722D76B8F0E74958F48 /* WaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveView.swift; sourceTree = "<group>"; };
 		973C8D800835EE14440BF5B3 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadyForCheckInView.swift; sourceTree = "<group>"; };
 		9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 				C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */,
 				3FC2D6B016804A7082CC2DC1 /* RoomReviewTests.swift */,
 				50A5C3A70DB9F979B11AA344 /* SignalReviewTests.swift */,
+				78F76570E3831012D0307BD9 /* WaveReviewTests.swift */,
 				01B042CE5C13665A2DF282D5 /* WelcomeReviewTests.swift */,
 				DF0CD69B687C2A33D9C4C25A /* WristbandReviewTests.swift */,
 			);
@@ -255,6 +260,7 @@
 				993598AB6A61AA9E0B3998C1 /* ReadyForCheckInView.swift */,
 				6CBCC9927A389B44BBE4DDFB /* RoomView.swift */,
 				BCE0E9C34F158759B57E69D4 /* SignalView.swift */,
+				96962722D76B8F0E74958F48 /* WaveView.swift */,
 				9ABF3BD46AC41BEDAD1E2019 /* WelcomeView.swift */,
 				BF0F93D4AD9E51DA2E0553E8 /* WristbandView.swift */,
 			);
@@ -377,6 +383,7 @@
 				F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */,
 				ABB887D0441BA7D39FA9A024 /* RoomReviewTests.swift in UISources */,
 				2C4569A07025A8AA82A26E01 /* SignalReviewTests.swift in UISources */,
+				FC40C26B8ACD55F576F37553 /* WaveReviewTests.swift in UISources */,
 				02B1992E645740A203CDB235 /* WelcomeReviewTests.swift in UISources */,
 				5BE49265F51E5ED7897F160B /* WristbandReviewTests.swift in UISources */,
 			);
@@ -415,6 +422,7 @@
 				AD05325380AB6EA9B6FCB5A2 /* ReadyForCheckInView.swift in Sources */,
 				3D6DB46F672571395E246748 /* RoomView.swift in Sources */,
 				45BB5FAFF3AD55DACD5C6351 /* SignalView.swift in Sources */,
+				F1442D9D2AECBE5EF87BAD62 /* WaveView.swift in Sources */,
 				5C420BEF23E3F9027C17A184 /* WelcomeView.swift in Sources */,
 				7E294903C0C1CE50B44A2249 /* WristbandView.swift in Sources */,
 			);

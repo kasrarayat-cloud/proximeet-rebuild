@@ -49,6 +49,12 @@
          <TestPlanReference
             reference = "container:TestPlans/RoomVerificationSmall.xctestplan">
          </TestPlanReference>
+         <TestPlanReference
+            reference = "container:TestPlans/WaveVerificationMain.xctestplan">
+         </TestPlanReference>
+         <TestPlanReference
+            reference = "container:TestPlans/WaveVerificationSmall.xctestplan">
+         </TestPlanReference>
       </TestPlans>
    </TestAction>
    <LaunchAction

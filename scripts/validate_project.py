@@ -43,8 +43,18 @@ CATALOG = RESOURCES_DIR / "Assets.xcassets"
 PRIVACY = RESOURCES_DIR / "PrivacyInfo.xcprivacy"
 PACKAGE_NAME = "ProximeetDomain"
 PACKAGE_TEST_TARGET = "ProximeetDomainTests"
-# The scheme's test plans, in order; the first is the default (check 7).
-EXPECTED_TEST_PLANS = ("TestPlans/RoomVerificationMain.xctestplan", "TestPlans/RoomVerificationSmall.xctestplan")
+# The scheme's test plans, in order; the first is the default (check 7). The Room plans keep the verified
+# Room commit 1a5f97e's order, options and UI selections; RoomVerificationMain adds two source-reading-test
+# skips (chapter 09). The Wave plans (chapter 09) are only listed after them.
+EXPECTED_TEST_PLANS = ("TestPlans/RoomVerificationMain.xctestplan", "TestPlans/RoomVerificationSmall.xctestplan",
+                       "TestPlans/WaveVerificationMain.xctestplan", "TestPlans/WaveVerificationSmall.xctestplan")
+# Review classes whose skip flag a plan must set when it selects any of their tests, named here as well as
+# read from the class's `reviewFlag = "…"` declaration, so a renamed or reworded declaration cannot quietly
+# turn the check off: without its flag the class skips itself, and a skipped test is not a pass (check 7).
+REQUIRED_PLAN_FLAGS = {"RoomReviewTests": "PROXIMEET_ROOM_REVIEW", "WaveReviewTests": "PROXIMEET_WAVE_REVIEW"}
+# Classes whose every test method must be selected by at least one scheme plan: the chapter's own native
+# verification leaves none of them out (docs/verification/wave-xcode-cloud-manifest.tsv, check 7).
+COMPLETE_PLAN_CLASSES = ("RoomReviewTests", "WaveReviewTests")
 APP_TARGET = "Proximeet"
 UI_TEST_TARGET = "ProximeetUITests"
 EXPECTED_BUNDLE_ID = "com.goseng.proximeet"
@@ -672,8 +682,11 @@ def _test_sources(container: str, name: str) -> list[Path]:
 
 
 def check_test_plan(c: Check, reference: str, targets: dict[str, dict],
-                    manifest_targets: dict[str, str]) -> list[tuple[str, str]]:
-    """Validate one scheme test plan; return its testables as (name, container)."""
+                    manifest_targets: dict[str, str],
+                    selected: dict[str, set[str]] | None = None) -> list[tuple[str, str]]:
+    """Validate one scheme test plan; return its testables as (name, container).
+
+    `selected`, when given, collects every UI test method the plan selects, by class."""
     path = ROOT / reference[len("container:"):]
     if not c.require(reference.startswith("container:") and v_is_file(path), f"test plan {reference} missing"):
         return []
@@ -724,9 +737,16 @@ def check_test_plan(c: Check, reference: str, targets: dict[str, dict],
             c.require(method is None or re.search(rf"\bfunc\s+{method}\(", text) is not None,
                       f"{label}: {owner} has no func {method}(")
             flag = re.search(r'reviewFlag\s*=\s*"(PROXIMEET_\w+)"', text)
-            if test in entry.get("selectedTests", []) and flag:
+            required_flag = REQUIRED_PLAN_FLAGS.get(owner)
+            if test in entry.get("selectedTests", []):
                 # Without its flag the class skips itself, and a skipped test is not a pass.
-                c.require(environment.get(flag.group(1)) == "1", f"{label}: {owner} needs {flag.group(1)}=1")
+                flags = ({flag.group(1)} if flag else set()) | ({required_flag} if required_flag else set())
+                for name_of_flag in sorted(flags):
+                    c.require(environment.get(name_of_flag) == "1", f"{label}: {owner} needs {name_of_flag}=1")
+                if required_flag:
+                    c.require(f'"{required_flag}"' in text, f"{label}: {owner} does not read {required_flag}")
+            if selected is not None and method is not None and test in entry.get("selectedTests", []):
+                selected.setdefault(owner, set()).add(method)
         c.note(f"{label}: {name}, {len(entry.get('selectedTests', []))} selected, "
                f"{len(entry.get('skippedTests', []))} skipped")
     return testables
@@ -777,9 +797,10 @@ def check_scheme(ctx: Context, c: Check) -> None:
                    for ref in entry.iter("BuildableReference")]
     c.require(APP_TARGET in build_names, "BuildAction does not build the app")
     c.require(UI_TEST_TARGET in build_names, "BuildAction does not build the UI test bundle")
-    # The Test action runs committed test plans (Room verification in Xcode Cloud,
-    # docs/verification/room-xcode-cloud-verification.md), so the testables live in the plans: one
-    # source of truth, never a scheme list beside them and never an autocreated plan.
+    # The Test action runs committed test plans (Room and Wave verification in Xcode Cloud,
+    # docs/verification/room-xcode-cloud-verification.md and wave-xcode-cloud-verification.md), so the
+    # testables live in the plans: one source of truth, never a scheme list beside them and never an
+    # autocreated plan.
     test_action = scheme.find("TestAction")
     c.require(test_action is not None and test_action.find("Testables") is None
               and test_action.get("shouldAutocreateTestPlan") is None,
@@ -791,8 +812,39 @@ def check_scheme(ctx: Context, c: Check) -> None:
     c.require([default for _, default in plans] == [True] + [False] * (len(plans) - 1),
               f"{EXPECTED_TEST_PLANS[0]} must be the one default test plan")
     testables: list[tuple[str, str]] = []
+    selected: dict[str, set[str]] = {}
     for reference, _ in plans:
-        testables += check_test_plan(c, reference, targets, manifest_targets)
+        testables += check_test_plan(c, reference, targets, manifest_targets, selected)
+    # Every plan runs under the verified Room plans' options (coverage off, 900/1200-s allowances,
+    # timeouts on, en/US, captures kept): only the environment may differ, and only by adding flags,
+    # so a later chapter's plan can never run a test under weaker settings than the Room's.
+    loaded = []
+    for reference, _ in plans:
+        path = ROOT / reference[len("container:"):]
+        try:
+            loaded.append((path.name, json.loads(v_read_text(path)).get("defaultOptions", {})))
+        except (OSError, ValueError):
+            continue  # already reported by check_test_plan
+    if loaded:
+        base_label, base = loaded[0]
+        base_environment = {(entry.get("key"), entry.get("value"))
+                            for entry in base.get("environmentVariableEntries", [])}
+        for label, options in loaded[1:]:
+            others = {key: value for key, value in options.items() if key != "environmentVariableEntries"}
+            c.require(others == {key: value for key, value in base.items() if key != "environmentVariableEntries"},
+                      f"{label}: defaultOptions differ from {base_label} beyond its environment")
+            environment = {(entry.get("key"), entry.get("value"))
+                           for entry in options.get("environmentVariableEntries", [])}
+            c.require(base_environment <= environment, f"{label}: drops {sorted(base_environment - environment)}")
+    texts = [source.read_text(encoding="utf-8") for source in _test_sources("container:Proximeet.xcodeproj", "")]
+    for owner in COMPLETE_PLAN_CLASSES:
+        declared = [text for text in texts if re.search(rf"\bclass\s+{owner}\s*:", text)]
+        if not c.require(len(declared) == 1, f"class {owner} is not declared once in {UI_TEST_TARGET}"):
+            continue
+        methods = set(re.findall(r"\bfunc\s+(test\w*)\s*\(", declared[0]))
+        missing = sorted(methods - selected.get(owner, set()))
+        c.require(not missing, f"{owner}: no test plan selects {missing}")
+        c.note(f"{owner}: all {len(methods)} test methods selected by the plans")
     c.require((PACKAGE_TEST_TARGET, f"container:{PACKAGE_NAME}") in testables,
               f"no test plan includes {PACKAGE_TEST_TARGET}")
     c.require((UI_TEST_TARGET, "container:Proximeet.xcodeproj") in testables,
@@ -1061,8 +1113,10 @@ APPROVED_COPY_EXCEPTIONS = {
     # checked in by the demo.
     "Introductions appear only when a venue session has enough people checked in.": "checked in",
 }
-# Domain sources that hold visible copy, scanned for dishonest copy like the app's own sources.
-COPY_SOURCES = ("ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift",)
+# Domain sources that hold visible copy, scanned for dishonest copy like the app's own sources. WaveDemo.swift
+# holds the approved Wave copy (chapter 09, Figma page 74:567); none of it needs an exception above.
+COPY_SOURCES = ("ProximeetDomain/Sources/ProximeetDomain/RoomDemo.swift",
+                "ProximeetDomain/Sources/ProximeetDomain/WaveDemo.swift")
 # Built by concatenation so this file does not match its own repository scan.
 REPOSITORY_PATTERNS = (
     ("legacy bundle identifier", re.compile(re.escape("app.projecthalo" + ".lab"))),
@@ -1222,18 +1276,77 @@ SCANNER_EXPECTED = [
 ]
 
 
+# The Wave (chapter 09) is a fictional, local demo: nothing is sent, delivered, timed or logged. Its two
+# sources are held to a stricter list on top of the app-wide one: no clock, scheduling, notification or
+# logging API in code, and no delivery or presence claim in copy.
+WAVE_SOURCES = ("Proximeet/Scenes/WaveView.swift", "ProximeetDomain/Sources/ProximeetDomain/WaveDemo.swift")
+WAVE_APIS = ("Date(", "Date.now", "Clock", "DispatchQueue", ".delay(", "NotificationCenter", "print(",
+             "Logger", "os_log", "NSLog")
+WAVE_API_PATTERNS = tuple((token, re.compile(re.escape(token))) for token in WAVE_APIS)
+WAVE_PHRASES = ("delivered", "online now", "read receipt", "typing", "notified")
+
+
+def scan_wave(text: str) -> list[tuple[int, str]]:
+    """[(line, finding)] for the Wave-only APIs (comments ignored) and phrases (literals only)."""
+    code, literals = lex_swift(text)
+    findings: list[tuple[int, str]] = []
+    for number, line in enumerate(code.split("\n"), start=1):
+        for token, pattern in WAVE_API_PATTERNS:
+            if pattern.search(line):
+                findings.append((number, f"Wave forbids {token!r}"))
+    for start_line, literal in literals:
+        lowered = literal.lower()
+        for phrase in WAVE_PHRASES:
+            index = lowered.find(phrase)
+            if index >= 0:
+                findings.append((start_line + literal.count("\n", 0, index),
+                                 f"Wave copy claims {phrase!r} in {literal.strip()[:60]!r}"))
+    return findings
+
+
+WAVE_FIXTURE = (
+    "// Nothing is delivered and no Clock is read; a comment may say so.\n"
+    "let now = Date.now\n"
+    "withAnimation(.easeOut(duration: 0.8).delay(0.2)) { joined = true }\n"
+    'let a = Text("Wave delivered")\n'
+    'let b = Text("Nothing is sent.")\n'
+    "let clock = ContinuousClock()\n"
+)
+WAVE_EXPECTED = [
+    (2, "Wave forbids 'Date.now'"),
+    (3, "Wave forbids '.delay('"),
+    (4, "Wave copy claims 'delivered' in 'Wave delivered'"),
+    (6, "Wave forbids 'Clock'"),
+]
+
+
 @check(11, "guardrails: no persistence/network/tracking/timing APIs or dishonest copy")
 def check_guardrails(ctx: Context, c: Check) -> None:
     self_test = sorted(scan_swift(SCANNER_FIXTURE))
     c.require(self_test == SCANNER_EXPECTED,
               f"scanner self-test mismatch: got {self_test}, expected {SCANNER_EXPECTED}")
     swift_files = sorted(APP_DIR.rglob("*.swift")) if APP_DIR.is_dir() else []
-    swift_files += [ROOT / name for name in COPY_SOURCES if (ROOT / name).is_file()]
+    for name in COPY_SOURCES:
+        # A moved or renamed copy source would otherwise drop out of the scan without a word.
+        if c.require((ROOT / name).is_file(), f"copy source {name} missing"):
+            swift_files.append(ROOT / name)
     for path in swift_files:
         for number, finding in scan_swift(path.read_text(encoding="utf-8")):
             c.fail(f"{rel(path)}:{number}: {finding}")
     c.note(f"scanner self-test passed; scanned {len(swift_files)} Swift file(s) under Proximeet/ and the domain copy sources"
            if self_test == SCANNER_EXPECTED else f"scanned {len(swift_files)} Swift file(s)")
+    wave_test = sorted(scan_wave(WAVE_FIXTURE))
+    c.require(wave_test == WAVE_EXPECTED,
+              f"Wave scanner self-test mismatch: got {wave_test}, expected {WAVE_EXPECTED}")
+    wave_scanned = 0
+    for name in WAVE_SOURCES:
+        if c.require((ROOT / name).is_file(), f"Wave source {name} missing"):
+            wave_scanned += 1
+            for number, finding in scan_wave((ROOT / name).read_text(encoding="utf-8")):
+                c.fail(f"{name}:{number}: {finding}")
+    c.note(f"Wave scanner self-test passed; {wave_scanned} Wave source(s) free of clock, scheduling, notification "
+           "and logging APIs and of delivery or presence copy" if wave_test == WAVE_EXPECTED
+           else f"scanned {wave_scanned} Wave source(s)")
     scanned = 0
     for directory, subdirectories, files in os.walk(ROOT):
         subdirectories[:] = sorted(d for d in subdirectories if d not in REPOSITORY_SKIP_DIRS)

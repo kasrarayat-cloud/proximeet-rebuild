@@ -302,6 +302,32 @@ final class DemoSession {
         return true
     }
 
+    // MARK: - Approved Wave (chapter 09)
+
+    /// The Wave demo of the current Room run, if one is open (or, after a Leave made from it, its ended
+    /// record). It lives inside the run, so the run's identity, phase, one blocked set and Leave are the
+    /// Wave's too; nothing here copies them.
+    var wave: WaveDemo? { room?.run?.wave }
+
+    /// "Preview Wave demo" on an eligible same-intent Room profile: the Wave's menu (74:568), nothing
+    /// started. The viewer's name is the actual Guest List name, as the card shows it (edges trimmed),
+    /// read once here; the Guest List cannot change while the explanation is current. The run decides
+    /// everything else and never resets its identity, phase or blocks; a stale run changes nothing.
+    @discardableResult
+    func openWaveDemo(_ id: RoomRunID) -> Bool {
+        guard let name = flow.draft.introduction.card?.name else { return false }
+        return updateRoomRun(id) { $0.openWaveDemo(viewerName: name) }
+    }
+
+    /// One Wave control, applied only to the run it was drawn for, after the Places and Room eligibility
+    /// is re-checked (`updateRoomRun` reconciles first). The domain re-checks the Wave's own guards at
+    /// that moment, so a late, repeated or stale tap changes nothing. Leave is the Room's own
+    /// `updateRoomRun(id) { $0.leave() }`, and Return to Places is `returnToPlacesFromRoom()`.
+    @discardableResult
+    func performWave(_ id: RoomRunID, _ action: WaveAction) -> Bool {
+        updateRoomRun(id) { $0.perform(action) }
+    }
+
     #if DEBUG
     /// DEBUG fixtures only: open the next Guest List on its card, as if Preview my card had been
     /// pressed. Read once.

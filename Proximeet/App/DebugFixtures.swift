@@ -24,7 +24,7 @@ import ProximeetDomain
 ///     -ProximeetRoomBlocked maya | jules | maya-jules | jules-maya   (the order the blocks are applied)
 ///     -ProximeetRoomTab people | notes
 ///     -ProximeetRoomProfile maya | jules
-///     -ProximeetRoomPanel global-safety | actor-safety | report | wave-info
+///     -ProximeetRoomPanel global-safety | actor-safety | report
 ///     -ProximeetRoomReason unwantedAttention | harassment | somethingElse
 ///
 /// The Room fixtures (chapter 08) continue from `place-explanation` (so they need an explicit Social or
@@ -33,7 +33,40 @@ import ProximeetDomain
 /// populated example. Blocks are applied through each actor's profile safety, in the order given; the tab,
 /// the profile and the panel are opened as a guest would open them. A step the app would refuse is
 /// refused here too (for example an ineligible intent stays on the detail). They are direct launches for
-/// captures, never a real journey.
+/// captures, never a real journey. (Chapter 09 removed `-ProximeetRoomPanel wave-info` with the Wave
+/// information panel 66:134 it opened: the same-intent profile's action now opens the Wave.)
+///     -ProximeetFixture wave-menu | wave-out-confirm | wave-out-pending | wave-out-withdrawn |
+///                       wave-in-review | wave-in-declined | wave-in-accepted | wave-in-withdrawn |
+///                       wave-unavailable | wave-blocked | wave-allowance-unavailable | wave-session-ended
+///     -ProximeetWaveFrom out-pending | in-review | in-accepted                  (wave-unavailable; in-review)
+///                        out-confirm | out-pending | in-review | in-accepted    (wave-blocked; out-pending)
+///                        any other Wave screen's name, demo-menu by default     (wave-session-ended)
+///     -ProximeetWaveAfterBlock menu | start-outgoing | start-incoming | no-allowance | room   (wave-blocked)
+///     -ProximeetWavePanel global-safety | safety | report | chat-info | conditions
+///     -ProximeetWaveReason unwantedAttention | harassment | somethingElse    (with report)
+///     -ProximeetFixtureName <text>
+///
+/// The Wave fixtures (chapter 09) take the Room's own path first (so they too need an explicit Social or
+/// Business band and an approach): Preview room demo, Enter room demo, Show populated example and any
+/// `-ProximeetRoomBlocked` blocks, then the counterpart's profile (Maya for Social, Jules for Business)
+/// and Preview Wave demo, and from the menu exactly the Wave controls a guest would press to reach the
+/// named screen. A counterpart blocked in the Room first stays blocked: its card and profile are gone, so
+/// the fixture stops on the filtered People, as the app would. `wave-blocked` blocks the counterpart
+/// from the counterpart's safety over `-ProximeetWaveFrom`; `-ProximeetWaveAfterBlock` then goes back
+/// to the menu and (for the three starts) starts a new example, which shows the generic blocked screen
+/// again with no identity, or (`room`) closes the Wave from its menu to the Room's filtered People, where
+/// `-ProximeetRoomTab` may then choose Room notes. `-ProximeetWavePanel` opens one overlay on the screen
+/// reached, as its chrome, Demo cases or About private chat would (`global-safety` only where the shield
+/// opens the global safety, `safety` and `report` only where it opens the counterpart's); an overlay
+/// the design does not offer there is refused and the fixture stays on the screen. `wave-session-ended`
+/// leaves from `-ProximeetWaveFrom` (the menu by default). A `-ProximeetWaveFrom` or
+/// `-ProximeetWaveAfterBlock` value not listed for the stage is refused: the fixture stays on the menu
+/// (or on the blocked screen), never on a default the capture did not ask for.
+///
+/// `-ProximeetFixtureName` gives the fictional Guest List example another name, exactly as written, on
+/// every fixture that enters the example (for long names and the largest text sizes); the Wave reads it
+/// as the actual Guest List name, like any typed name. A name the Guest List would not preview stops the
+/// fixture on the Guest List, as the app would.
 ///     -ProximeetReduceMotionPreview YES
 ///     -ProximeetPlacesKeepContentPop YES
 ///
@@ -51,21 +84,28 @@ enum DebugLaunch {
         let band = value(after: "-ProximeetFixtureBand", in: arguments).flatMap(BandIntent.init(rawValue:))
         let signal = value(after: "-ProximeetFixtureSignal", in: arguments).flatMap(ApproachSignal.init(rawValue:))
         let category = value(after: "-ProximeetFixtureCategory", in: arguments).flatMap(PlaceCategory.init(rawValue:))
+        let guestName = value(after: "-ProximeetFixtureName", in: arguments)
         if stage == .signal || stage == .signalSelected {
             guard let band, stage == .signal || signal != nil else { return nil }
-            return PreviewFixtures.session(at: stage, band: band, signal: signal ?? .chatFirst)
+            return PreviewFixtures.session(at: stage, band: band, signal: signal ?? .chatFirst, name: guestName)
         }
         if PreviewFixtures.Stage.placesStages.contains(stage) {
             guard let band, let signal else { return nil }
-            return PreviewFixtures.session(at: stage, band: band, signal: signal, category: category ?? .now)
+            return PreviewFixtures.session(at: stage, band: band, signal: signal, category: category ?? .now, name: guestName)
         }
         if PreviewFixtures.Stage.roomStages.contains(stage) {
             guard let band, let signal else { return nil }
-            let session = PreviewFixtures.session(at: .placeExplanation, band: band, signal: signal)
+            let session = PreviewFixtures.session(at: .placeExplanation, band: band, signal: signal, name: guestName)
             RoomFixture.apply(stage, to: session, arguments: arguments)
             return session
         }
-        return PreviewFixtures.session(at: stage, band: band ?? .social, signal: signal ?? .chatFirst)
+        if let screen = PreviewFixtures.Stage.waveScreens[stage] {
+            guard let band, let signal else { return nil }
+            let session = PreviewFixtures.session(at: .placeExplanation, band: band, signal: signal, name: guestName)
+            WaveFixture.apply(screen, to: session, arguments: arguments)
+            return session
+        }
+        return PreviewFixtures.session(at: stage, band: band ?? .social, signal: signal ?? .chatFirst, name: guestName)
     }
 
     static func prefersReducedMotionPreview(arguments: [String]) -> Bool {
@@ -133,6 +173,20 @@ enum PreviewFixtures {
         case roomWaiting = "room-waiting"
         case roomPopulated = "room-populated"
         case roomEnded = "room-ended"
+        /// The Wave (chapter 09) above the counterpart's Room profile: its menu and each of its screens,
+        /// reached from the menu through the Wave's own controls (see `WaveFixture`).
+        case waveMenu = "wave-menu"
+        case waveOutgoingConfirm = "wave-out-confirm"
+        case waveOutgoingPending = "wave-out-pending"
+        case waveOutgoingWithdrawn = "wave-out-withdrawn"
+        case waveIncomingReview = "wave-in-review"
+        case waveIncomingDeclined = "wave-in-declined"
+        case waveIncomingAccepted = "wave-in-accepted"
+        case waveIncomingWithdrawn = "wave-in-withdrawn"
+        case waveUnavailable = "wave-unavailable"
+        case waveBlocked = "wave-blocked"
+        case waveAllowanceUnavailable = "wave-allowance-unavailable"
+        case waveSessionEnded = "wave-session-ended"
         /// Legacy, unapproved later scenes, reached through the legacy route for their captures.
         case band
         case bandSelected = "band-selected"
@@ -142,6 +196,14 @@ enum PreviewFixtures {
         static let placesStages: Set<Stage> = [.places, .placeDetail, .placeExplanation]
         /// The Room stages.
         static let roomStages: Set<Stage> = [.roomEntry, .roomWaiting, .roomPopulated, .roomEnded]
+        /// The Wave stages, each with the approved Wave screen it reaches (all twelve, 74:568–74:579).
+        static let waveScreens: [Stage: WaveScreen] = [
+            .waveMenu: .menu, .waveOutgoingConfirm: .outgoingConfirm, .waveOutgoingPending: .outgoingPending,
+            .waveOutgoingWithdrawn: .outgoingWithdrawn, .waveIncomingReview: .incomingReview,
+            .waveIncomingDeclined: .incomingDeclined, .waveIncomingAccepted: .incomingAccepted,
+            .waveIncomingWithdrawn: .incomingWithdrawn, .waveUnavailable: .unavailable, .waveBlocked: .blocked,
+            .waveAllowanceUnavailable: .allowanceUnavailable, .waveSessionEnded: .sessionEnded,
+        ]
     }
 
     static let firstName = "Alex"
@@ -155,13 +217,24 @@ enum PreviewFixtures {
         interests: GuestIntroduction.Interest.allCases
     )
 
+    /// The approved example under `name` (DEBUG `-ProximeetFixtureName`), exactly as given; the example
+    /// itself when there is none.
+    static func exampleIntroduction(named name: String?) -> GuestIntroduction {
+        var introduction = exampleIntroduction
+        if let name {
+            introduction.name = name
+        }
+        return introduction
+    }
+
     static func session(
         at stage: Stage,
         band: BandIntent = .social,
         signal: ApproachSignal = .chatFirst,
-        category: PlaceCategory = .now
+        category: PlaceCategory = .now,
+        name: String? = nil
     ) -> DemoSession {
-        let session = DemoSession(flow: flow(at: stage, band: band, signal: signal, category: category))
+        let session = DemoSession(flow: flow(at: stage, band: band, signal: signal, category: category, name: name))
         // The Guest List below a Wristband, Signal or Places fixture shows its card too, as on the
         // real route.
         session.fixtureOpensGuestListCard = [.guestListCard, .guestListNameOnly, .wristband, .wristbandSocial,
@@ -171,7 +244,7 @@ enum PreviewFixtures {
     }
 
     static func flow(at stage: Stage, band: BandIntent, signal: ApproachSignal,
-                     category: PlaceCategory = .now) -> DemoFlow {
+                     category: PlaceCategory = .now, name: String? = nil) -> DemoFlow {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         // Midday UTC, so the fixture birthday is 17 May in every time zone within ±11 h.
@@ -210,13 +283,13 @@ enum PreviewFixtures {
             flow.continueFromCompletedPass(demo)
             switch stage {
             case .guestListFilled, .guestListCard:
-                flow.editIntroduction { $0 = exampleIntroduction }
+                flow.editIntroduction { $0 = exampleIntroduction(named: name) }
             case .guestListNameOnly:
-                flow.editIntroduction { $0.name = exampleIntroduction.name }
+                flow.editIntroduction { $0.name = exampleIntroduction(named: name).name }
             case .wristband, .wristbandSocial, .wristbandDating, .wristbandBusiness, .wristbandActivity,
                  .signal, .signalSelected, .places, .placeDetail, .placeExplanation:
                 // Through the card's Continue preview, as a guest would reach it.
-                flow.editIntroduction { $0 = exampleIntroduction }
+                flow.editIntroduction { $0 = exampleIntroduction(named: name) }
                 var card = GuestListDemo()
                 card.preview(flow.draft.introduction)
                 flow.continueFromGuestListCard(card)
@@ -282,17 +355,7 @@ enum RoomFixture {
             session.updateRoomRun(id) { $0.leave() }
         case .roomPopulated:
             session.updateRoomRun(id) { $0.showPopulatedExample() }
-            let blocked: [RoomActor]
-            switch DebugLaunch.value(after: "-ProximeetRoomBlocked", in: arguments) {
-            case "maya": blocked = [.maya]
-            case "jules": blocked = [.jules]
-            case "maya-jules": blocked = [.maya, .jules]
-            case "jules-maya": blocked = [.jules, .maya]
-            default: blocked = []
-            }
-            for actor in blocked {
-                session.updateRoomRun(id) { $0.openProfile(actor) && $0.openActorSafety(actor) && $0.block(actor) }
-            }
+            applyBlocks(to: session, run: id, arguments: arguments)
             let tab = DebugLaunch.value(after: "-ProximeetRoomTab", in: arguments).flatMap(RoomTab.init(rawValue:))
             if let tab {
                 session.updateRoomRun(id) { $0.selectTab(tab) }
@@ -314,11 +377,184 @@ enum RoomFixture {
                     .flatMap(RoomReportReason.init(rawValue:)) {
                     session.updateRoomRun(id) { $0.selectReportReason(reason) }
                 }
-            case "wave-info":
-                session.updateRoomRun(id) { $0.openWaveInfo() }
             default:
                 break
             }
+        default:
+            break
+        }
+    }
+
+    /// `-ProximeetRoomBlocked`: each actor blocked through their profile's safety, in the order given.
+    static func applyBlocks(to session: DemoSession, run id: RoomRunID, arguments: [String]) {
+        let blocked: [RoomActor]
+        switch DebugLaunch.value(after: "-ProximeetRoomBlocked", in: arguments) {
+        case "maya": blocked = [.maya]
+        case "jules": blocked = [.jules]
+        case "maya-jules": blocked = [.maya, .jules]
+        case "jules-maya": blocked = [.jules, .maya]
+        default: blocked = []
+        }
+        for actor in blocked {
+            session.updateRoomRun(id) { $0.openProfile(actor) && $0.openActorSafety(actor) && $0.block(actor) }
+        }
+    }
+}
+
+/// The Wave fixtures (chapter 09): the Room's own path to the counterpart's profile, Preview Wave demo,
+/// then only the Wave controls a guest would press, each through `DemoSession.performWave` and so through
+/// every guard the app itself applies. Nothing sets a Wave state directly; a step the app refuses stops
+/// the fixture where the app would stop.
+enum WaveFixture {
+    static func apply(_ screen: WaveScreen, to session: DemoSession, arguments: [String]) {
+        // Preview room demo, Enter room demo, Show populated example and any Room blocks, as for
+        // `room-populated`.
+        guard session.previewRoomDemo(), let id = session.enterRoomDemo(),
+              session.updateRoomRun(id, { $0.showPopulatedExample() }),
+              let run = session.room?.run
+        else { return }
+        RoomFixture.applyBlocks(to: session, run: id, arguments: arguments)
+        // The sample of the guest's own intent (Maya for Social, Jules for Business): the one profile whose
+        // action is Preview Wave demo. Blocked in the Room first, it has no card, so this stops on People.
+        guard let counterpart = RoomActor.allCases.first(where: { run.profileAction(for: $0) == .previewWaveDemo }),
+              session.updateRoomRun(id, { $0.openProfile(counterpart) }),
+              session.openWaveDemo(id)
+        else { return }
+
+        let from = DebugLaunch.value(after: "-ProximeetWaveFrom", in: arguments)
+        /// The screen `-ProximeetWaveFrom` names when it is one of `allowed`, `fallback` without the argument,
+        /// and nil for any other value (refused: the fixture stays on the menu).
+        func origin(_ allowed: Set<WaveScreen>, _ fallback: WaveScreen) -> WaveScreen? {
+            guard let from else { return fallback }
+            return WaveScreen(rawValue: from).flatMap { allowed.contains($0) ? $0 : nil }
+        }
+        switch screen {
+        case .unavailable:
+            // Demo cases → Show expired example, over a pending or accepted invitation.
+            guard let start = origin([.outgoingPending, .incomingReview, .incomingAccepted], .incomingReview),
+                  reach(start, session: session, run: id), let invitation = session.wave?.invitation?.id,
+                  session.performWave(id, .openConditions(invitation))
+            else { return }
+            session.performWave(id, .showExpired(invitation))
+        case .blocked:
+            // "Block [Name] in demo" on the counterpart's safety over an active invitation.
+            guard let start = origin([.outgoingConfirm, .outgoingPending, .incomingReview, .incomingAccepted],
+                                     .outgoingPending),
+                  reach(start, session: session, run: id), session.performWave(id, .openSafety(from: start)),
+                  session.performWave(id, .blockCounterpart)
+            else { return }
+            afterBlock(session: session, run: id, arguments: arguments)
+        case .sessionEnded:
+            // Leave and disappear, from the menu or from the given screen (its overlays, if any, are not
+            // opened first: Leave from an overlay ends the same way).
+            guard let start = origin(Set(WaveScreen.allCases).subtracting([.sessionEnded]), .menu),
+                  reach(start, session: session, run: id)
+            else { return }
+            session.updateRoomRun(id) { $0.leave() }
+        default:
+            guard reach(screen, session: session, run: id) else { return }
+        }
+        openPanel(session: session, run: id, arguments: arguments)
+    }
+
+    /// From the menu to `screen` through the Wave's own controls, by the default path (`unavailable` from
+    /// an incoming review, `blocked` from an outgoing pending invitation); `apply` takes the other paths
+    /// `-ProximeetWaveFrom` names. The ended screen is reached by Leave, never from here.
+    @discardableResult
+    private static func reach(_ screen: WaveScreen, session: DemoSession, run id: RoomRunID) -> Bool {
+        /// The current invitation's identity, read afresh at each step (each start issues a new one).
+        func current(_ action: (WaveInvitationID) -> WaveAction) -> Bool {
+            guard let invitation = session.wave?.invitation?.id else { return false }
+            return session.performWave(id, action(invitation))
+        }
+        let done: Bool
+        switch screen {
+        case .menu:
+            done = true
+        case .outgoingConfirm:
+            done = session.performWave(id, .startOutgoing)
+        case .outgoingPending:
+            done = session.performWave(id, .startOutgoing) && current { .send($0) }
+        case .outgoingWithdrawn:
+            done = session.performWave(id, .startOutgoing) && current { .send($0) } && current { .withdraw($0) }
+        case .incomingReview:
+            done = session.performWave(id, .startIncoming)
+        case .incomingAccepted:
+            done = session.performWave(id, .startIncoming) && current { .accept($0) }
+        case .incomingDeclined:
+            done = session.performWave(id, .startIncoming) && current { .decline($0) }
+        case .incomingWithdrawn:
+            done = session.performWave(id, .startIncoming) && current { .openConditions($0) }
+                && current { .showSenderWithdrawn($0) }
+        case .unavailable:
+            done = session.performWave(id, .startIncoming) && current { .openConditions($0) }
+                && current { .showExpired($0) }
+        case .allowanceUnavailable:
+            done = session.performWave(id, .showNoAllowance)
+        case .blocked:
+            done = session.performWave(id, .startOutgoing) && current { .send($0) }
+                && session.performWave(id, .openSafety(from: .outgoingPending))
+                && session.performWave(id, .blockCounterpart)
+        case .sessionEnded:
+            done = false
+        }
+        return done && session.wave?.screen == screen
+    }
+
+    /// `-ProximeetWaveAfterBlock`: what the guest does next on the blocked screen (74:576). Back to demo
+    /// menu, and then optionally a new start, which the blocked counterpart turns into the same generic
+    /// blocked screen with no identity; or `room`, the outer Back from the menu to the Room's filtered
+    /// People (the Wave's only way back to the Room), with `-ProximeetRoomTab` after it.
+    private static func afterBlock(session: DemoSession, run id: RoomRunID, arguments: [String]) {
+        guard let next = DebugLaunch.value(after: "-ProximeetWaveAfterBlock", in: arguments),
+              ["menu", "start-outgoing", "start-incoming", "no-allowance", "room"].contains(next),
+              session.performWave(id, .backToMenu(from: .blocked))
+        else { return }
+        switch next {
+        case "start-outgoing":
+            session.performWave(id, .startOutgoing)
+        case "start-incoming":
+            session.performWave(id, .startIncoming)
+        case "no-allowance":
+            session.performWave(id, .showNoAllowance)
+        case "room":
+            guard session.roomOuterBack() == .closedLevel else { return }
+            if let tab = DebugLaunch.value(after: "-ProximeetRoomTab", in: arguments).flatMap(RoomTab.init(rawValue:)) {
+                session.updateRoomRun(id) { $0.selectTab(tab) }
+            }
+        default:
+            break
+        }
+    }
+
+    /// `-ProximeetWavePanel`: one overlay on the screen reached, opened by the control that opens it there.
+    private static func openPanel(session: DemoSession, run id: RoomRunID, arguments: [String]) {
+        guard let panel = DebugLaunch.value(after: "-ProximeetWavePanel", in: arguments),
+              let wave = session.wave
+        else { return }
+        let screen = wave.screen
+        let invitation = wave.invitation?.id
+        switch panel {
+        case "global-safety":
+            guard screen.safety == .globalSafety else { return }
+            session.performWave(id, .openSafety(from: screen))
+        case "safety":
+            guard screen.safety == .counterpartSafety else { return }
+            session.performWave(id, .openSafety(from: screen))
+        case "report":
+            guard screen.safety == .counterpartSafety, session.performWave(id, .openSafety(from: screen)),
+                  session.performWave(id, .previewReport)
+            else { return }
+            if let reason = DebugLaunch.value(after: "-ProximeetWaveReason", in: arguments)
+                .flatMap(RoomReportReason.init(rawValue:)) {
+                session.performWave(id, .selectReportReason(reason))
+            }
+        case "chat-info":
+            guard let invitation else { return }
+            session.performWave(id, .openChatInformation(invitation))
+        case "conditions":
+            guard let invitation else { return }
+            session.performWave(id, .openConditions(invitation))
         default:
             break
         }

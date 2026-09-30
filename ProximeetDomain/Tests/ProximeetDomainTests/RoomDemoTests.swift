@@ -82,7 +82,7 @@ final class RoomDemoTests: XCTestCase {
         }
         XCTAssertFalse(run.selectTab(.notes))
         XCTAssertFalse(run.previewReport())
-        XCTAssertFalse(run.openWaveInfo())
+        XCTAssertFalse(run.openWaveDemo(viewerName: "Alex"))
         XCTAssertEqual(run.phase, .waiting, "nothing but the labelled control reveals the sample")
         XCTAssertTrue(run.isConsistent)
     }
@@ -115,10 +115,10 @@ final class RoomDemoTests: XCTestCase {
 
     func testCompatibilityFollowsTheActualIntent() {
         let expectations: [(BandIntent, RoomActor, RoomProfileAction, String)] = [
-            (.social, .maya, .howWavesWork, "Prefers a Wave and a chat before meeting."),
+            (.social, .maya, .previewWaveDemo, "Prefers a Wave and a chat before meeting."),
             (.social, .jules, .backToPeople, "Waves stay within your selected intent."),
             (.business, .maya, .backToPeople, "Waves stay within your selected intent."),
-            (.business, .jules, .howWavesWork, "Open to a brief hello. No pressure to continue."),
+            (.business, .jules, .previewWaveDemo, "Open to a brief hello. No pressure to continue."),
         ]
         for (intent, actor, action, boundary) in expectations {
             for approach in ApproachSignal.allCases {
@@ -129,12 +129,12 @@ final class RoomDemoTests: XCTestCase {
         }
     }
 
-    func testWaveInformationOnlyForTheSameIntentAndSendsNothing() {
+    func testPreviewWaveDemoOnlyForTheSameIntent() {
         for (intent, same, other) in [(BandIntent.social, RoomActor.maya, RoomActor.jules),
                                       (.business, .jules, .maya)] {
             var run = RoomFixture.populated(intent)
             XCTAssertTrue(run.openProfile(other))
-            XCTAssertFalse(run.openWaveInfo(), "\(intent): no Wave action for another intent")
+            XCTAssertFalse(run.openWaveDemo(viewerName: "Alex"), "\(intent): no Wave action for another intent")
             XCTAssertTrue(run.backToPeople())
             XCTAssertEqual(run.route, [])
             XCTAssertEqual(run.tab, .people)
@@ -142,10 +142,47 @@ final class RoomDemoTests: XCTestCase {
             XCTAssertTrue(run.openProfile(same))
             XCTAssertFalse(run.backToPeople(), "\(intent): the same intent has no Back to people action")
             let before = run
-            XCTAssertTrue(run.openWaveInfo())
-            XCTAssertEqual(run.route, [.profile(same), .waveInfo(same)])
-            XCTAssertTrue(run.closeLevel())
+            XCTAssertEqual(run.profileAction(for: same).title, "Preview Wave demo")
+            XCTAssertTrue(run.openWaveDemo(viewerName: "Alex"))
+            XCTAssertEqual(run.route, [.profile(same), .waveDemo])
+            XCTAssertFalse(run.closeLevel(), "the Wave closes through its own route, not a Room panel's Close")
+            XCTAssertNil(run.panel, "the Wave is not one of the Room's panels")
+            XCTAssertEqual(run.profile, same, "it sits above the profile that opened it")
+            XCTAssertEqual(run.outerBack(), .closedLevel, "the menu's outer Back returns to its caller")
             XCTAssertEqual(run, before, "closing returns to the same profile and blocks")
+        }
+    }
+
+    /// Chapter 09 retired the Room's Wave-information panel (66:134): "Preview Wave demo" opens the Wave
+    /// itself (lead decision 1), so the Room reaches seven panels, not eight. Its copy and its route are
+    /// gone from the domain, read as source (comments ignored).
+    ///
+    /// A native test runner carries the built tests, not the repository (the native plans skip every
+    /// source-reading test for that reason), so this skips itself there, and only there.
+    func testTheRetiredWaveInformationPanelIsGone() throws {
+        let package = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // ProximeetDomainTests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // package root
+        guard FileManager.default.fileExists(atPath: package.appendingPathComponent("Package.swift").path)
+        else { throw XCTSkip("No source tree on this runner; the host `swift test` reads the domain sources.") }
+        let sources = package.appendingPathComponent("Sources/ProximeetDomain")
+        let names = try FileManager.default.contentsOfDirectory(atPath: sources.path).filter { $0.hasSuffix(".swift") }
+        XCTAssertTrue(names.contains("RoomDemo.swift"))
+        let retired = ["How Waves work", "A Wave is", "Chat opens only after the other person accepts.",
+                       "Sending Waves comes in the next preview.", "Back to profile", "waveInfo", "howWavesWork",
+                       "openWaveInfo", "backToProfile"]
+        for name in names {
+            let code = try String(contentsOf: sources.appendingPathComponent(name), encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .map { line -> Substring in
+                    guard let comment = line.range(of: "//") else { return line }
+                    return line[..<comment.lowerBound]
+                }
+                .joined(separator: "\n")
+            for text in retired {
+                XCTAssertFalse(code.contains(text), "\(name) still carries \(text)")
+            }
         }
     }
 
@@ -315,7 +352,7 @@ final class RoomDemoTests: XCTestCase {
             ("notes", { $0.showPopulatedExample(); $0.selectTab(.notes) }),
             ("global safety", { $0.showPopulatedExample(); $0.openGlobalSafety() }),
             ("profile", { $0.showPopulatedExample(); $0.openProfile(.maya) }),
-            ("wave info", { $0.showPopulatedExample(); $0.openProfile(.maya); $0.openWaveInfo() }),
+            ("wave menu", { $0.showPopulatedExample(); $0.openProfile(.maya); $0.openWaveDemo(viewerName: "Alex") }),
             ("actor safety", { $0.showPopulatedExample(); $0.openProfile(.jules); $0.openActorSafety(.jules) }),
             ("report", { $0.showPopulatedExample(); $0.openProfile(.jules); $0.openActorSafety(.jules)
                 $0.previewReport(); $0.selectReportReason(.somethingElse) }),
@@ -437,7 +474,7 @@ final class RoomDemoTests: XCTestCase {
                     case 5: run.previewReport()
                     case 6: run.selectReportReason(RoomReportReason.allCases[Int(generator.next() % 3)])
                     case 7: run.closeLevel()
-                    case 8: run.openWaveInfo()
+                    case 8: run.openWaveDemo(viewerName: "Alex")
                     case 9: run.backToPeople()
                     case 10: run.block(actor)
                     case 11: _ = run.outerBack()
@@ -494,7 +531,7 @@ final class RoomDemoTests: XCTestCase {
         XCTAssertEqual(RoomCopy.actorSafetyTitle(.jules), "Jules · safety")
         XCTAssertEqual(RoomCopy.reportTitle(.maya), "Report Maya")
         XCTAssertEqual(RoomCopy.viewCard, "View card  →")
-        for text in [RoomCopy.waveExplanation, RoomCopy.waveScope, RoomCopy.reportExplanation] {
+        for text in [RoomCopy.previewWaveDemo, RoomCopy.reportExplanation] {
             XCTAssertFalse(text.lowercased().contains("sent to"), text)
         }
     }

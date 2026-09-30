@@ -47,7 +47,7 @@ public enum RoomCopy {
 
     public static let profileTitle = "Room"
     public static let profileLabel = "FICTIONAL PROFILE"
-    public static let howWavesWork = "How Waves work"
+    public static let previewWaveDemo = "Preview Wave demo"
     public static let backToPeople = "Back to people"
     /// The incompatible actor's last line: Waves stay within the guest's own intent.
     public static let sameIntentExplanation = "Waves stay within your selected intent."
@@ -63,10 +63,6 @@ public enum RoomCopy {
     public static let actorSafetyBack = "Back"
     public static let reportExplanation = "Choose a sample reason.\nExample only — nothing is submitted."
     public static let closePreview = "Close preview"
-    public static let waveTitle = ["A Wave is", "an invitation."]
-    public static let waveExplanation = "Chat opens only after the other person accepts."
-    public static let waveScope = "Sending Waves comes in the next preview."
-    public static let backToProfile = "Back to profile"
 
     public static let endedStatus = "DEMO SESSION ENDED"
     public static let endedHeadline = ["You’ve left", "the room."]
@@ -212,23 +208,26 @@ public enum RoomPhase: Hashable, Sendable {
     case ended
 }
 
-/// One level of the Room's caller hierarchy, from the root screen outwards: a profile over People, and
-/// the panels (global safety, an actor's safety, its unsent report, Wave information). Closing one
-/// returns to the level below it, which is always its caller.
+/// One level of the Room's caller hierarchy, from the root screen outwards: a profile over People, the
+/// panels (global safety, an actor's safety, its unsent report) and, since chapter 09, the Wave demo
+/// (which replaced the Wave-information panel 66:134). Closing one returns to the level below it, which
+/// is always its caller.
 public enum RoomRoute: Hashable, Sendable {
     case profile(RoomActor)
     case globalSafety
     case actorSafety(RoomActor)
     /// The unsent report preview for an actor, with its local selection (none at first).
     case report(RoomActor, RoomReportReason?)
-    case waveInfo(RoomActor)
+    /// The Wave demo above the same-intent profile that opened it (chapter 09). Its counterpart lives in
+    /// `RoomRun.wave`; once that counterpart is blocked the profile below it is gone and this is the only level.
+    case waveDemo
 
     /// The actor this level concerns, if any.
     public var actor: RoomActor? {
         switch self {
-        case .profile(let actor), .actorSafety(let actor), .report(let actor, _), .waveInfo(let actor):
+        case .profile(let actor), .actorSafety(let actor), .report(let actor, _):
             return actor
-        case .globalSafety:
+        case .globalSafety, .waveDemo:
             return nil
         }
     }
@@ -246,15 +245,15 @@ public struct RoomRunID: Hashable, Sendable, CustomStringConvertible {
     public var description: String { "run \(value)" }
 }
 
-/// What a profile's action is for the actual guest: Wave information for a same-intent sample, and
-/// "Back to people" for another intent. Information only: nothing is sent, created or accepted.
+/// What a profile's action is for the actual guest: "Preview Wave demo" for a same-intent sample (the
+/// fictional Wave menu, chapter 09), and "Back to people" for another intent. Nothing is sent.
 public enum RoomProfileAction: Hashable, Sendable {
-    case howWavesWork
+    case previewWaveDemo
     case backToPeople
 
     public var title: String {
         switch self {
-        case .howWavesWork: return RoomCopy.howWavesWork
+        case .previewWaveDemo: return RoomCopy.previewWaveDemo
         case .backToPeople: return RoomCopy.backToPeople
         }
     }
@@ -280,6 +279,7 @@ public enum RoomOuterBack: Hashable, Sendable {
 /// - Ended shows nothing and has no route.
 /// - No route level concerns a blocked actor, and a profile is only ever the first level.
 /// - Blocks only grow within a run; nothing removes one.
+/// - Closed Wave invitations are only ever appended, and none is ever reopened (chapter 09).
 public struct RoomRun: Equatable, Sendable {
     public let id: RoomRunID
     /// The actual guest's intent and approach, read when the preview opened.
@@ -289,6 +289,19 @@ public struct RoomRun: Equatable, Sendable {
     public private(set) var blocked: Set<RoomActor> = []
     public private(set) var tab: RoomTab = .people
     public private(set) var route: [RoomRoute] = []
+    /// The Wave demo while it shows (and, after a Leave from it, its ended record). Chapter 09.
+    public private(set) var wave: WaveDemo?
+    /// How many Wave examples this run has started; each start takes the next number, so no identity recurs.
+    public private(set) var waveStarts = 0
+    /// Every Wave invitation of this run that has closed (withdrawn, declined, sender withdrawn, unavailable,
+    /// blocked or session ended), in the order it closed, each with its immutable identity and terminal
+    /// status. Append-only, in memory for the life of the run and dropped with it; nothing reads an entry
+    /// back into an example, so a closed invitation can never become pending or accepted again. The Wave
+    /// handoff asks for exactly this: "Retain immutable IDs/terminal status internally even when the
+    /// generic screen displays no invitation details" (CLAUDE_PROMPT.md:68; lead decision 5). An unsent
+    /// confirmation discarded by its Back never closed, so it is not here; its number stays used up in
+    /// `waveStarts`.
+    public private(set) var closedInvitations: [WaveInvitation] = []
 
     public init(id: RoomRunID, intent: BandIntent, approach: ApproachSignal) {
         self.id = id
@@ -339,18 +352,22 @@ public struct RoomRun: Equatable, Sendable {
     public var panel: RoomRoute? {
         guard let top = route.last else { return nil }
         if case .profile = top { return nil }
+        if case .waveDemo = top { return nil }
         return top
     }
 
-    /// The profile's action for the actual guest: Wave information for the same intent only.
+    /// The Wave screen covering the Room, if any: while the Wave is open, and after a Leave made from it.
+    public var waveScreen: WaveScreen? { wave?.screen }
+
+    /// The profile's action for the actual guest: the Wave demo for the same intent only.
     public func profileAction(for actor: RoomActor) -> RoomProfileAction {
-        actor.intent == intent ? .howWavesWork : .backToPeople
+        actor.intent == intent ? .previewWaveDemo : .backToPeople
     }
 
     /// The profile's last line: the sample's own approach when its intent is the guest's, otherwise the
     /// approved same-intent explanation.
     public func profileBoundary(for actor: RoomActor) -> String {
-        profileAction(for: actor) == .howWavesWork ? actor.approachDescription : RoomCopy.sameIntentExplanation
+        profileAction(for: actor) == .previewWaveDemo ? actor.approachDescription : RoomCopy.sameIntentExplanation
     }
 
     /// Whether a sample actor may be shown anywhere right now.
@@ -360,14 +377,38 @@ public struct RoomRun: Equatable, Sendable {
 
     /// Every invariant at once; used by tests and as a last line of defence.
     public var isConsistent: Bool {
+        guard hasConsistentClosedInvitations else { return false }
         switch phase {
         case .ended:
-            return route.isEmpty
+            return route.isEmpty && (wave.map { $0.ended && $0.isConsistent(central: waveCentral) } ?? true)
         case .waiting:
-            return route.isEmpty || route == [.globalSafety]
+            return wave == nil && waveStarts == 0 && (route.isEmpty || route == [.globalSafety])
         case .populated:
-            return Self.isValidRoute(route, run: self)
+            guard Self.isValidRoute(route, run: self) else { return false }
+            guard (route.last == .waveDemo) == (wave != nil) else { return false }
+            if let wave {
+                guard !wave.ended, wave.isConsistent(central: waveCentral) else { return false }
+                if let issued = wave.invitation?.id, issued.sequence > waveStarts { return false }
+            }
+            return true
         }
+    }
+
+    /// The closed record: well-formed invitations of this run and its one counterpart, each terminal, each
+    /// issued, in strictly increasing order. The invitation on screen is its last entry exactly when it is
+    /// closed, and is newer than every entry while it is still active.
+    private var hasConsistentClosedInvitations: Bool {
+        var previous = 0
+        for closed in closedInvitations {
+            guard closed.status.isTerminal, closed.id.run == id, closed.roomRunID == id,
+                  closed.id.sequence > previous, closed.id.sequence <= waveStarts,
+                  closed.intent == intent, closed.venue == CheckInExplanation.venue,
+                  closed.counterpart?.intent == intent
+            else { return false }
+            previous = closed.id.sequence
+        }
+        guard let shown = wave?.invitation else { return true }
+        return shown.status.isTerminal ? closedInvitations.last == shown : shown.id.sequence > previous
     }
 
     // MARK: - The populated example (the second deliberate gate)
@@ -410,14 +451,76 @@ public struct RoomRun: Equatable, Sendable {
         return true
     }
 
-    /// "How Waves work" on a same-intent profile: information only.
+    /// "Preview Wave demo" on a same-intent profile: the Wave's menu, with nothing started. The run's
+    /// identity, phase, blocks and tab stay exactly as they are. `viewerName` is the actual Guest List name,
+    /// kept with its edges trimmed as the card shows it.
     @discardableResult
-    public mutating func openWaveInfo() -> Bool {
-        guard case .profile(let actor)? = route.last, route.count == 1, showsSample(actor),
-              profileAction(for: actor) == .howWavesWork
+    public mutating func openWaveDemo(viewerName: String) -> Bool {
+        guard phase == .populated, wave == nil, case .profile(let actor)? = route.last, route.count == 1,
+              showsSample(actor), profileAction(for: actor) == .previewWaveDemo,
+              !GuestIntroduction.trimmed(viewerName).isEmpty
         else { return false }
-        route.append(.waveInfo(actor))
+        route.append(.waveDemo)
+        wave = WaveDemo(counterpart: actor, viewerName: String(GuestIntroduction.trimmed(viewerName)),
+                        intent: intent, approach: approach, venue: CheckInExplanation.venue)
         return true
+    }
+
+    /// Leaves the Wave for its Room caller: only from the menu with nothing open (an outer Back). The
+    /// profile below shows again, or the filtered People once the counterpart is blocked.
+    @discardableResult
+    public mutating func closeWaveDemo() -> Bool {
+        guard isActive, route.last == .waveDemo, let wave, wave.screen == .menu, wave.overlays.isEmpty
+        else { return false }
+        route.removeLast()
+        self.wave = nil
+        tab = .people
+        return true
+    }
+
+    /// One Wave control, checked against the current central state (phase, blocks, run) at the moment it
+    /// arrives. Block is applied here because the blocked set is the Room's own.
+    @discardableResult
+    public mutating func perform(_ action: WaveAction) -> Bool {
+        guard isActive, phase == .populated, route.last == .waveDemo, var current = wave else { return false }
+        if action == .blockCounterpart {
+            let actor = current.counterpart
+            guard current.overlays.contains(.counterpartSafety), !blocked.contains(actor) else { return false }
+            blocked.insert(actor)
+            current.invalidateForBlock()
+            wave = current
+            route = [.waveDemo]
+            tab = .people
+            retainClosedInvitation()
+            return true
+        }
+        let next = WaveInvitationID(run: id, sequence: waveStarts + 1)
+        guard current.apply(action, central: waveCentral, nextID: next) else { return false }
+        if current.invitation?.id == next { waveStarts += 1 }
+        wave = current
+        retainClosedInvitation()
+        return true
+    }
+
+    /// Appends the invitation on screen to `closedInvitations` the moment it closes, once. A terminal status
+    /// never changes again, so the retained copy stays equal to what any later screen derives from.
+    private mutating func retainClosedInvitation() {
+        guard let shown = wave?.invitation, shown.status.isTerminal,
+              !closedInvitations.contains(where: { $0.id == shown.id })
+        else { return }
+        closedInvitations.append(shown)
+    }
+
+    /// The first acceptance guard that would refuse Accept for `waveID` now (nil: Accept may commit). With
+    /// no Wave there is no current invitation, so the contract's first guard (same current ID) is the one.
+    public func acceptanceRefusal(_ waveID: WaveInvitationID) -> WaveAcceptanceGuard? {
+        guard let wave else { return .sameWaveID }
+        return wave.acceptanceRefusal(waveID, central: waveCentral)
+    }
+
+    var waveCentral: WaveCentral {
+        WaveCentral(runID: id, active: isActive, populated: phase == .populated, blocked: blocked, intent: intent,
+                    venue: CheckInExplanation.venue)
     }
 
     // MARK: - Safety
@@ -466,7 +569,7 @@ public struct RoomRun: Equatable, Sendable {
     /// tab, the phase and the blocks). A report preview's selection is discarded with it.
     @discardableResult
     public mutating func closeLevel() -> Bool {
-        guard isActive, !route.isEmpty else { return false }
+        guard isActive, !route.isEmpty, route.last != .waveDemo else { return false }
         route.removeLast()
         return true
     }
@@ -495,6 +598,11 @@ public struct RoomRun: Equatable, Sendable {
         phase = .ended
         route = []
         tab = .people
+        if var current = wave {
+            current.end()
+            wave = current
+            retainClosedInvitation()
+        }
         return true
     }
 
@@ -504,6 +612,17 @@ public struct RoomRun: Equatable, Sendable {
     @discardableResult
     public mutating func outerBack() -> RoomOuterBack {
         if !isActive { return .alreadyEnded }
+        if route.last == .waveDemo, var current = wave {
+            switch current.outerBack(central: waveCentral) {
+            case .closedOverlay, .closedExample:
+                wave = current
+                return .closedLevel
+            case .exitToRoom:
+                return closeWaveDemo() ? .closedLevel : .none
+            case .none:
+                return .none
+            }
+        }
         if !route.isEmpty {
             route.removeLast()
             return .closedLevel
@@ -527,8 +646,9 @@ public struct RoomRun: Equatable, Sendable {
             switch rest.first {
             case nil:
                 return true
-            case .waveInfo(let other)?:
-                return other == actor && rest.count == 1 && run.profileAction(for: actor) == .howWavesWork
+            case .waveDemo?:
+                return rest.count == 1 && run.profileAction(for: actor) == .previewWaveDemo
+                    && run.wave?.counterpart == actor
             case .actorSafety(let other)?:
                 return other == actor && isValidReportTail(Array(rest.dropFirst()), actor: actor)
             default:
@@ -538,7 +658,10 @@ public struct RoomRun: Equatable, Sendable {
             // Opened from a public note on Room notes.
             return run.tab == .notes && actor.publicNote != nil
                 && isValidReportTail(Array(route.dropFirst()), actor: actor)
-        case .report, .waveInfo:
+        case .waveDemo:
+            // Only once its counterpart is blocked: the profile that opened it is gone.
+            return route.count == 1 && run.wave.map { run.blocked.contains($0.counterpart) } == true
+        case .report:
             return false
         }
     }

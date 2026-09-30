@@ -94,7 +94,9 @@
       "skippedTests" : [
         "DomainSourceGuardTests",
         "PlacesBackWiringTests",
-        "PlacesRouteTests\/testThePlacesSourceReadsNoClockCalendarOrLocation()"
+        "PlacesRouteTests\/testThePlacesSourceReadsNoClockCalendarOrLocation()",
+        "RoomDemoTests\/testTheRetiredWaveInformationPanelIsGone()",
+        "WaveDemoTests\/testTheSessionMirrorMatchesTheAppWiring()"
       ],
       "target" : {
         "containerPath" : "container:ProximeetDomain",

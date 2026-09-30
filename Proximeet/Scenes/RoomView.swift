@@ -4,7 +4,10 @@ import ProximeetDomain
 
 /// Chapter 08 — the approved Room (handoff `LAYOUT_SPEC.json`, Figma page 66:111: the fifteen screens
 /// 66:112–66:126, the eight panels 66:127–66:134 and the report-reason set 67:856), on the 440 × 956
-/// reference canvas.
+/// reference canvas. Chapter 09 (the approved Wave) replaces the same-intent profile's "How Waves work"
+/// with "Preview Wave demo", so the Wave information panel 66:134 is no longer reachable and is gone
+/// (seven panels remain); while the run has a Wave, `WaveView` is shown here instead of the Room's page.
+/// The Room's components below are internal so the Wave reuses them rather than copies them.
 ///
 /// Shown by `PlacesView` above Common Ground's check-in explanation while `session.room` exists: first
 /// the entry, then (only after "Enter room demo") one local run in waiting, the fictional sample (only
@@ -67,7 +70,11 @@ struct RoomView: View {
     /// escape. The session decides what it means (the entry back to the explanation, one caller level,
     /// the terminal Leave at an active run's root, Places once ended); this decides only how it moves.
     /// A Leave changes the model with animations disabled, like the Leave buttons; anything else uses
-    /// `animation`.
+    /// `animation`. Under the Wave (chapter 09) the run follows only the Wave's visible Backs: its top
+    /// overlay, the unsent confirmation's Back, a closed screen's "Back to demo menu", and from the menu
+    /// back to the Room's profile (or the filtered People once the counterpart is blocked); pending,
+    /// review and accepted have no Back, so nothing happens there. It never leaves from the Wave, whose
+    /// route is never empty, so this always dissolves there.
     @MainActor
     static func outerBack(_ session: DemoSession, animation: Animation?) {
         let leaves = session.room?.run.map { $0.isActive && $0.route.isEmpty } ?? false
@@ -89,16 +96,31 @@ struct RoomView: View {
     /// The screen, and above it the open panel (if any) over the dimmed screen. While a panel is open
     /// the screen below takes no touches and is hidden from accessibility, and its bar is not built
     /// at all (see `page`); the panel is modal.
+    ///
+    /// Chapter 09: while the run has a Wave (from "Preview Wave demo" until the Wave closes back to the
+    /// Room, and after a Leave made from it, so the Wave's own ended screen 74:578 shows rather than the
+    /// Room's 66:114), `WaveView` replaces the Room's page and panels entirely. It draws its own chrome,
+    /// ticket, rings, bar and overlays from the run it is given (the removal copy after Return to Places
+    /// is drawn from `lastShown`, as the Room's own screens are). This root keeps the container, the
+    /// escape action and the repeat-tap guard for both. The change dissolves (240 ms; none for
+    /// VoiceOver), and a Leave changes nothing here but the model.
     private func layers(_ room: RoomPreview, width: CGFloat, proxy: GeometryProxy) -> some View {
         let screen = RoomScreen(room)
         let panel = room.run?.panel
         return ZStack {
-            page(room, screen: screen, width: width, bottomInset: proxy.safeAreaInsets.bottom, covered: panel != nil)
-                .accessibilityHidden(panel != nil)
-                .allowsHitTesting(panel == nil)
-            if let run = room.run, let panel {
-                panelLayer(run, panel: panel, width: width, height: proxy.size.height)
+            if let run = room.run, let wave = run.wave {
+                WaveView(run: run, wave: wave)
                     .transition(.opacity)
+            } else {
+                page(room, screen: screen, width: width, bottomInset: proxy.safeAreaInsets.bottom,
+                     covered: panel != nil)
+                    .accessibilityHidden(panel != nil)
+                    .allowsHitTesting(panel == nil)
+                    .transition(.opacity)
+                if let run = room.run, let panel {
+                    panelLayer(run, panel: panel, width: width, height: proxy.size.height)
+                        .transition(.opacity)
+                }
             }
         }
     }
@@ -218,6 +240,9 @@ struct RoomView: View {
             }
         case .ended:
             endedContent(width: width)
+        case .wave:
+            // Never drawn: `layers` shows `WaveView` instead of this page while the run has a Wave.
+            EmptyView()
         }
     }
 
@@ -296,7 +321,7 @@ struct RoomView: View {
                 .accessibilityFocused($focus, equals: .profileSafety)
                 .accessibilityIdentifier("roomProfile.safety")
                 .transition(.opacity)
-            case .entry, .ended:
+            case .entry, .ended, .wave:
                 EmptyView()
             }
         }
@@ -544,14 +569,16 @@ struct RoomView: View {
 
     // MARK: - Profiles (66:117, 66:118, 66:121, 66:124)
 
-    /// The fictional profile (376 × 422 at y 292) and its information action (376 × 56 at y 744):
-    /// "How Waves work" for a sample of the guest's own intent, "Back to people" for another intent,
-    /// with the matching last line on the card. Both come from the run for the actual intent.
+    /// The fictional profile (376 × 422 at y 292) and its action (376 × 56 at y 744, the Wave ledger's
+    /// `standardPrimary` [32, 744, 376, 56] too): "Preview Wave demo" for a sample of the guest's own
+    /// intent (chapter 09: it replaces "How Waves work" and its information panel 66:134), "Back to
+    /// people" for another intent, with the matching last line on the card. Both come from the run for
+    /// the actual intent. The hint is new (the handoff gives none) and says what the button does.
     private func profileContent(_ run: RoomRun, actor: RoomActor) -> some View {
         let id = run.id
         let action = run.profileAction(for: actor)
-        let hint = action == .howWavesWork
-            ? "Information only. Nothing is sent."
+        let hint = action == .previewWaveDemo
+            ? "Opens a fictional Wave demo. Nothing is sent."
             : "Returns to the sample introductions."
         return VStack(alignment: .leading, spacing: 0) {
             RoomProfileCard(actor: actor, boundary: run.profileBoundary(for: actor), focus: $focus)
@@ -567,10 +594,15 @@ struct RoomView: View {
         }
     }
 
+    /// Preview Wave demo: the Wave's menu (74:568) above this profile, nothing started, dissolving in
+    /// (240 ms; none for VoiceOver). The session reads the actual Guest List name and the run decides;
+    /// the run's identity, phase and blocks are untouched, and a stale or repeated tap opens nothing.
     private func profileAction(_ action: RoomProfileAction, id: RoomRunID) {
         switch action {
-        case .howWavesWork:
-            change(id, animation: dissolveAnimation) { $0.openWaveInfo() }
+        case .previewWaveDemo:
+            withAnimation(dissolveAnimation) {
+                _ = session.openWaveDemo(id)
+            }
         case .backToPeople:
             change(id, animation: dissolveAnimation) { $0.backToPeople() }
         }
@@ -634,7 +666,7 @@ struct RoomView: View {
                     .padding(.bottom, 19)
                     .transition(.opacity)
             }
-        case .waiting, .profile:
+        case .waiting, .profile, .wave:
             EmptyView()
         }
     }
@@ -648,7 +680,7 @@ struct RoomView: View {
         switch screen {
         case .entry: gap = 29
         case .ended: gap = 84
-        case .waiting, .tabs, .profile: gap = 76
+        case .waiting, .tabs, .profile, .wave: gap = 76
         }
         if inset >= 60 { return 8 }
         if inset < 1 { return min(gap, 29) }
@@ -666,7 +698,7 @@ struct RoomView: View {
         .accessibilityIdentifier(identifier)
     }
 
-    // MARK: - Panels (66:127–66:134)
+    // MARK: - Panels (66:127–66:133; 66:134 left with chapter 09)
 
     /// The open panel, centred over the dimmed screen (the ground at 72 %; tapping the dim does
     /// nothing). It scrolls when taller than the space, so its Leave is always reachable. A different
@@ -727,11 +759,8 @@ struct RoomView: View {
             if run.showsSample(actor) {
                 report(actor, selected: selected, id: run.id)
             }
-        case .waveInfo(let actor):
-            if run.showsSample(actor) {
-                waveInfo(run.id)
-            }
-        case .profile:
+        case .profile, .waveDemo:
+            // Neither is a panel (`RoomRun.panel` returns neither); the Wave draws itself (`WaveView`).
             EmptyView()
         }
     }
@@ -841,31 +870,6 @@ struct RoomView: View {
         .accessibilityIdentifier("room.report.reason.\(reason.rawValue)")
     }
 
-    /// 66:134, 376 × 480: "A Wave is / an invitation." (ExtraBold 32/38), the explanation (Regular
-    /// 18/26, white, in 72), the scope line (Regular 14/22 in 52), Back to profile (52 at y 333) and
-    /// Leave (52 at y 401). Information only: nothing is sent, created or accepted.
-    private func waveInfo(_ id: RoomRunID) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            panelTitle(RoomCopy.waveTitle, size: 32, lineHeight: 38, box: 82)
-            panelText(RoomCopy.waveExplanation, size: 18, lineHeight: 26, box: 72,
-                      color: .white, identifier: "roomPanel.explanation")
-                .padding(.top, 26)
-            panelText(RoomCopy.waveScope, size: 14, lineHeight: 22, box: 52,
-                      color: RoomStyle.secondaryText, identifier: "roomPanel.scope")
-                .padding(.top, 17)
-            Button(RoomCopy.backToProfile) {
-                change(id, animation: dissolveAnimation) { $0.closeLevel() }
-            }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 52))
-            .accessibilityIdentifier("roomPanel.backToProfile")
-            .padding(.top, 18)
-            leaveButton(id, height: 52, identifier: "roomPanel.leave")
-                .padding(.top, 16)
-        }
-        .padding(.top, 20)
-        .padding(.bottom, 27)
-    }
-
     /// A panel title (from y 66) in its Figma box; VoiceOver lands here when the panel opens.
     private func panelTitle(_ lines: [String], size: CGFloat, lineHeight: CGFloat, box: CGFloat) -> some View {
         RoomHeadline(lines: lines, size: size, lineHeight: lineHeight, box: box, identifier: "roomPanel.title")
@@ -887,8 +891,9 @@ struct RoomView: View {
         case .globalSafety: return "roomPanel.globalSafety"
         case .actorSafety(let actor): return "roomPanel.actorSafety.\(actor.rawValue)"
         case .report(let actor, _): return "roomPanel.report.\(actor.rawValue)"
-        case .waveInfo: return "roomPanel.waveInfo"
         case .profile(let actor): return "roomProfile.\(actor.rawValue)"
+        // Never a panel (`RoomRun.panel` excludes it): the Wave above a profile is drawn by `WaveView`.
+        case .waveDemo: return "room.waveDemo"
         }
     }
 
@@ -933,7 +938,8 @@ struct RoomView: View {
         }
     }
 
-    /// Where VoiceOver starts when the Room appears: the current screen's first element.
+    /// Where VoiceOver starts when the Room appears: the current screen's first element. Under the Wave,
+    /// nothing here: `WaveView` moves VoiceOver inside itself.
     private static func appearTarget(_ room: RoomPreview?) -> RoomFocus? {
         guard let room else { return nil }
         if room.run?.panel != nil { return .panelTitle }
@@ -943,6 +949,7 @@ struct RoomView: View {
         case .tabs: return .framing
         case .profile: return .profileName
         case .ended: return .endedStatus
+        case .wave: return nil
         }
     }
 
@@ -950,12 +957,21 @@ struct RoomView: View {
     /// it as it closes, to the filtered People after Block, to a profile's name, back to the card a
     /// profile was opened from, and to the first element of a new screen. A tab or a report reason keeps
     /// the focus where it is.
+    ///
+    /// Chapter 09: while the run has a Wave (and after a Leave made from it), `WaveView` owns VoiceOver's
+    /// focus, so nothing here. When the Wave closes from its menu (the outer Back), VoiceOver returns to
+    /// "Preview Wave demo", the control that opened it, or, once the Wave blocked its counterpart and the
+    /// profile below it is gone, to the filtered People's framing.
     private static func focusTarget(from previous: RoomPreview?, to current: RoomPreview?) -> RoomFocus? {
         guard let current else { return nil }
         guard let run = current.run else {
             return previous == nil ? .entryHeadline : nil
         }
         guard let old = previous?.run, old.id == run.id else { return .waitingHeadline }
+        if run.wave != nil { return nil }
+        if old.wave != nil {
+            return run.profile != nil ? .profileAction : .framing
+        }
         if run.phase != old.phase {
             switch run.phase {
             case .ended: return .endedStatus
@@ -975,8 +991,9 @@ struct RoomView: View {
             switch closed {
             case .globalSafety: return .chromeSafety
             case .actorSafety(let actor): return run.profile == nil ? .noteMore(actor) : .profileSafety
-            case .waveInfo: return .profileAction
             case .report, .profile: return .framing
+            // Never a panel; the Wave's own close is handled above.
+            case .waveDemo: return .profileAction
             }
         }
         if run.profile != old.profile {
@@ -990,17 +1007,24 @@ struct RoomView: View {
 
 // MARK: - Screens, scroll targets and focus
 
-/// Which screen the Room shows, derived from the preview each time.
+/// Which screen the Room shows, derived from the preview each time. `wave` (chapter 09) is chosen
+/// before the phase whenever the run has a Wave, so a Leave made from the Wave keeps the Wave's own
+/// ended screen (74:578) rather than the Room's (66:114); `WaveView` draws every `wave` screen.
 private enum RoomScreen: Hashable {
     case entry
     case waiting
     case tabs
     case profile(RoomActor)
     case ended
+    case wave(WaveScreen)
 
     init(_ room: RoomPreview) {
         guard let run = room.run else {
             self = .entry
+            return
+        }
+        if let wave = run.wave {
+            self = .wave(wave.screen)
             return
         }
         switch run.phase {
@@ -1051,7 +1075,7 @@ private enum RoomFocus: Hashable {
 /// 108 × 110 at 258, 10). One view in both, so Enter moves the same art, name and preference line
 /// (SMART_ANIMATE matches them by name) while the session line crossfades. The preference is the
 /// guest's actual intent and approach; the art is decoration.
-private struct RoomVenueTicket: View {
+struct RoomVenueTicket: View {
     let compact: Bool
     let preference: String
     let width: CGFloat
@@ -1093,7 +1117,7 @@ private struct RoomVenueTicket: View {
 /// either arrangement, so a change of arrangement moves each piece rather than replacing it. Text is
 /// measured at the current size, and the ticket grows with it; the art scales with the column
 /// (`k = width / 376`), as on Places.
-private struct RoomTicketLayout: Layout {
+struct RoomTicketLayout: Layout {
     let compact: Bool
     let width: CGFloat
     /// Only at the accessibility text sizes may the compact ticket stack its text below the art; at
@@ -1181,7 +1205,7 @@ private struct RoomTicketLayout: Layout {
 
 /// Common Ground's approved scene (Places' crop [46, 83, 1211, 1218], alpha kept), fitted, never
 /// stretched. Decoration: hidden from VoiceOver, since the name says what the place is.
-private struct RoomVenueArt: View {
+struct RoomVenueArt: View {
     var body: some View {
         Group {
             if let image = PlacesArt.image(for: .commonGround) {
@@ -1204,7 +1228,7 @@ private struct RoomVenueArt: View {
 /// with its steel seal (60 × 36, radius 7, #7A8585) at the top edge, "INTRODUCTIONS" (Bold 14/24) and
 /// "A little privacy comes first." (Regular 14/22), centred. No actor information of any kind; one
 /// element for VoiceOver.
-private struct RoomEnvelope: View {
+struct RoomEnvelope: View {
     let identifier: String
 
     var body: some View {
@@ -1245,7 +1269,7 @@ private struct RoomEnvelope: View {
 
 /// The host announcement (67:431, 376 × 112, #111415, radius 22): the label (Bold 14/22, #A8B0AD) at
 /// 20, 16 and the note (Medium 17/24, white) at y 51. One element.
-private struct RoomHostNote: View {
+struct RoomHostNote: View {
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     var body: some View {
@@ -1268,7 +1292,7 @@ private struct RoomHostNote: View {
 
 /// The host icebreaker (67:434, 376 × 122, #F6F7F2, radius 22): the label (Bold 14/22) at 20, 17 and
 /// the question (SemiBold 19/26) at y 53. One element.
-private struct RoomIcebreaker: View {
+struct RoomIcebreaker: View {
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     var body: some View {
@@ -1292,7 +1316,7 @@ private struct RoomIcebreaker: View {
 /// A public sample note's words (67:437): "[Name] · public sample note" (SemiBold 14/24, white, 268
 /// wide at 20, 15, clear of the "…" control) and the note (Regular 16/23, #A8B0AD) at y 52. One element;
 /// the control beside it is its own button.
-private struct RoomPublicNote: View {
+struct RoomPublicNote: View {
     let author: RoomActor
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
@@ -1320,7 +1344,7 @@ private struct RoomPublicNote: View {
 /// The filtered empty state (67:613, 376 × 236, #111415, radius 24): "No sample introductions / to
 /// show." (ExtraBold 28/36 in 80, at 24, 38) and "Your demo blocks are still applied." (Regular 16/24,
 /// #A8B0AD, in 52, at y 146). It says nothing about the venue or who is there.
-private struct RoomEmptyCard: View {
+struct RoomEmptyCard: View {
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     /// "No sample introductions" (339.6 pt at ExtraBold 28) is wider than the title's 328-pt box, so
@@ -1357,7 +1381,7 @@ private struct RoomEmptyCard: View {
 /// in 42 at y 57), the introduction (Regular 16/22 at 20, 101) and "View card  →" (SemiBold 14/22,
 /// right-aligned, ending 20 in, at y 142). The card grows with its text; the introduction's box ends
 /// where "View card" starts, so a second line pushes it down instead of overlapping it.
-private struct RoomSampleCard: View {
+struct RoomSampleCard: View {
     let actor: RoomActor
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
@@ -1394,10 +1418,12 @@ private struct RoomSampleCard: View {
 /// the interests (y 296) and the last line (Medium 14/22 in 46 at y 351): the sample's approach for the
 /// guest's own intent, otherwise that Waves stay within the selected intent. The card grows with its
 /// text.
-private struct RoomProfileCard: View {
+struct RoomProfileCard: View {
     let actor: RoomActor
     let boundary: String
-    let focus: AccessibilityFocusState<RoomFocus?>.Binding
+    /// `fileprivate` because `RoomFocus` stays private to this file (chapter 09 promoted the Room's
+    /// components for Wave's reuse, but not the Room's own focus targets); so the card is built here only.
+    fileprivate let focus: AccessibilityFocusState<RoomFocus?>.Binding
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     var body: some View {
@@ -1446,7 +1472,7 @@ private struct RoomProfileCard: View {
 
 /// About: two sentences on their approved line break, each on the 24-pt line (tighter than the face's
 /// natural 24.6, so each sentence gets its own line box rather than one `lineSpacing`). One element.
-private struct RoomAbout: View {
+struct RoomAbout: View {
     let text: String
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
@@ -1468,7 +1494,7 @@ private struct RoomAbout: View {
 
 /// The interests: #050606 chips, 28 tall (radius 14), with #F6F7F2 Medium 14/28 labels at their Figma
 /// widths, 8 apart. At larger text they stack. One element: "Interests: A, B, C".
-private struct RoomInterestChips: View {
+struct RoomInterestChips: View {
     let interests: [String]
 
     var body: some View {
@@ -1492,7 +1518,7 @@ private struct RoomInterestChips: View {
     }
 }
 
-private struct RoomInterestChip: View {
+struct RoomInterestChip: View {
     let title: String
     var usesFigmaWidth = true
     @ScaledMetric(relativeTo: .body) private var size: CGFloat = 14
@@ -1522,7 +1548,7 @@ private struct RoomInterestChip: View {
 
 /// Fictional initials on a #E0E0D9 disc inside a 2-pt ring of the sample's own intent colour (the
 /// word beside it says the same thing). Decoration: the name is read instead.
-private struct RoomInitialsDisc: View {
+struct RoomInitialsDisc: View {
     let actor: RoomActor
     let diameter: CGFloat
 
@@ -1549,7 +1575,7 @@ private struct RoomInitialsDisc: View {
 /// 28/36), each line on its own line box because every one of these is tighter than the face's natural
 /// line; at larger text a line wraps between its words rather than shrinking. `box` is the Figma text
 /// box, kept as a minimum height. One header element.
-private struct RoomHeadline: View {
+struct RoomHeadline: View {
     let lines: [String]
     let size: CGFloat
     let lineHeight: CGFloat
@@ -1577,7 +1603,7 @@ private struct RoomHeadline: View {
 }
 
 /// A name (ExtraBold 25/30 or 34/40), following Dynamic Type like a title and wrapping.
-private struct RoomTitleText: View {
+struct RoomTitleText: View {
     let text: String
     let size: CGFloat
     let lineHeight: CGFloat
@@ -1596,7 +1622,7 @@ private struct RoomTitleText: View {
 
 /// An upper-case label: Bold 14/22 (framing lines, DEMO CONTROL, DEMO PREVIEW, DEMO SESSION ENDED,
 /// FICTIONAL PROFILE, the note labels).
-private struct RoomLabel: View {
+struct RoomLabel: View {
     let text: String
     let color: Color
     var alignment: TextAlignment = .leading
@@ -1609,7 +1635,7 @@ private struct RoomLabel: View {
 
 /// The chrome's "Proximeet" or "Room": Bold 22 on the 38-pt line, centred on the 44-pt row; at the
 /// largest sizes it steps down rather than crowd the badge.
-private struct RoomChromeTitle: View {
+struct RoomChromeTitle: View {
     let text: String
 
     var body: some View {
@@ -1621,7 +1647,7 @@ private struct RoomChromeTitle: View {
     }
 }
 
-private struct RoomChromeTitleText: View {
+struct RoomChromeTitleText: View {
     let text: String
     @ScaledMetric(relativeTo: .title2) private var size: CGFloat = 22
 
@@ -1636,7 +1662,7 @@ private struct RoomChromeTitleText: View {
 
 /// The Room's DEMO label (67:113): 72 × 28, radius 9, a 0.6-pt cyan outline inside, "DEMO" Bold 11/28
 /// in cyan, centred. One element: "Demo".
-private struct RoomDemoBadge: View {
+struct RoomDemoBadge: View {
     @ScaledMetric(relativeTo: .caption) private var size: CGFloat = 11
 
     var body: some View {
@@ -1660,11 +1686,11 @@ private struct RoomDemoBadge: View {
 // MARK: - Controls
 
 /// The Room's buttons, radius 18, SemiBold 16 centred. Primary (Enter room demo, Show populated example,
-/// the profile action, Return to Places, Close, Block, Close preview, Back to profile): #F6F7F2 with
-/// #050606. Outline (Leave, the entry's Back, Preview report, the actor's Back): no fill, a 1-pt
-/// #7A8585 border inside, white. `height` is the approved height (60, 56, 52, 48 or 44); a label that
-/// needs more at larger text grows the button.
-private struct RoomButtonStyle: ButtonStyle {
+/// the profile action, Return to Places, Close, Block, Close preview): #F6F7F2 with #050606. Outline
+/// (Leave, the entry's Back, Preview report, the actor's Back): no fill, a 1-pt #7A8585 border inside,
+/// white. `height` is the approved height (60, 56, 52, 48 or 44); a label that needs more at larger text
+/// grows the button. The Wave's buttons are these too (its components 75:111–75:134 are the Room's).
+struct RoomButtonStyle: ButtonStyle {
     enum Kind {
         case primary
         case outline
@@ -1678,7 +1704,7 @@ private struct RoomButtonStyle: ButtonStyle {
     }
 }
 
-private struct RoomButtonBody: View {
+struct RoomButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let primary: Bool
     let height: CGFloat
@@ -1707,7 +1733,7 @@ private struct RoomButtonBody: View {
 }
 
 /// A card or an icon: its own look, dimmed while pressed.
-private struct RoomPressStyle: ButtonStyle {
+struct RoomPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(configuration.isPressed ? 0.7 : 1)
@@ -1716,7 +1742,7 @@ private struct RoomPressStyle: ButtonStyle {
 
 /// A 44 × 44 icon button (radius 12 or 10, no fill) with its 24-pt glyph centred; the glyph grows with
 /// the text up to 1.5×, the target never below 44.
-private struct RoomIconButton: View {
+struct RoomIconButton: View {
     let pieces: [WristbandPaths.Piece]
     let action: @MainActor () -> Void
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
@@ -1734,7 +1760,7 @@ private struct RoomIconButton: View {
 }
 
 /// People / Room notes tab label: SemiBold 15/44.
-private struct RoomTabLabel: View {
+struct RoomTabLabel: View {
     let title: String
     let selected: Bool
     @ScaledMetric(relativeTo: .body) private var size: CGFloat = 15
@@ -1749,7 +1775,7 @@ private struct RoomTabLabel: View {
     }
 }
 
-private struct RoomTabStyle: ButtonStyle {
+struct RoomTabStyle: ButtonStyle {
     let selected: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -1764,7 +1790,7 @@ private struct RoomTabStyle: ButtonStyle {
 /// A sample reason row's content (328 × 56): the reason (Medium 14/20, white, 272 wide at x 16) and the
 /// 16-pt radio at x 296. The label is centred on the radio's line rather than top-aligned in its
 /// two-line Figma box, so a one-line reason sits level with its radio.
-private struct RoomReasonLabel: View {
+struct RoomReasonLabel: View {
     let title: String
     let selected: Bool
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
@@ -1785,7 +1811,7 @@ private struct RoomReasonLabel: View {
 
 /// Unselected: #111415 (the panel's own colour, as approved). Selected: #242A2B with a 1-pt #7A8585
 /// border inside. Radius 14.
-private struct RoomReasonStyle: ButtonStyle {
+struct RoomReasonStyle: ButtonStyle {
     let selected: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -1801,7 +1827,7 @@ private struct RoomReasonStyle: ButtonStyle {
 }
 
 /// The 16-pt report radio (67:819 / 67:829): a 1-pt #A8B0AD ring inside, filled #F6F7F2 when selected.
-private struct RoomRadio: View {
+struct RoomRadio: View {
     let selected: Bool
 
     var body: some View {
@@ -1816,7 +1842,7 @@ private struct RoomRadio: View {
 }
 
 /// Stroked vector pieces in a 24-pt frame, scaled to the frame: #F3F2EF, 1.7 pt, round caps and joins.
-private struct RoomGlyph: View {
+struct RoomGlyph: View {
     let pieces: [WristbandPaths.Piece]
 
     var body: some View {
@@ -1857,7 +1883,7 @@ enum RoomStyle {
 }
 
 /// The approved glyphs, verbatim from `LAYOUT_SPEC.json`, with each vector's offset in its 24-pt frame.
-private enum RoomPaths {
+enum RoomPaths {
     typealias Piece = WristbandPaths.Piece
 
     /// The Safety shield and its tick (67:117, 67:118).

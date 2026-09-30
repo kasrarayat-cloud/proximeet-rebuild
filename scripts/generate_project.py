@@ -67,9 +67,15 @@ PACKAGE_RELATIVE_PATH = "ProximeetDomain"
 PACKAGE_PRODUCT = "ProximeetDomain"
 # Hand-written test plans the scheme's Test action references, relative to the folder holding the
 # project; the first is the default. They are not generated: scripts/validate_project.py checks them.
+# The Room plans stay first and RoomVerificationMain stays the default. At this commit RoomVerificationMain
+# also skips the two chapter-09 source-reading tests and its domain run includes WaveDemoTests, so it no
+# longer runs exactly what it ran on the verified Room commit 1a5f97e. The Wave plans (chapter 09) are only
+# listed, for Xcode Cloud to select by name (docs/verification/wave-xcode-cloud-verification.md).
 TEST_PLANS = (
     "TestPlans/RoomVerificationMain.xctestplan",
     "TestPlans/RoomVerificationSmall.xctestplan",
+    "TestPlans/WaveVerificationMain.xctestplan",
+    "TestPlans/WaveVerificationSmall.xctestplan",
 )
 
 OBJECT_VERSION = "60"

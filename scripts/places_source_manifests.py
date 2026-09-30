@@ -6,7 +6,7 @@
 docs/verification/places-approved-files.sha256 lists the approved assets: the Welcome poses, the
 Manrope faces and licence, the Birthday housing, the Pass artwork, the Guest List card art, the four
 Wristband artworks, the blank Signal tag, the three Places scenes, and the approved handoff copies of
-every chapter (the Room's, docs/design/room-approved, included).
+every chapter (the Room's, docs/design/room-approved, and the Wave's, docs/design/wave-approved, included).
 docs/verification/places-review-files.sha256 lists every other file of the checkout
 (tracked or untracked, not ignored) except itself. scripts/places_review.sh checkpoint checks both.
 With --check nothing is written; the exit is 1 when either manifest is out of date.
@@ -28,7 +28,7 @@ APPROVED = [ASSETS + d + "/" for d in (
     "SignalTag.imageset", "PlaceCommonGround.imageset", "PlaceAfterglow.imageset", "PlaceFieldwork.imageset")] + [
     "docs/design/welcome-approved/", "docs/design/birthday-approved/", "docs/design/pass-approved/",
     "docs/design/guest-list-approved/", "docs/design/wristband-approved/", "docs/design/signal-approved/",
-    "docs/design/places-approved/", "docs/design/room-approved/"]
+    "docs/design/places-approved/", "docs/design/room-approved/", "docs/design/wave-approved/"]
 
 
 def sha(path):

@@ -1,0 +1,80 @@
+{
+  "configurations" : [
+    {
+      "id" : "8355297D-F43F-5297-8E53-AAA82B4E4111",
+      "name" : "Wave Verification",
+      "options" : {}
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "defaultTestExecutionTimeAllowance" : 900,
+    "environmentVariableEntries" : [
+      {
+        "key" : "PROXIMEET_WAVE_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_ROOM_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_PLACES_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_SIGNAL_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_WRISTBAND_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_GUEST_LIST_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_PASS_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_BIRTHDAY_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_WELCOME_REVIEW",
+        "value" : "1"
+      },
+      {
+        "key" : "PROXIMEET_SHORT_HOLDS",
+        "value" : "1"
+      }
+    ],
+    "language" : "en",
+    "maximumTestExecutionTimeAllowance" : 1200,
+    "region" : "US",
+    "testTimeoutsEnabled" : true,
+    "uiTestingScreenshotsLifetime" : "keepAlways"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "selectedTests" : [
+        "PlacesCorrectionTests\/testBackGesturesMatchTheBackControls()",
+        "PlacesCorrectionTests\/testDetailAndExplanationStartAtTheirBeginning()",
+        "PlacesReviewTests\/testBackRoutesKeepTheCategoryAndTheDraft()",
+        "PlacesReviewTests\/testChangingTheBandRecomputesEveryVenue()",
+        "RoomReviewTests\/testLargestTextKeepsRoomReachable()",
+        "WaveReviewTests\/testLargestTextKeepsWavePanelsReachable()",
+        "WaveReviewTests\/testLargestTextKeepsWaveScreensReachable()"
+      ],
+      "target" : {
+        "containerPath" : "container:Proximeet.xcodeproj",
+        "identifier" : "A8309941D6B07785FF53BCEC",
+        "name" : "ProximeetUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

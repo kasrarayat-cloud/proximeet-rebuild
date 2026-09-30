@@ -1,0 +1,282 @@
+{
+  "scope": "Bounded local invitation demonstration; no production authorization or real delivery",
+  "snapshot": "Inherited fixed fictional Thursday 8 PM, Common Ground until 10 PM; no live clock",
+  "actualDraft": {
+    "viewerID": "Stable existing current demo viewer ID",
+    "viewerName": "Actual Guest List display name; Alex is a reference fixture only",
+    "intentApproach": "Preserve actual typed values; no Social/Chat first default",
+    "approachesNeedNotMatch": true,
+    "invitationPreferenceCopy": "Identify counterpart values without falsely claiming a shared approach"
+  },
+  "counterpartMapping": [
+    {
+      "viewerIntent": "Social",
+      "targetId": "maya",
+      "targetName": "Maya",
+      "targetIntent": "Social",
+      "targetApproach": "Chat first"
+    },
+    {
+      "viewerIntent": "Business",
+      "targetId": "jules",
+      "targetName": "Jules",
+      "targetIntent": "Business",
+      "targetApproach": "Okay to say hello"
+    }
+  ],
+  "entry": {
+    "roomProfileAction": "Preview Wave demo on eligible same-intent profile",
+    "requires": [
+      "current central populated Room run",
+      "eligible Common Ground Social/Business draft",
+      "matching current counterpart intent",
+      "unblocked visible target",
+      "valid current profile route"
+    ],
+    "preserve": [
+      "Room run ID",
+      "Room phase",
+      "central blocked actors",
+      "actual draft",
+      "participant identity"
+    ],
+    "otherIntentAction": "Existing Back to people boundary; no Wave action",
+    "placesShortcut": "Figma-only; do not implement"
+  },
+  "identity": {
+    "immutableFields": [
+      "id",
+      "roomRunID",
+      "senderID",
+      "recipientID",
+      "venueID",
+      "direction"
+    ],
+    "freshIDPerExplicitStart": true,
+    "reviewOutgoingID": "wave-demo-outgoing-01",
+    "reviewIncomingID": "wave-demo-incoming-01",
+    "reviewViewer": "alex",
+    "referenceIDsNotProductionIDs": true,
+    "viewerNeverSwitchesRoleAccount": true,
+    "senderRecipientMustDiffer": true
+  },
+  "examples": [
+    {
+      "direction": "outgoing",
+      "startAction": "Start outgoing example",
+      "sender": "currentViewer",
+      "recipient": "eligibleCounterpart",
+      "initialStatus": "compose",
+      "viewerMayAccept": false
+    },
+    {
+      "direction": "incoming",
+      "startAction": "Start incoming example",
+      "sender": "eligibleCounterpart",
+      "recipient": "currentViewer",
+      "initialStatus": "pending",
+      "viewerMayAccept": "Only after all current pending-recipient guards pass"
+    }
+  ],
+  "newExample": {
+    "menuAloneStartsNothing": true,
+    "resetsOnlyLocalInvitationFixture": true,
+    "mustRecheckCentralEligibility": true,
+    "cannotResetRoomPhaseOrRun": true,
+    "cannotClearAnyBlock": true,
+    "cannotReviveClosedWave": true,
+    "cannotRefillRealAllowance": true,
+    "blockedOrEndedStart": "Unavailable/disabled with generic reason; never expose blocked identity",
+    "RoomRestart": "Only the separate approved explicit Room-run sequence can reset its fictional fixture"
+  },
+  "transitions": [
+    {
+      "from": "compose",
+      "direction": "outgoing",
+      "action": "Send demo Wave",
+      "to": "pending",
+      "guards": [
+        "current viewer is sender",
+        "current eligible Room/target",
+        "demo allowance available",
+        "same current unsent ID"
+      ],
+      "effects": "One idempotent local transition; remove stale compose route; nothing is delivered"
+    },
+    {
+      "from": "pending",
+      "direction": "outgoing",
+      "action": "Withdraw Wave",
+      "to": "withdrawn",
+      "guards": [
+        "current viewer is sender",
+        "same current ID"
+      ],
+      "effects": "Terminal for this ID; no acceptance or refund policy"
+    },
+    {
+      "from": "pending",
+      "direction": "incoming",
+      "action": "Accept Wave",
+      "to": "accepted",
+      "guards": [
+        "same current immutable Wave ID",
+        "same current Room run ID",
+        "current status is pending",
+        "current viewer ID equals recipient ID",
+        "sender ID differs from recipient ID",
+        "Room remains populated and active",
+        "same eligible venue",
+        "same current intent",
+        "no relevant central block or invalidation"
+      ],
+      "effects": "Atomic local acceptance before ring animation; idempotent, no production chat entitlement"
+    },
+    {
+      "from": "pending",
+      "direction": "incoming",
+      "action": "Decline Wave",
+      "to": "declined",
+      "guards": [
+        "current viewer is recipient",
+        "same current ID"
+      ],
+      "effects": "Terminal; no reason or sender notification"
+    },
+    {
+      "from": "pending",
+      "direction": "incoming",
+      "action": "Show sender withdrawn",
+      "to": "senderWithdrawn",
+      "guards": [
+        "explicit labeled demo condition"
+      ],
+      "effects": "Terminal; stale Accept rejected"
+    },
+    {
+      "from": [
+        "pending",
+        "accepted"
+      ],
+      "action": "Show expired example",
+      "to": "unavailable",
+      "guards": [
+        "explicit labeled demo condition"
+      ],
+      "effects": "Invalidate current invitation; if Room itself is ineligible, central access also invalidates"
+    },
+    {
+      "from": "any reachable context",
+      "action": "Block counterpart in demo",
+      "to": "blocked",
+      "effects": "Union target into existing central Room block set; hide all actor Room/Wave routes; invalidate invitation and dismiss stale overlays"
+    },
+    {
+      "from": "any reachable context",
+      "action": "Leave and disappear",
+      "to": "sessionEnded",
+      "effects": "End underlying Room run and all its Waves; clear active/modal routes before animation"
+    }
+  ],
+  "acceptanceGuards": [
+    "same current immutable Wave ID",
+    "same current Room run ID",
+    "current status is pending",
+    "current viewer ID equals recipient ID",
+    "sender ID differs from recipient ID",
+    "Room remains populated and active",
+    "same eligible venue",
+    "same current intent",
+    "no relevant central block or invalidation"
+  ],
+  "terminalStatuses": [
+    "withdrawn",
+    "declined",
+    "senderWithdrawn",
+    "unavailable",
+    "blocked",
+    "sessionEnded"
+  ],
+  "terminalRules": {
+    "oldIdentityNeverBecomesPendingOrAcceptedAgain": true,
+    "genericClosedUIHidesCounterparty": true,
+    "unavailabilityDoesNotDiscloseOtherPersonsReason": true,
+    "staleCallbacksUseCurrentCentralState": true,
+    "BackOrModalCloseCannotRestoreInvalidStatus": true
+  },
+  "allowance": {
+    "demoValues": [
+      "available",
+      "unavailable"
+    ],
+    "numericQuota": null,
+    "refillPeriod": null,
+    "refundPolicy": null,
+    "cooldown": null,
+    "productionServiceImplemented": false,
+    "newExampleIsNotRefill": true
+  },
+  "blocking": {
+    "sourceOfTruth": "Same central Room blocked-actor set",
+    "preserveExistingBlocks": true,
+    "maya": "Hide Maya card/profile/Wave; Jules note unchanged",
+    "jules": "Hide Jules card/profile/public note/Wave",
+    "newWaveExampleCannotRestoreActor": true,
+    "incomingOrAcceptedInvalidation": true,
+    "noProductionRetentionClaim": true
+  },
+  "report": {
+    "actualCounterpartContext": true,
+    "reasons": [
+      "Unwanted attention",
+      "Harassment or harmful content",
+      "Something else"
+    ],
+    "initialSelection": null,
+    "singleChoice": true,
+    "selectedTap": "No-op",
+    "close": "Discard unsent presentation; preserve current invitation/block state and caller only while valid",
+    "submits": false,
+    "receiptOrQueue": false,
+    "crossActorLeak": false,
+    "logsPersistenceOrTransmission": false
+  },
+  "chatBoundary": {
+    "acceptedAction": "About private chat",
+    "informationOnly": true,
+    "noComposerOrMessages": true,
+    "noConversationIDOrProductionEntitlement": true,
+    "noKeepOrRetention": true,
+    "separateApprovedHandoffRequired": true
+  },
+  "leave": {
+    "confirmation": false,
+    "immediate": true,
+    "endsUnderlyingRoomRun": true,
+    "clearsActiveAndOverlayRoutes": true,
+    "staleBackGesturesCallbacksCannotRestore": true,
+    "return": "Actual Places Now with onboarding draft intact",
+    "reentryRequires": [
+      "eligible Places flow",
+      "explicit Room entry",
+      "populated-example control",
+      "valid same-intent profile"
+    ]
+  },
+  "memory": "Local demo and existing draft in memory only; no network, disk, logs or analytics",
+  "excluded": [
+    "real notification/delivery",
+    "production verification",
+    "production membership/presence",
+    "conversation authorization",
+    "server implementation",
+    "production quota/refill/refund",
+    "actual chat",
+    "Keep",
+    "permissions",
+    "camera/location",
+    "hardware",
+    "real reporting"
+  ],
+  "graphScope": "Isolated reviewed Alex/Social/Maya fixture. Its explicit restarts do not prove or override stricter integrated central Room run/block rules."
+}
