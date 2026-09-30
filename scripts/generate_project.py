@@ -340,6 +340,13 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
              "path": name, "sourceTree": "<group>"},
             inline=True,
         ))
+    # Include the package as a project member so its test targets are available to test plans.
+    package_file = add(PBXObject(
+        object_id(f"fileref:{PACKAGE_RELATIVE_PATH}"), PACKAGE_RELATIVE_PATH,
+        {"isa": "PBXFileReference", "lastKnownFileType": "wrapper",
+         "path": PACKAGE_RELATIVE_PATH, "sourceTree": "<group>"},
+        inline=True,
+    ))
     product = add(PBXObject(
         object_id(f"product:{PRODUCT_FILE}"), PRODUCT_FILE,
         {"isa": "PBXFileReference", "explicitFileType": "wrapper.application",
@@ -384,7 +391,8 @@ def build_objects(root: Path) -> tuple[list[PBXObject], str]:
     ))
     main_group = add(PBXObject(
         object_id("group:<main>"), None,
-        {"isa": "PBXGroup", "children": [groups[APP_DIR].ref(), groups[UI_TEST_TARGET].ref(), products_group.ref()],
+        {"isa": "PBXGroup", "children": [groups[APP_DIR].ref(), groups[UI_TEST_TARGET].ref(),
+                                         package_file.ref(), products_group.ref()],
          "sourceTree": "<group>"},
     ))
 
