@@ -45,7 +45,7 @@ struct GuestListView: View {
                             if demo.stage == .card, let card = session.introduction.card {
                                 GuestListCardPage(
                                     card: card,
-                                    width: min(392, proxy.size.width - 48),
+                                    width: min(392, max(0, proxy.size.width - 48)),
                                     headlineFocused: $headlineFocused
                                 )
                                 .transition(.opacity)

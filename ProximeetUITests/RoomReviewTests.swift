@@ -34,6 +34,13 @@ final class RoomReviewTests: XCTestCase {
     /// 44-pt Places tab as 43.99999999999997 once a fractional scroll offset had moved it).
     private static let minimumTarget: CGFloat = 44 - 1e-6
 
+    /// Set by the recorded walkthrough (R1) alone: its holds stay full even with
+    /// `PROXIMEET_SHORT_HOLDS=1`. An Xcode Cloud test plan gives every test in it one environment, so a
+    /// plan that shortens the unrecorded rows' holds would otherwise shorten R1's too, and R1's holds
+    /// are what keep each state on screen long enough to be seen in the recording. XCTest makes a new
+    /// instance for every test method, so this never leaks into another test.
+    private var fullHolds = false
+
     /// The two fictional samples as approved (`RoomActor`; cards 67:146 / 67:170, profiles 67:154 /
     /// 67:178). Jules's own approach line reuses Signal's approved summary of "Okay to say hello".
     private static let maya = SampleActor(
@@ -86,7 +93,10 @@ final class RoomReviewTests: XCTestCase {
     /// Preview report, a reason, Close preview (her safety again) and Back (her profile); Block Maya in
     /// demo: the filtered People; Leave and disappear: the ended screen; Return to Places: browsing at
     /// Now; Back: Signal with the same intent and approach, so the draft was never touched.
+    ///
+    /// Full holds whatever `PROXIMEET_SHORT_HOLDS` says (see `fullHolds`): this is the recorded run.
     func testRealJourneyFromTheExplanationThroughTheRoomAndBack() throws {
+        fullHolds = true
         let app = launchWelcome()
         hold(0.8)
         let pass = openCompletedPass(app)
@@ -718,7 +728,9 @@ final class RoomReviewTests: XCTestCase {
     /// states), the 8 overlays (global safety, the four actor safeties, both reports, Wave information)
     /// and the four report selections (67:816 none, from the report-maya launch; 67:826, 67:836 and
     /// 67:846, each its own launch). Each is checked (copy, the samples shown or absent, the column)
-    /// before it is captured as `room-<state>-<width>pt-fixture`.
+    /// before it is captured as `room-<state>-<width>pt-fixture`. Under every overlay (the 8, and the
+    /// three reason variants of Maya's report) nothing of the Room page or of Places is left in the tree
+    /// (`assertUnderlayAbsent`), checked softly so one leak still leaves every capture taken.
     func testCaptureApprovedStatesAndOverlays() throws {
         var shown: [String] = []
         for state in Self.approvedStates {
@@ -728,6 +740,11 @@ final class RoomReviewTests: XCTestCase {
             settle()
             let width = Int(app.frame.width.rounded())
             assertShown(state.shown, room, "\(state.key), \(width) pt")
+            if let panel = panelID(state.shown) {
+                softly {
+                    assertUnderlayAbsent(panel, room, "\(state.key), \(width) pt")
+                }
+            }
             softlyColumn(room, state.shown, "\(state.key), \(width) pt")
             capture("room-\(state.key)-\(width)pt-fixture", app)
             if state.key == "report-maya" {
@@ -743,10 +760,30 @@ final class RoomReviewTests: XCTestCase {
 
     /// Direct launches at the largest accessibility text size, on whichever iPhone runs it (the
     /// captures name its width): the entry, a long profile (Jules for a Business guest, the longest
-    /// approach line), Room notes, an actor's safety, a report with a reason selected and the Wave
-    /// information. Every text grows (never a fixed or clipped box) and stays in its column or panel;
-    /// every button, Leave included, can be brought into view and tapped, and is at least 44 pt tall.
+    /// approach line), Room notes, the global safety (over People), an actor's safety, a report with a
+    /// reason selected and the Wave information. Every text grows (never a fixed or clipped box) and
+    /// stays in its column or panel; every button, Leave included, can be brought into view and tapped,
+    /// and is at least 44 pt tall; under each panel nothing of the Room page or of Places is left in
+    /// the tree.
+    ///
+    /// Then real taps, each on a fresh launch of its panel (rows R7 on the iPhone 17 Pro Max and R14 on
+    /// the smaller iPhone): every panel's way back (Jules's safety's Back to his profile, Maya's report's
+    /// Close preview to her safety and a new unselected preview, the Wave information's Back to profile,
+    /// the global safety's Close to People), and every panel's Leave and disappear, each proved to end
+    /// the run, to shrug off a stale tap where the way back was and a cancelled back swipe, and to lead
+    /// through Return to Places to Places at Now and Back to Signal with the draft intact. Each control
+    /// is brought into view by `reveal`, proved hittable where it is, and only then tapped.
+    ///
+    /// Time, estimated (nothing of this has run yet): the six checks took 229-322 s in builds
+    /// 6abc1b80-6abc3ebe (253 s in 6abc3ebe's R14, six of their reveals failing after dead drags), so the
+    /// seven about 260-360 s; the four ways back about 60-90 s; the four Leaves, each a launch, a reveal,
+    /// five snapshots, a swipe and three screens (R8's ten plain Leaves took 126.9 s in 6abc3654), about
+    /// 100-150 s. About 420-600 s per iPhone: inside a 900-s allowance, and at the edge of a 600-s one.
     func testLargestTextKeepsRoomReachable() throws {
+        // The test plans cap tests at 900 s unless a test asks for more (their maximum is 1,200 s). This
+        // one has seven checks and eight fresh-launch proofs at the largest text, estimated at 420-600 s
+        // at Codemagic's pace; Xcode Cloud's is unmeasured, so it asks for the plans' maximum.
+        executionTimeAllowance = 1200
         for check in Self.largestChecks {
             let app = launchRoom(check.state, band: check.band, approach: check.approach, extra: Self.largestText)
             let room = RoomUI(app: app)
@@ -756,6 +793,9 @@ final class RoomReviewTests: XCTestCase {
             let state = "\(check.name), largest text, \(width) pt"
             capture("room-\(check.name)-largest-\(width)pt-fixture", app)
             softly {
+                if let panel = check.container {
+                    assertUnderlayAbsent(panel, room, state)
+                }
                 let bounds = horizontalBounds(check.container, room)
                 for text in check.texts {
                     assertUnclipped(text.id, grownFrom: text.figma, within: bounds, room, state)
@@ -767,6 +807,209 @@ final class RoomReviewTests: XCTestCase {
             capture("room-\(check.name)-largest-end-\(width)pt-fixture", app)
             app.terminate()
         }
+        // Each proof is soft as a whole, so one that fails still leaves the others to run and be read.
+        // Inside, every step that the next one stands on (the control revealed and hittable, the panel
+        // closed, the caller, the ended screen, Places, Signal) is a guard that fails and stops that
+        // proof, so nothing is ever tapped on top of a failure; the detailed checks of each state (its
+        // words, targets and tree) are ordinary assertions and all of them are read.
+        for item in Self.largestPanels {
+            softly {
+                proveWayBackAtLargestText(item)
+            }
+        }
+        for item in Self.largestPanels {
+            softly {
+                proveLeaveAtLargestText(item)
+            }
+        }
+    }
+
+    /// A panel's way back at the largest text, on a fresh launch: its control revealed, proved
+    /// hittable and tapped; then its caller, with no panel left (or, from a report, only its caller's).
+    private func proveWayBackAtLargestText(_ item: LargestPanel) {
+        let app = launchRoom(item.state, extra: Self.largestText)
+        defer { app.terminate() }
+        let room = RoomUI(app: app)
+        let width = Int(app.frame.width.rounded())
+        let state = "\(item.name), largest text, \(width) pt, \(item.wayBack)"
+        guard room.element(item.panel).waitForExistence(timeout: 15) else {
+            XCTFail("\(state): \(item.panel) shows.")
+            return
+        }
+        settle()
+        guard revealThenTap(item.wayBack, in: item.panel, room, state) else { return }
+        guard waitForAbsence(room.element(item.panel)) else {
+            XCTFail("\(state): \(item.wayBack) closes \(item.panel).")
+            return
+        }
+        switch item.caller {
+        case .profile(let key):
+            let actor = Self.actor(key)
+            guard room.profileName.waitForExistence(timeout: 10) else {
+                XCTFail("\(state): \(actor.name)'s profile shows.")
+                return
+            }
+            waitForLabel(room.profileName, actor.name)
+            settle()
+            assertProfile(room, actor, userIntent: "social", "\(state): \(actor.name)'s profile")
+            assertIdentifiers(absent: ["roomPanel."], readTree(app), "\(state): no panel is left")
+            capture("room-\(item.name)-largest-back-to-profile-\(width)pt-fixture", app)
+        case .people:
+            guard room.peopleFraming.waitForExistence(timeout: 10) else {
+                XCTFail("\(state): Close returns to People.")
+                return
+            }
+            XCTAssertTrue(waitFor(room.tab("people"), selected: true), "\(state): People is selected.")
+            settle()
+            assertButton(room.leave, RoomText.leave, "\(state): People")
+            assertIdentifiers(absent: ["roomPanel.", "roomProfile."], readTree(app), "\(state): the root screen, no panel")
+            capture("room-\(item.name)-largest-close-to-people-\(width)pt-fixture", app)
+        case .actorSafety(let key):
+            let actor = Self.actor(key)
+            let safety = Panel.actorSafety(key)
+            guard room.element(safety).waitForExistence(timeout: 10) else {
+                XCTFail("\(state): Close preview returns to \(actor.name)'s safety, the report's caller.")
+                return
+            }
+            settle()
+            assertActorSafety(room, actor, "\(state): \(actor.name)'s safety, the report's caller")
+            assertUnderlayAbsent(safety, room, "\(state): \(actor.name)'s safety")
+            assertIdentifiers(absent: [Panel.report(key)], readTree(app), "\(state): the report is gone")
+            capture("room-\(item.name)-largest-close-preview-to-safety-\(width)pt-fixture", app)
+            // The selection went with the preview (`RoomRun.closeLevel`: "A report preview's selection
+            // is discarded with it"): Preview report opens a new preview with nothing selected.
+            guard revealThenTap("roomPanel.previewReport", in: safety, room, state) else { return }
+            let report = Panel.report(key)
+            guard room.element(report).waitForExistence(timeout: 10) else {
+                XCTFail("\(state): Preview report opens \(actor.name)'s report again.")
+                return
+            }
+            settle()
+            assertReport(room, actor, selected: nil, "\(state): Preview report again, a new unselected preview")
+            assertUnderlayAbsent(report, room, "\(state): Preview report again")
+            capture("room-\(item.name)-largest-reopened-\(width)pt-fixture", app)
+        }
+    }
+
+    /// A panel's Leave and disappear at the largest text, on a fresh launch: revealed, proved hittable
+    /// and tapped. The ended screen, with nothing of the run in the tree. Then a stale Back: a tap where
+    /// the panel's way back was as Leave was tapped, and a cancelled swipe from the leading edge; the run
+    /// stays ended (or is Places at Now: an ended outer Back goes there, report deviation 6, and so does
+    /// a tap that meets Return to Places), never back in a run. Return to Places, revealed: browsing at
+    /// Now. Back: Signal, with the fixture's band and approach still selected.
+    private func proveLeaveAtLargestText(_ item: LargestPanel) {
+        let band = "social", approach = "chatFirst"
+        let app = launchRoom(item.state, band: band, approach: approach, extra: Self.largestText)
+        defer { app.terminate() }
+        let room = RoomUI(app: app)
+        let places = RoomPlaces(app: app)
+        let signal = RoomSignal(app: app)
+        let width = Int(app.frame.width.rounded())
+        let state = "\(item.name), largest text, \(width) pt, Leave"
+        guard room.element(item.panel).waitForExistence(timeout: 15) else {
+            XCTFail("\(state): \(item.panel) shows.")
+            return
+        }
+        settle()
+        guard reveal("roomPanel.leave", app) else { return }
+        let leave = room.inPanel(item.panel, "roomPanel.leave")
+        let wayBack = room.inPanel(item.panel, item.wayBack)
+        let leaveHittable = leave.isHittable
+        XCTAssertTrue(leaveHittable, "\(state): Leave can be tapped once in view (\(Self.rect(leave.frame))).")
+        guard leaveHittable else { return }
+        // The stale tap lands where the way back is now, as Leave is tapped: it has to be on screen for
+        // that tap to mean anything (at the largest text it sits just above Leave). If it is not, that
+        // fails here and only the stale tap is skipped: Leave, the ended screen, the cancelled swipe,
+        // Return to Places and the draft are still proved (their geometry on the 440-pt iPhone and for
+        // the global safety was never measured, so one unmet precondition must not hide them).
+        let wayBackHittable = wayBack.isHittable
+        XCTAssertTrue(wayBackHittable, "\(state): \(item.wayBack) is on screen beside Leave, where the stale tap "
+                      + "will land (\(Self.rect(wayBack.frame))).")
+        let stale: CGPoint? = wayBackHittable ? CGPoint(x: wayBack.frame.midX, y: wayBack.frame.midY) : nil
+        leave.tap()
+        let left = Date()
+        guard room.endedStatus.waitForExistence(timeout: 15) else {
+            XCTFail("\(state): Leave and disappear ends the run at once: the ended screen.")
+            return
+        }
+        assertEnded(room, "\(state): ended")
+        // One snapshot for the whole claim: the ended screen's way out is there, and nothing of the run.
+        let ended = readTree(app)
+        XCTAssertTrue(ended.contains { $0.identifier == "roomEnded.returnToPlaces" }, "\(state): the ended screen's way out.")
+        assertIdentifiers(absent: Self.runOnly, ended, "\(state): nothing of the run is left")
+        capture("room-\(item.name)-largest-left-\(width)pt-fixture", app)
+
+        // The stale Back. At least 0.8 s after Leave, so the window's repeat-tap guard can never swallow
+        // it as the second tap of a double tap, which would prove nothing.
+        var staleInPlaces = false
+        if let stale {
+            let quiet = Date().timeIntervalSince(left)
+            if quiet < 0.8 {
+                waitQuietly(0.8 - quiet)
+            }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                .withOffset(CGVector(dx: stale.x, dy: stale.y)).tap()
+            settle()
+            guard let afterTap = assertEndedOrPlaces(room, places, "\(state): a tap at \(Self.point(stale)), where "
+                                                     + "\(item.wayBack) was") else { return }
+            staleInPlaces = afterTap
+        }
+        edgeSwipe(app, completing: false)
+        // Long enough for a swipe that had been taken as a Back to show (every Room change is at most a
+        // 240-ms dissolve); the same wait the cancelled swipes of testBackGesturesInTheRoom use.
+        waitQuietly(0.6)
+        guard let swipeInPlaces = assertEndedOrPlaces(room, places, "\(state): a cancelled back swipe") else { return }
+        guard swipeInPlaces == staleInPlaces else {
+            XCTFail("\(state): a cancelled back swipe changes nothing (it went from "
+                    + (staleInPlaces ? "Places to the ended screen" : "the ended screen to Places") + ").")
+            return
+        }
+        let staleText = stale.map { "the stale tap at \(Self.point($0)) left " } ?? "no stale tap (the way back was not hittable); "
+        attachNote("\(state): " + staleText
+                   + (staleInPlaces ? "Places at Now (it met Return to Places, the ended screen's own way out)"
+                                    : "the ended screen as it was") + "; a cancelled back swipe changed nothing.")
+
+        if !staleInPlaces {
+            guard revealThenTap("roomEnded.returnToPlaces", in: nil, room, state) else { return }
+            guard places.headline.waitForExistence(timeout: 15) else {
+                XCTFail("\(state): Return to Places opens Places.")
+                return
+            }
+            assertPlacesNow(places, room, "\(state): Return to Places")
+        }
+        capture("room-\(item.name)-largest-left-return-to-places-\(width)pt-fixture", app)
+
+        // The draft: Back is Places' own way to Signal, which shows the fixture's band and approach.
+        XCTAssertEqual(places.secondary.label, "Back", "\(state): browsing's Back.")
+        guard revealThenTap("places.secondary", in: nil, room, state) else { return }
+        guard signal.headline.waitForExistence(timeout: 15) else {
+            XCTFail("\(state): Back from browsing opens Signal.")
+            return
+        }
+        waitForLabel(signal.headline, "A hello, on your terms.")
+        waitForLabel(signal.summary, "\(Self.intentTitles[band] ?? band) band · \(Self.approachTitles[approach] ?? approach)")
+        XCTAssertTrue(waitFor(signal.row(approach), selected: true), "\(state): the approach is kept; the Room never wrote the draft.")
+        capture("room-\(item.name)-largest-left-back-to-signal-\(width)pt-fixture", app)
+    }
+
+    /// After a stale tap or swipe on an ended run: still the ended screen, or Places browsing at Now;
+    /// never a run, a sample, a panel or the entry. Returns whether it is Places, or nil (having
+    /// failed) when it is neither.
+    private func assertEndedOrPlaces(_ room: RoomUI, _ places: RoomPlaces, _ state: String) -> Bool? {
+        var nodes = readTree(room.app)
+        let inPlaces = nodes.contains { $0.identifier == "places.headline" }
+        if inPlaces {
+            assertPlacesNow(places, room, state)
+            nodes = readTree(room.app)
+        } else if !nodes.contains(where: { $0.identifier == "roomEnded.status" }) {
+            XCTFail("\(state): still the ended screen, or Places at Now; it is neither.")
+            return nil
+        }
+        assertIdentifiers(absent: Self.runOnly + ["room.leave", "room.safety", "roomEntry."], nodes,
+                          "\(state): never back in a run")
+        let leaks = sampleLeaks(nodes, of: Self.actors, hostNotes: true, structure: true)
+        XCTAssertTrue(leaks.isEmpty, "\(state): no sample anywhere. " + leaks.joined(separator: "; "))
+        return inPlaces
     }
 
     // MARK: - Reduce Motion
@@ -939,6 +1182,14 @@ final class RoomReviewTests: XCTestCase {
                         ("room.note.public.jules", 116)],
                 buttons: ["room.safety", "room.tab.people", "room.tab.notes", "room.note.public.jules.more", "room.leave"]
             ),
+            // The Room's own safety (66:127) over People: never checked at the largest text before this.
+            LargestCheck(
+                name: "global-safety",
+                state: RoomState(key: "global-safety", stage: "room-populated", panel: "global-safety", shown: .globalSafety),
+                container: Panel.globalSafety,
+                texts: [("roomPanel.label", 22), ("roomPanel.title", 82), ("roomPanel.explanation", 112)],
+                buttons: ["roomPanel.close", "roomPanel.leave"]
+            ),
             LargestCheck(
                 name: "jules-safety-0",
                 state: RoomState(key: "jules-safety-0", stage: "room-populated", profile: "jules", panel: "actor-safety",
@@ -967,6 +1218,42 @@ final class RoomReviewTests: XCTestCase {
             ),
         ]
     }
+
+    /// The four panels whose ways back and Leave are tapped at the largest text, each with its way
+    /// back and the caller that way back returns to (`RoomRun.closeLevel`: the level below).
+    private static var largestPanels: [LargestPanel] {
+        [
+            LargestPanel(
+                name: "jules-safety-0",
+                state: RoomState(key: "jules-safety-0", stage: "room-populated", profile: "jules", panel: "actor-safety",
+                                 shown: .actorSafety(actor: "jules", blocked: [])),
+                panel: Panel.actorSafety("jules"), wayBack: "roomPanel.back", caller: .profile("jules")
+            ),
+            LargestPanel(
+                name: "report-maya-harassment",
+                state: RoomState(key: "report-maya", stage: "room-populated", profile: "maya", panel: "report",
+                                 reason: "harassment", shown: .report(actor: "maya", reason: "harassment")),
+                panel: Panel.report("maya"), wayBack: "roomPanel.closePreview", caller: .actorSafety("maya")
+            ),
+            LargestPanel(
+                name: "wave-info",
+                state: RoomState(key: "wave-info", stage: "room-populated", profile: "maya", panel: "wave-info",
+                                 shown: .waveInfo),
+                panel: Panel.waveInfo, wayBack: "roomPanel.backToProfile", caller: .profile("maya")
+            ),
+            LargestPanel(
+                name: "global-safety",
+                state: RoomState(key: "global-safety", stage: "room-populated", panel: "global-safety", shown: .globalSafety),
+                panel: Panel.globalSafety, wayBack: "roomPanel.close", caller: .people
+            ),
+        ]
+    }
+
+    /// What only an active run shows (a sample's card, a note, a profile, a panel, the tabs, the venue
+    /// ticket, waiting): none of it may exist once the run has ended.
+    private static let runOnly = [
+        "room.card.", "room.note", "roomProfile.", "roomPanel.", "room.tab", "room.venue", "roomWaiting.",
+    ]
 
     // MARK: - Route helpers
 
@@ -1393,13 +1680,45 @@ final class RoomReviewTests: XCTestCase {
     }
 
     /// What every panel carries: its container, "DEMO PREVIEW" and its own Leave; the screen below is
-    /// hidden from accessibility while it shows.
+    /// hidden from accessibility while it shows, and so is Places' bar below the whole Room (its
+    /// "Preview room demo" and "Back to place", `PlacesView.actions`, are not built while the Room
+    /// shows: in builds 6abc1b80-6abc3ebe the scroll helper took an element outside every scroll view
+    /// at y 592.33 on the smaller iPhone for the Room's bar, and its geometry is that of "Preview room
+    /// demo" left in the tree under the Room; its identifier was never logged).
     private func assertPanel(_ room: RoomUI, _ panel: String, _ state: String) {
         XCTAssertTrue(room.element(panel).exists, "\(state): \(panel) is showing.")
         assertText(room.inPanel(panel, "roomPanel.label"), RoomText.overlayLabel, state)
         assertButton(room.inPanel(panel, "roomPanel.leave"), RoomText.leave, state)
         XCTAssertFalse(room.leave.exists, "\(state): the screen below is hidden while a panel shows.")
+        XCTAssertFalse(room.element("explanation.primary").exists, "\(state): Places' Preview room demo is not under the Room.")
+        XCTAssertFalse(room.element("explanation.secondary").exists, "\(state): Places' Back to place is not under the Room.")
     }
+
+    /// While a panel shows, one snapshot, and in it nothing of the Room page below the panel and nothing
+    /// of Places below the Room: every offender is named. Two containers are not offenders: `room.screen`
+    /// holds the panel itself, and `places.screen` holds the whole Room (PlacesView draws RoomView as an
+    /// overlay inside the container it names). A new check (the repair after build 6abc3ebe), so it is
+    /// called only by the capture test and the largest-text test, never by the rest.
+    private func assertUnderlayAbsent(_ panel: String, _ room: RoomUI, _ state: String,
+                                      file: StaticString = #filePath, line: UInt = #line) {
+        let nodes = readTree(room.app, file: file, line: line)
+        XCTAssertTrue(nodes.contains { $0.identifier == panel }, "\(state): \(panel) is showing.", file: file, line: line)
+        let offenders = nodes.map { $0.identifier }.filter { identifier in
+            identifier != "places.screen" && Self.underlay.contains { identifier.hasPrefix($0) }
+        }
+        XCTAssertTrue(offenders.isEmpty, "\(state): under \(panel), the Room page and Places are gone from the tree; still "
+                      + "there: " + offenders.joined(separator: ", "), file: file, line: line)
+    }
+
+    /// Every identifier of the Room page (its chrome, venue ticket, tabs, cards, notes, profile, entry,
+    /// waiting, ended and bar) and of Places (browsing, a detail, the explanation), by prefix. The
+    /// chrome's three (`room.brand`, `room.demoBadge`, `room.safety`) sit in the page's scroll content
+    /// with the cards, under the same two hides.
+    private static let underlay = [
+        "room.brand", "room.demoBadge", "room.safety", "room.card.", "room.note", "room.tab", "room.venue",
+        "room.boundary", "room.leave", "room.empty", "room.peopleFraming", "room.notesFraming", "roomProfile.",
+        "roomWaiting.", "roomEntry.", "roomEnded.", "places.", "place.", "explanation.",
+    ]
 
     /// The global safety (66:127).
     private func assertGlobalSafety(_ room: RoomUI, _ state: String) {
@@ -1806,19 +2125,58 @@ final class RoomReviewTests: XCTestCase {
         element.tap()
     }
 
-    /// Brings the element with `identifier` between the top of the screen (the status bar: 62 on the
-    /// 956-pt iPhone 17 Pro Max, 47 on the 844-pt smaller iPhone, where the chrome rests at y 50)
-    /// and the top of any fixed bar below its scroll view (the buttons outside that scroll view in
-    /// its lower half: the Room's bottom actions); an element taller than that counts once its top
-    /// is in view. An element in no scroll view must already be there. Returns whether it did; when it did
-    /// not, it has already failed the test at the caller's line, with the screen, every drag and every
-    /// look attached: "Scroll PRODUCT" when two drags in a row did not move the page (its end, with the
-    /// element still out of view), "Scroll HARNESS" for everything else.
+    /// Brings the control `identifier` into view (found inside `panel`'s container when one is given),
+    /// proves it can be tapped where it now is, and only then taps it. Returns false, having failed at
+    /// the caller's line, when it could not be brought into view or is not hittable there; nothing is
+    /// tapped then.
+    @discardableResult
+    private func revealThenTap(_ identifier: String, in panel: String?, _ room: RoomUI, _ state: String,
+                               file: StaticString = #filePath, line: UInt = #line) -> Bool {
+        guard reveal(identifier, room.app, file: file, line: line) else { return false }
+        let control = panel.map { room.inPanel($0, identifier) } ?? room.element(identifier)
+        let hittable = control.isHittable
+        XCTAssertTrue(hittable, "\(state): \(identifier) can be tapped once in view (\(Self.rect(control.frame))).",
+                      file: file, line: line)
+        guard hittable else { return false }
+        control.tap()
+        return true
+    }
+
+    /// Brings the element with `identifier` into its ACTIVE viewport, clear of what really covers that
+    /// viewport; an element taller than the space counts once its top is in view. An element in no
+    /// scroll view (the Room's bar, Places' bar) only has to be on screen. Returns whether it did; when it
+    /// did not, it has already failed the test at the caller's line, with the screen, every drag and
+    /// every look attached: "Scroll PRODUCT" when two drags in a row did not move the page (its end, with
+    /// the element still out of view), "Scroll HARNESS" for everything else.
+    ///
+    /// The viewport is the element's scroll view, cut to the space between the status bar (62 on the
+    /// 956-pt iPhone 17 Pro Max, 47 on the 844-pt smaller iPhone, where the chrome rests at y 50) and the
+    /// screen's bottom less the home indicator's 20 pt. What may cover its lower part depends on where
+    /// the element is (`revealLook`): in a panel, only that panel's own elements outside its scroll view
+    /// (it has none: the whole card scrolls), never the dimmed page or Places beneath, which take no
+    /// touches; on a Room page, the Room's own bar (`RoomView.actionBar`) from its visual top.
+    ///
+    /// Why, before and after (builds 6abc1b80-6abc3ebe, R14 on the 390 × 844 iPhone). The helper took any
+    /// element outside every scroll view in the lower half for a fixed bar, and one had its top at 592.33
+    /// (by its geometry Places' "Preview room demo", `explanation.primary`, which Places' inset kept in
+    /// the tree under the Room; the helper never logged which element it was, hence the log line
+    /// below): every look, in a panel or on a page, had the range 47–592.33. The six panel
+    /// controls it then failed as "Scroll PRODUCT" were all on screen at their panel's end. Jules's
+    /// safety's Back ended at 526.33–610.0: against 47–592.33 it failed by 16.67 pt (past the 1-pt
+    /// tolerance); in the panel's own viewport, 47–824, it passes at the first look, 600.33–684.0. His
+    /// Leave (624–775, short by 181.67 pt), Maya's report's Close preview (448–599, by 5.67) and Leave
+    /// (615–766, by 172.67), and the Wave information's Back to profile (449–600, by 6.67) and Leave
+    /// (616–767, by 173.67) are all inside 47–824. On a page the edge is now the Room's own bar: its
+    /// Leave's top, 617, less the bar's 13-pt top padding is 604, where its ground begins (716 on the
+    /// 956-pt iPhone, where Places' button had set 704.33 and failed build 1's R7 on the profile's
+    /// action, 553.67–705.0); the entry's, from Enter at 569.33, is 556.33.
     ///
     /// Short, momentum-free drags (press 0.05 s, slow, held 0.2 s before release), each touching down
-    /// inside the element's scroll view on nothing that is a control (10 pt clear), never within 40 pt of
-    /// either screen edge (the leading edge is the Room's back swipe), and 0.7 s after the last, so the
-    /// window's repeat-tap guard never takes one for a second tap. Every drag prints a `ROOM_SCROLL` line.
+    /// inside the element's scroll view on nothing that is a control of the element's own layer (10 pt
+    /// clear), never within 40 pt of either screen edge (the leading edge is the Room's back swipe), and
+    /// 0.7 s after the last, so the window's repeat-tap guard never takes one for a second tap. Every look
+    /// and every drag prints a `ROOM_SCROLL` line, and each look names the element that set the bar's
+    /// top (its identifier, frame and layer) or says none, so a failure can be read from the log alone.
     @discardableResult
     private func reveal(_ identifier: String, _ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> Bool {
         var trace: [String] = []
@@ -1856,11 +2214,13 @@ final class RoomReviewTests: XCTestCase {
             }
             let screen = look.screen
             // The bar's own elements (and anything in no scroll view) never move: they only have to be
-            // on screen. Everything else has to come between the status bar and the bar.
+            // on screen. Everything else has to come into its viewport, above what covers it.
             let fixed = look.scroller == nil || Self.barIdentifiers.contains(identifier)
             let statusBar: CGFloat = screen.height >= 900 ? 62 : 47
             let top: CGFloat = fixed ? 0 : max(statusBar, look.scroller?.minY ?? statusBar)
-            var bottom: CGFloat = fixed ? screen.maxY - 8 : min(look.scroller?.maxY ?? screen.maxY, screen.maxY - 20)
+            var bottom: CGFloat = fixed
+                ? screen.maxY - 8
+                : min(look.scroller?.maxY ?? screen.maxY, screen.maxY - Self.homeIndicatorMargin)
             if !fixed, let bar = look.barTop {
                 bottom = min(bottom, bar)
             }
@@ -1868,8 +2228,11 @@ final class RoomReviewTests: XCTestCase {
             let low = fits ? frame.maxY > bottom + 1 : frame.minY > bottom - 44
             let high = frame.minY < top - 1
             let barText = look.barTop.map { Self.pt($0) } ?? "none"
-            trace.append("look \(attempt + 1): \(Self.rect(frame)); range \(Self.pt(top))–\(Self.pt(bottom)); scroll view "
-                         + "\(Self.rect(look.scroller)); bar top \(barText)")
+            let layer = look.panel.map { "in panel \($0)" } ?? "on the page"
+            let lookLine = "look \(attempt + 1): \(Self.rect(frame)) \(layer); range \(Self.pt(top))–\(Self.pt(bottom)); "
+                + "scroll view \(Self.rect(look.scroller)); bar top \(barText), set by \(look.barSource)"
+            trace.append(lookLine)
+            print("ROOM_SCROLL \(identifier) \(lookLine)")
             if !low && !high {
                 return true
             }
@@ -1943,46 +2306,82 @@ final class RoomReviewTests: XCTestCase {
         return look
     }
 
-    /// One snapshot of the whole app: the target, the scroll view that holds it, the top of any fixed
-    /// bar below that scroll view, and every control. The bar is whatever lies in the lower half of the
-    /// scroll view's extent but outside it (the Room's `.safeAreaInset` actions, and People's boundary
-    /// line above Leave), together with the elements the Room keeps in that bar, wherever the tree
-    /// places them.
+    /// One snapshot of the whole app: the target; the nearest scroll view and the nearest panel
+    /// container above it; the edge of what covers the lower part of its viewport, and which element
+    /// set it; and the controls of its layer.
+    ///
+    /// - In a panel (its container is `roomPanel.globalSafety`, `roomPanel.actorSafety.<actor>`,
+    ///   `roomPanel.report.<actor>` or `roomPanel.waveInfo`, `RoomView.panelIdentifier`): only that same
+    ///   panel's elements outside the target's scroll view, in its lower half, cover it. There are none
+    ///   today (the card scrolls whole inside its full-screen scroll view); nothing outside the panel ever
+    ///   counts, whatever the tree still holds of the dimmed page or of Places.
+    /// - On a Room page (no panel): the Room's bar, that is the elements the Room keeps there
+    ///   (`barIdentifiers`, wherever the tree places them) or anything outside every scroll view in the
+    ///   lower half, never a Places element (`places.`, `place.`, `explanation.`): Places' bar lies under
+    ///   the Room, not in front of it. The edge is the first such element's top less the bar's 13-pt top
+    ///   padding (`RoomView.actionBar`'s `.padding(.top, 13)`, a constant at every text size), where the
+    ///   bar's opaque ground begins; no other margin.
     private func revealLook(_ identifier: String, _ app: XCUIApplication) throws -> RevealLook {
         let root = try app.snapshot()
         var look = RevealLook()
         look.screen = root.frame
         var placed: [RevealPlaced] = []
-        var stack: [RevealEntry] = [RevealEntry(node: root, scroller: nil)]
+        var stack: [RevealEntry] = [RevealEntry(node: root, scroller: nil, panel: nil)]
         while let entry = stack.popLast() {
             let node = entry.node
+            // A panel's container belongs to its own panel, as everything inside it does.
+            let panel = Self.isPanelContainer(node.identifier) ? node.identifier : entry.panel
             if !look.found && node.identifier == identifier {
                 look.found = true
                 look.target = node.frame
                 look.scroller = entry.scroller
+                look.panel = panel
             }
-            if Self.controlTypes.contains(node.elementType) {
-                look.controls.append(node.frame)
-            }
-            placed.append(RevealPlaced(frame: node.frame, scroller: entry.scroller, identifier: node.identifier))
+            placed.append(RevealPlaced(frame: node.frame, scroller: entry.scroller, panel: panel, identifier: node.identifier,
+                                       control: Self.controlTypes.contains(node.elementType)))
             let inner: CGRect? = node.elementType == .scrollView ? node.frame : entry.scroller
             for child in node.children.reversed() {
-                stack.append(RevealEntry(node: child, scroller: inner))
+                stack.append(RevealEntry(node: child, scroller: inner, panel: panel))
             }
         }
-        if let scroller = look.scroller {
-            let screenBottom = look.screen.maxY
-            // Two scroll views with the same frame to within a point are the same place: under a panel the
-            // dimmed page's full-screen scroll view and the panel's differ only by rounding (844 against
-            // 843.99999 on the smaller iPhone, build 6abc3654), and the page's content is not a fixed bar.
-            let fixed = placed.filter { item in
+        // A drag avoids the controls of the target's own layer: under an open panel the page takes no
+        // touches (`allowsHitTesting(false)`), and the whole Room lies above Places.
+        look.controls = placed.filter { $0.control && $0.panel == look.panel }.map { $0.frame }
+        guard look.found, let scroller = look.scroller else { return look }
+        let screenBottom = look.screen.maxY
+        let onScreenAcross = { (item: RevealPlaced) -> Bool in
+            item.frame.minY < screenBottom && item.frame.height > 0
+                && item.frame.maxX > scroller.minX && item.frame.minX < scroller.maxX && item.identifier != identifier
+        }
+        let lowerHalf = { (item: RevealPlaced) -> Bool in
+            item.frame.minY >= scroller.midY && onScreenAcross(item)
+        }
+        if let panel = look.panel {
+            let covering = placed.filter { item in
                 let sameScroller = item.scroller.map { Self.sameFrame($0, scroller) } ?? false
-                let barred = !sameScroller || Self.barIdentifiers.contains(item.identifier)
-                let below = item.frame.minY >= scroller.midY && item.frame.minY < screenBottom && item.frame.height > 0
-                let across = item.frame.maxX > scroller.minX && item.frame.minX < scroller.maxX
-                return barred && below && across && item.identifier != identifier
+                return item.panel == panel && item.identifier != panel && !sameScroller && lowerHalf(item)
             }
-            look.barTop = fixed.map { $0.frame.minY }.min()
+            if let first = covering.min(by: { $0.frame.minY < $1.frame.minY }) {
+                look.barTop = first.frame.minY
+                look.barSource = "\(Self.named(first.identifier)) \(Self.rect(first.frame)) in panel \(panel)"
+            }
+        } else {
+            // The Room's own bar elements count wherever they are: at the largest text People's boundary
+            // line (three or more lines of 14/22) can start above the screen's middle, and the bar's
+            // ground begins 13 pt above it all the same. Anything else outside every scroll view counts
+            // only in the lower half, as before.
+            let bar = placed.filter { item in
+                guard item.panel == nil, !Self.isPlaces(item.identifier) else { return false }
+                if Self.barIdentifiers.contains(item.identifier) {
+                    return onScreenAcross(item)
+                }
+                return item.scroller == nil && lowerHalf(item)
+            }
+            if let first = bar.min(by: { $0.frame.minY < $1.frame.minY }) {
+                look.barTop = first.frame.minY - Self.barTopPadding
+                look.barSource = "\(Self.named(first.identifier)) \(Self.rect(first.frame)) on the page, less the bar's "
+                    + "\(Self.pt(Self.barTopPadding))-pt top padding"
+            }
         }
         return look
     }
@@ -1992,6 +2391,28 @@ final class RoomReviewTests: XCTestCase {
             && abs(a.height - b.height) <= 1
     }
 
+    /// A panel's container (the card `RoomView.panelCard` names), as opposed to a control inside one
+    /// (`roomPanel.back`, `roomPanel.leave`, …).
+    private static func isPanelContainer(_ identifier: String) -> Bool {
+        identifier == Panel.globalSafety || identifier == Panel.waveInfo
+            || identifier.hasPrefix("roomPanel.actorSafety.") || identifier.hasPrefix("roomPanel.report.")
+    }
+
+    /// Places' own elements (browsing, a detail, the explanation): under the Room, never in front of it.
+    private static func isPlaces(_ identifier: String) -> Bool {
+        identifier.hasPrefix("places.") || identifier.hasPrefix("place.") || identifier.hasPrefix("explanation.")
+    }
+
+    private static func named(_ identifier: String) -> String {
+        identifier.isEmpty ? "an element with no identifier" : identifier
+    }
+
+    /// `RoomView.actionBar`'s `.padding(.top, 13)`: the bar's ground begins this far above its first element.
+    private static let barTopPadding: CGFloat = 13
+
+    /// Kept clear above the screen's bottom edge, for the home indicator.
+    private static let homeIndicatorMargin: CGFloat = 20
+
     /// What the Room keeps in the bar below its scrolling content (`RoomView.actionBar`): never scrolled.
     private static let barIdentifiers: Set<String> = [
         "room.leave", "room.boundary", "roomEntry.enter", "roomEntry.back", "roomEnded.returnToPlaces",
@@ -1999,8 +2420,9 @@ final class RoomReviewTests: XCTestCase {
 
     /// Where a drag touches down: inside the scroll view (across its middle, a third in, or 12 pt into
     /// either side margin of the column), never within 40 pt of a screen edge, at a height from which
-    /// the whole drag stays in the band (nearest its middle first), 10 pt or more from every control,
-    /// and preferably 60 pt or more from the last drag's touch-down.
+    /// the whole drag stays in the band (nearest its middle first), 10 pt or more from every control of
+    /// the target's layer (`RevealLook.controls`), and preferably 60 pt or more from the last drag's
+    /// touch-down.
     private func revealTouch(_ look: RevealLook, scroller: CGRect, travel: CGFloat, fingerUp: Bool, bandTop: CGFloat,
                              bandBottom: CGFloat, awayFrom previous: CGPoint?) -> CGPoint? {
         let fractions: [CGFloat] = [0.5, 0.33, 0.67]
@@ -2175,9 +2597,9 @@ final class RoomReviewTests: XCTestCase {
     }
 
     /// With `PROXIMEET_SHORT_HOLDS=1` (unrecorded runs), a hold is at most 0.6 s: longer than any
-    /// 500 ms movement it waits for.
+    /// 500 ms movement it waits for. Never in the recorded walkthrough (`fullHolds`).
     private func hold(_ seconds: TimeInterval) {
-        let short = ProcessInfo.processInfo.environment["PROXIMEET_SHORT_HOLDS"] == "1"
+        let short = !fullHolds && ProcessInfo.processInfo.environment["PROXIMEET_SHORT_HOLDS"] == "1"
         let duration = short ? min(seconds, 0.6) : seconds
         let done = expectation(description: "Hold so the recording shows this state")
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { done.fulfill() }
@@ -2384,6 +2806,26 @@ private struct LargestCheck {
     var buttons: [String] = []
 }
 
+/// One panel at the largest text, for the taps that close it and that leave from it.
+private struct LargestPanel {
+    /// Where a panel's way back returns (the level below it).
+    enum Caller {
+        /// That sample's profile (an actor's safety opened from it; the Wave information).
+        case profile(String)
+        /// That sample's safety (its report preview's caller).
+        case actorSafety(String)
+        /// People, the root screen (the global safety opened from it).
+        case people
+    }
+
+    var name: String
+    var state: RoomState
+    var panel: String
+    /// Back, Close preview, Back to profile or Close.
+    var wayBack: String
+    var caller: Caller
+}
+
 /// One element of a tree snapshot.
 private struct RoomNode {
     let identifier: String
@@ -2397,24 +2839,33 @@ private struct RevealLook {
     var found = false
     var target = CGRect.zero
     var screen = CGRect.zero
-    /// The scroll view that holds the target, if any.
+    /// The nearest scroll view above the target, if any.
     var scroller: CGRect?
-    /// The top of the fixed bar below that scroll view, if any.
+    /// The nearest panel container above the target (or the target itself), if any; nil on a page.
+    var panel: String?
+    /// The edge of what covers the lower part of the target's viewport, if anything does.
     var barTop: CGFloat?
+    /// Which element set `barTop` (identifier, frame, layer), for the log.
+    var barSource = "none"
+    /// The controls of the target's layer, which a drag never touches down on.
     var controls: [CGRect] = []
 }
 
-/// One element of a reading for `reveal`: where it is, and the scroll view it moves with.
+/// One element of a reading for `reveal`: where it is, the scroll view it moves with, the panel it
+/// belongs to, and whether it is a control.
 private struct RevealPlaced {
     let frame: CGRect
     let scroller: CGRect?
+    let panel: String?
     let identifier: String
+    let control: Bool
 }
 
 @MainActor
 private struct RevealEntry {
     let node: any XCUIElementSnapshot
     let scroller: CGRect?
+    let panel: String?
 }
 
 // MARK: - Screens

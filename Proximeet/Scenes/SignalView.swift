@@ -53,7 +53,7 @@ struct SignalView: View {
                         .padding(.top, 14)
                         .padding(.horizontal, 32)
                         .accessibilityIdentifier("signal.support")
-                    SignalHero(intent: intent, approach: session.approach, width: min(376, proxy.size.width - 64))
+                    SignalHero(intent: intent, approach: session.approach, width: min(376, max(0, proxy.size.width - 64)))
                         .id(motionEpoch)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 26)

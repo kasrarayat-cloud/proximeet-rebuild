@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Independent consistency checks for the checked-in Proximeet Xcode project.
 
-Read-only: parses the on-disk project, scheme, asset catalog, privacy manifest,
+Read-only: parses the on-disk project, scheme and its test plans, asset catalog, privacy manifest,
 local package manifest and Swift sources, and cross-checks them against each
 other and against the filesystem. It does not reuse the generator's data model;
 the only generator interaction is check 10, which imports
@@ -43,6 +43,8 @@ CATALOG = RESOURCES_DIR / "Assets.xcassets"
 PRIVACY = RESOURCES_DIR / "PrivacyInfo.xcprivacy"
 PACKAGE_NAME = "ProximeetDomain"
 PACKAGE_TEST_TARGET = "ProximeetDomainTests"
+# The scheme's test plans, in order; the first is the default (check 7).
+EXPECTED_TEST_PLANS = ("TestPlans/RoomVerificationMain.xctestplan", "TestPlans/RoomVerificationSmall.xctestplan")
 APP_TARGET = "Proximeet"
 UI_TEST_TARGET = "ProximeetUITests"
 EXPECTED_BUNDLE_ID = "com.goseng.proximeet"
@@ -663,7 +665,74 @@ def check_settings(ctx: Context, c: Check) -> None:
 # ==========================================================================
 
 
-@check(7, "shared scheme references the app, UI tests and package test target")
+def _test_sources(container: str, name: str) -> list[Path]:
+    folder = ROOT / UI_TEST_TARGET if container == "container:Proximeet.xcodeproj" else \
+        ROOT / PACKAGE_NAME / "Tests" / name
+    return sorted(path for path in folder.rglob("*.swift") if path.is_file()) if folder.is_dir() else []
+
+
+def check_test_plan(c: Check, reference: str, targets: dict[str, dict],
+                    manifest_targets: dict[str, str]) -> list[tuple[str, str]]:
+    """Validate one scheme test plan; return its testables as (name, container)."""
+    path = ROOT / reference[len("container:"):]
+    if not c.require(reference.startswith("container:") and v_is_file(path), f"test plan {reference} missing"):
+        return []
+    label = path.name
+    try:
+        plan = json.loads(v_read_text(path))
+    except ValueError as error:
+        c.fail(f"{label} is not JSON: {error}")
+        return []
+    c.require(plan.get("version") == 1, f"{label}: version is {plan.get('version')!r}, not 1")
+    options = [plan.get("defaultOptions", {})] + [item.get("options", {}) for item in plan.get("configurations", [])]
+    for option in options:
+        # A repeated or retried test is not a verdict: every selected test must execute once and pass.
+        c.require(not {"testRepetitionMode", "maximumTestRepetitions"} & set(option),
+                  f"{label}: test repetition is set")
+    environment = {entry.get("key"): entry.get("value") for entry in plan.get("defaultOptions", {}).get(
+        "environmentVariableEntries", []) if entry.get("enabled", True)}
+    testables = []
+    for entry in plan.get("testTargets", []):
+        target = entry.get("target", {})
+        container, identifier, name = (target.get(key) for key in ("containerPath", "identifier", "name"))
+        testables.append((name, container))
+        c.require(entry.get("parallelizable") is False, f"{label}: {name} must set parallelizable false")
+        if container == "container:Proximeet.xcodeproj":
+            native = targets.get(identifier)
+            c.require(native is not None and native.get("name") == name == UI_TEST_TARGET,
+                      f"{label}: {identifier} is not the {UI_TEST_TARGET} native target")
+            c.require(bool(entry.get("selectedTests")), f"{label}: {name} must select its tests explicitly")
+        elif container == f"container:{PACKAGE_NAME}":
+            c.require(identifier == name and manifest_targets.get(name) == "testTarget",
+                      f"{label}: {name} is not a {PACKAGE_NAME} testTarget")
+        else:
+            c.fail(f"{label}: unexpected containerPath {container!r}")
+            continue
+        texts = {source: source.read_text(encoding="utf-8") for source in _test_sources(container, name)}
+        tests = entry.get("selectedTests", []) + entry.get("skippedTests", [])
+        c.require(len(tests) == len(set(tests)), f"{label}: {name} lists a test twice")
+        for test in tests:
+            match = re.fullmatch(r"(\w+)(?:/(\w+)\(\))?", test)
+            if not c.require(match is not None, f"{label}: malformed test identifier {test!r}"):
+                continue
+            owner, method = match.groups()
+            files = [source for source, text in texts.items()
+                     if re.search(rf"\bclass\s+{owner}\s*:", text)]
+            if not c.require(len(files) == 1, f"{label}: class {owner} is not declared once in {name}"):
+                continue
+            text = texts[files[0]]
+            c.require(method is None or re.search(rf"\bfunc\s+{method}\(", text) is not None,
+                      f"{label}: {owner} has no func {method}(")
+            flag = re.search(r'reviewFlag\s*=\s*"(PROXIMEET_\w+)"', text)
+            if test in entry.get("selectedTests", []) and flag:
+                # Without its flag the class skips itself, and a skipped test is not a pass.
+                c.require(environment.get(flag.group(1)) == "1", f"{label}: {owner} needs {flag.group(1)}=1")
+        c.note(f"{label}: {name}, {len(entry.get('selectedTests', []))} selected, "
+               f"{len(entry.get('skippedTests', []))} skipped")
+    return testables
+
+
+@check(7, "shared scheme references the app and UI tests; its test plans select existing tests")
 def check_scheme(ctx: Context, c: Check) -> None:
     for path in (WORKSPACE_DATA, WORKSPACE_CHECKS):
         c.require(v_is_file(path), f"{rel(path)} missing")
@@ -708,16 +777,26 @@ def check_scheme(ctx: Context, c: Check) -> None:
                    for ref in entry.iter("BuildableReference")]
     c.require(APP_TARGET in build_names, "BuildAction does not build the app")
     c.require(UI_TEST_TARGET in build_names, "BuildAction does not build the UI test bundle")
-    testables = [(ref.get("BlueprintName"), ref.get("ReferencedContainer"))
-                 for testable in scheme.iter("TestableReference")
-                 for ref in testable.iter("BuildableReference")]
+    # The Test action runs committed test plans (Room verification in Xcode Cloud,
+    # docs/verification/room-xcode-cloud-verification.md), so the testables live in the plans: one
+    # source of truth, never a scheme list beside them and never an autocreated plan.
+    test_action = scheme.find("TestAction")
+    c.require(test_action is not None and test_action.find("Testables") is None
+              and test_action.get("shouldAutocreateTestPlan") is None,
+              "TestAction must select its tests only through its test plans")
+    plans = [(ref.get("reference", ""), ref.get("default") == "YES") for ref in scheme.iter("TestPlanReference")]
+    expected = [f"container:{path}" for path in EXPECTED_TEST_PLANS]
+    c.require([path for path, _ in plans] == expected,
+              f"TestAction plans {[path for path, _ in plans]} != {expected}")
+    c.require([default for _, default in plans] == [True] + [False] * (len(plans) - 1),
+              f"{EXPECTED_TEST_PLANS[0]} must be the one default test plan")
+    testables: list[tuple[str, str]] = []
+    for reference, _ in plans:
+        testables += check_test_plan(c, reference, targets, manifest_targets)
     c.require((PACKAGE_TEST_TARGET, f"container:{PACKAGE_NAME}") in testables,
-              f"TestAction does not include {PACKAGE_TEST_TARGET}")
+              f"no test plan includes {PACKAGE_TEST_TARGET}")
     c.require((UI_TEST_TARGET, "container:Proximeet.xcodeproj") in testables,
-              f"TestAction does not include {UI_TEST_TARGET}")
-    for name in testables:
-        c.require(manifest_targets.get(name[0]) == "testTarget" or name[1] == "container:Proximeet.xcodeproj",
-                  f"testable {name[0]} is not a package testTarget")
+              f"no test plan includes {UI_TEST_TARGET}")
     launch = scheme.find("LaunchAction")
     if c.require(launch is not None, "no LaunchAction"):
         runnable = launch.find("BuildableProductRunnable/BuildableReference")

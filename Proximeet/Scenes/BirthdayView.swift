@@ -28,7 +28,7 @@ struct BirthdayView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let console = min(376, proxy.size.width - 64)
+            let console = min(376, max(0, proxy.size.width - 64))
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     header

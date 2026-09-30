@@ -39,7 +39,7 @@ struct WristbandView: View {
                         .padding(.top, 14)
                         .padding(.horizontal, 32)
                         .accessibilityIdentifier("wristband.support")
-                    WristbandHero(choice: session.intent, width: min(376, proxy.size.width - 64))
+                    WristbandHero(choice: session.intent, width: min(376, max(0, proxy.size.width - 64)))
                         .frame(maxWidth: .infinity)
                         .padding(.top, 28)
                     summary

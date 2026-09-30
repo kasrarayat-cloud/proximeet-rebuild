@@ -7,6 +7,9 @@ Generates:
   Proximeet.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
   Proximeet.xcodeproj/xcshareddata/xcschemes/Proximeet.xcscheme
 
+The scheme's Test action references the committed test plans in TestPlans/ (TEST_PLANS); the
+plans themselves are written by hand, not generated.
+
 Format decisions
 ----------------
 * objectVersion = 60 is the Xcode 15 project format. It is required because the
@@ -62,7 +65,12 @@ RESOURCE_FILES = (
 )
 PACKAGE_RELATIVE_PATH = "ProximeetDomain"
 PACKAGE_PRODUCT = "ProximeetDomain"
-PACKAGE_TEST_TARGET = "ProximeetDomainTests"
+# Hand-written test plans the scheme's Test action references, relative to the folder holding the
+# project; the first is the default. They are not generated: scripts/validate_project.py checks them.
+TEST_PLANS = (
+    "TestPlans/RoomVerificationMain.xctestplan",
+    "TestPlans/RoomVerificationSmall.xctestplan",
+)
 
 OBJECT_VERSION = "60"
 COMPATIBILITY_VERSION = "Xcode 15.0"
@@ -605,6 +613,18 @@ def render_scheme() -> str:
         "         </CommandLineArgument>\n"
         for argument in FIXTURE_ARGUMENTS
     )
+    # The Test action runs committed test plans instead of an autocreated one, so Xcode Cloud can
+    # select the Room verification by name (docs/verification/room-xcode-cloud-verification.md). The
+    # plans hold the testables (ProximeetUITests and the package's ProximeetDomainTests), each test,
+    # the review flags and the time allowances; the scheme only lists them. The first is the default:
+    # xcodebuild without -testPlan runs it.
+    test_plans = "".join(
+        "         <TestPlanReference\n"
+        f'            reference = "container:{_xml_attr(plan)}"'
+        + ('\n            default = "YES">\n' if index == 0 else ">\n")
+        + "         </TestPlanReference>\n"
+        for index, plan in enumerate(TEST_PLANS)
+    )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         "<Scheme\n"
@@ -636,20 +656,10 @@ def render_scheme() -> str:
         '      buildConfiguration = "Debug"\n'
         '      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"\n'
         '      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"\n'
-        '      shouldUseLaunchSchemeArgsEnv = "YES"\n'
-        '      shouldAutocreateTestPlan = "YES">\n'
-        "      <Testables>\n"
-        "         <TestableReference\n"
-        '            skipped = "NO"\n'
-        '            parallelizable = "NO">\n'
-        + ui_ref(12)
-        + "         </TestableReference>\n"
-        "         <TestableReference\n"
-        '            skipped = "NO">\n'
-        + _buildable_reference(12, PACKAGE_TEST_TARGET, PACKAGE_TEST_TARGET, PACKAGE_TEST_TARGET,
-                               f"container:{PACKAGE_RELATIVE_PATH}")
-        + "         </TestableReference>\n"
-        "      </Testables>\n"
+        '      shouldUseLaunchSchemeArgsEnv = "YES">\n'
+        "      <TestPlans>\n"
+        + test_plans
+        + "      </TestPlans>\n"
         "   </TestAction>\n"
         "   <LaunchAction\n"
         '      buildConfiguration = "Debug"\n'

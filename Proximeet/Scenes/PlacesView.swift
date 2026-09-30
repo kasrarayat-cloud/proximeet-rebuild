@@ -45,6 +45,9 @@ struct PlacesView: View {
     /// bar. Build 6ab8adb4's frames, as reconstructed, put the scroll issued during the stage change
     /// within the outgoing detail's scroll range.
     @State private var revealTicketEnd = 0
+    /// The action bar's last measured height, so the spacer that stands in for it under the Room keeps
+    /// the stage where it was.
+    @State private var actionBarHeight: CGFloat = 0
 
     var body: some View {
         if let intent = session.intent, session.approach != nil {
@@ -111,7 +114,27 @@ struct PlacesView: View {
                         .background(WristbandStyle.ground.ignoresSafeArea(edges: .top))
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    actions(stage, eligibility, width: width, bottomInset: proxy.safeAreaInsets.bottom)
+                    if session.room == nil {
+                        actions(stage, eligibility, width: width, bottomInset: proxy.safeAreaInsets.bottom)
+                            .background {
+                                GeometryReader { bar in
+                                    Color.clear
+                                        .onAppear { actionBarHeight = bar.size.height }
+                                        .onChange(of: bar.size.height) { _, height in actionBarHeight = height }
+                                }
+                            }
+                            .transition(.opacity)
+                    } else {
+                        // Under the Room the bar is not built: an inset's content kept its buttons in
+                        // the accessibility tree under the Room although the stage above is hidden
+                        // (builds 6abc1b80-6abc3ebe; the Room's own bar under a panel likewise). An
+                        // empty spacer of its height keeps the explanation where it was, and the bar
+                        // dissolves out and back in with the Room. The spacer keeps the bar's own ground, so
+                        // nothing of the stage shows through while the buttons fade.
+                        Color.clear
+                            .frame(height: actionBarHeight)
+                            .background(WristbandStyle.ground.ignoresSafeArea(edges: .bottom))
+                    }
                 }
                 .onChange(of: session.flow.currentScene) { previous, scene in
                     revealStart(from: previous, to: scene, with: reader)
@@ -838,8 +861,10 @@ private struct TicketFooterLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard subviews.count == 2 else { return .zero }
-        let width = proposal.width
-            ?? subviews[0].sizeThatFits(.unspecified).width + spacing + subviews[1].sizeThatFits(.unspecified).width
+        // An unspecified or infinite proposal measures at the natural width: an infinite width returned
+        // as this layout's size is an invalid (non-finite) frame.
+        let natural = subviews[0].sizeThatFits(.unspecified).width + spacing + subviews[1].sizeThatFits(.unspecified).width
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? natural
         let action = actionSize(subviews, width: width)
         if fitsSideBySide(subviews, width: width) {
             let schedule = subviews[0].sizeThatFits(ProposedViewSize(width: width - spacing - action.width, height: nil))

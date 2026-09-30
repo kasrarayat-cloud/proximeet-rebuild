@@ -87,13 +87,15 @@ struct RoomView: View {
     // MARK: - Layers
 
     /// The screen, and above it the open panel (if any) over the dimmed screen. While a panel is open
-    /// the screen below is not an accessibility element; the panel is modal.
+    /// the screen below takes no touches and is hidden from accessibility, and its bar is not built
+    /// at all (see `page`); the panel is modal.
     private func layers(_ room: RoomPreview, width: CGFloat, proxy: GeometryProxy) -> some View {
         let screen = RoomScreen(room)
         let panel = room.run?.panel
         return ZStack {
             page(room, screen: screen, width: width, bottomInset: proxy.safeAreaInsets.bottom, covered: panel != nil)
                 .accessibilityHidden(panel != nil)
+                .allowsHitTesting(panel == nil)
             if let run = room.run, let panel {
                 panelLayer(run, panel: panel, width: width, height: proxy.size.height)
                     .transition(.opacity)
@@ -683,6 +685,13 @@ struct RoomView: View {
                     .frame(maxWidth: .infinity, minHeight: height)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // The ground behind the status bar, as on the page: a panel scrolled at large text never
+            // runs under the clock (builds 6abc2ae1-6abc3ebe, the largest-text panels at 390 and 440 pt).
+            .safeAreaInset(edge: .top, spacing: 0) {
+                Color.clear
+                    .frame(height: 0)
+                    .background(RoomStyle.ground.ignoresSafeArea(edges: .top))
+            }
             .id(Self.panelIdentifier(panel))
             .transition(.opacity)
         }

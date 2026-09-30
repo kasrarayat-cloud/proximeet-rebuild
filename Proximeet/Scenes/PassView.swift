@@ -25,7 +25,7 @@ struct PassView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let card = min(400, proxy.size.width - 40)
+            let card = min(400, max(0, proxy.size.width - 40))
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     header
