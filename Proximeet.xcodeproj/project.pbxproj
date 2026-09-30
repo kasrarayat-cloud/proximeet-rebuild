@@ -111,6 +111,7 @@
 		DB169914AA8CB8128679137B /* BirthdayReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayReviewTests.swift; sourceTree = "<group>"; };
 		DF0CD69B687C2A33D9C4C25A /* WristbandReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WristbandReviewTests.swift; sourceTree = "<group>"; };
 		E2B9055BE62D6166F7331A15 /* Fabric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fabric.swift; sourceTree = "<group>"; };
+		EE3587802A6FD794621D33A8 /* ProximeetDomain */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ProximeetDomain; sourceTree = "<group>"; };
 		F625C30EB22CE8ECAA33941C /* GuestListReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListReviewTests.swift; sourceTree = "<group>"; };
 		FF619E10369A2C250F60F6C1 /* PlacesEdgeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesEdgeBack.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -201,6 +202,7 @@
 			children = (
 				D191B56054CF72F82A333911 /* Proximeet */,
 				78E90A2F43990BC4C377723E /* ProximeetUITests */,
+				EE3587802A6FD794621D33A8 /* ProximeetDomain */,
 				70BA62A58D2B503196088CEC /* Products */,
 			);
 			sourceTree = "<group>";
