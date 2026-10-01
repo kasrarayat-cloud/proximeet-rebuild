@@ -1,4 +1,82 @@
-# Wave chapter 09: implementation and native-verification preparation
+# Wave chapter 09: Build 8 and the repair candidate
+
+Updated: 1 October 2026. **Native verification remains FAILED. The repair candidate has not run.**
+
+## Current result and continuation
+
+Build **8** (`b0f3f615-1b68-42b1-bcbc-000df4be40c2`) ran the published branch
+`wave/approved-20260930T173856Z` at `0fe14dc3fe934950e1fa3f72035dc9959e3a9c5c`.
+Both native builds compiled. Main passed **269/280**, Small **6/7**: **275/287**, with 12 failed methods.
+All 287 expected unique identities and destinations were represented; the retained logs show no repeated
+starts or ends, skipped results or `RUN_BUDGET_SPENT` marker. Apple's displayed use was **71 compute
+minutes**, with **48 minutes** elapsed. This is the failed baseline, not evidence for the repaired source.
+
+- Main: all 250 domain tests and the 16 Places/Room UI methods passed; 3/14 Wave methods passed.
+  The other 11 stopped at the same strict check finding `wave.rings` somewhere in the XCTest snapshot.
+  That evidence does not establish whether VoiceOver can focus or speak the rings. The original snapshot
+  collector did not retain the information needed to distinguish a structural wrapper from an exposed element.
+- Small: four Places methods, one Room method and the Wave panels method passed. The Wave largest-text
+  screens method had two scroll-helper failures: its five candidate touch-down positions all overlapped
+  expanded controls. A preceding drag did move content; final reachability was not established there.
+- W1 and the approved-screen inventory stopped early at the rings assertion. There is no complete Wave
+  walkthrough or complete approved-state capture set from Build 8.
+- A blocked-menu end still shows a blank Leave area, while the sampled recording at 40.0 seconds shows
+  Leave. This remains unresolved; neither a persistent drawing defect nor a capture artifact is established.
+
+Evidence is retained in `Wave-Build8-Review.zip`, including the result inventory, runtime audit, exact
+failure descriptions, selected captures, the original Small recording and its provenance. No archive or
+TestFlight delivery followed Build 8.
+
+## Bounded repair candidate
+
+The source is reconstructed from the exact GitHub archive of the Build 8 commit. Only these product/test
+changes are proposed:
+
+1. `WaveView.swift`: put dynamic page hiding on explicit accessibility containers. Give decorative rings
+   an explicit ignored-child boundary, retaining `wave.rings` before the final hidden modifier. This is a
+   semantic repair hypothesis that needs native validation; modifier ordering is not a proven root cause.
+   Existing text continues to convey invitation state. No art, layout, typography, navigation or motion changes.
+2. `WaveReviewTests.swift`: keep the original rings-absence assertion and identifier. If it fails, retain
+   the exact assertion snapshot, node roles/labels/frames/descendants and a screenshot for diagnosis.
+3. Add a page-only trailing-gutter scroll candidate, 16 pt inside the scroller and away from the left edge
+   Back gesture, after existing candidates. Preserve the 10-pt control exclusion, vertical bounds,
+   movement/stall checks and 40-attempt limit.
+4. At the blocked menu's largest-text end, keep the app alive for paired app/screen captures, record Leave
+   geometry, then actually tap Leave and check the ended screen. Hittability and a successful tap are not
+   substitutes for reviewing whether the text was drawn.
+5. `ci_scripts/ci_pre_xcodebuild.sh`: run the eight D2 source readers on the macOS build host once in the
+   existing Wave Main `build-for-testing` phase. Exact workflow, phase and plan gates prevent extra work in
+   Small and other workflows. The command has a five-minute timeout; zero, missing, repeated, skipped or
+   failing tests fail the hook. D2 remains separate from the 287 simulator executions.
+
+All 14 Wave UI methods and both plans remain selected. The 800-ms recipient-acceptance-only ring join,
+240-ms dissolves, Reduce Motion behavior, approved Room/Wave visual system and offline demo rules stay
+unchanged. Nothing here is a native pass, motion review, VoiceOver result or founder visual sign-off.
+
+## Authorized next action and limits
+
+The founder authorized the repair and **one further manual Wave Verification build, up to 160 compute
+minutes**, with “ok then do it stop waitig for me” and repeated continuation instructions. The lead performs
+the accessible publishing, trigger inspection, start, monitoring and artifact review steps. No new approval
+is required for those already authorized steps. Do not start automatic retries, Codemagic, an archive or
+TestFlight distribution. Inspect current Apple workflow triggers before publishing the repaired branch.
+
+The UI budgets remain 104 minutes Main and 36 minutes Small. D2 uses part of the existing setup allowance;
+it adds no action. The five-minute D2 timeout and UI guards do **not** bound all Apple setup/upload time.
+Monitor actual usage and cancel before the authorization limit is exceeded. An incomplete or budget-cut
+run is not verification success. A repaired-source native run is pending; the current browser requires Apple
+sign-in before trigger inspection or start. Source checks are recorded with the packaged candidate; this
+report does not carry old candidate passes forward.
+
+VoiceOver, system Reduce Motion, motion quality and device visual review remain manual and pending.
+The earlier Guest List negative-frame warning and largest-text INTRODUCTIONS wrapping stay recorded.
+
+## Historical implementation record — 30 September 2026
+
+The following record is preserved as originally reported. Its local-only, no-native-run, VPS-only D2,
+no-Apple-access and founder-only action statements describe that date. They are superseded for this
+continuation by the current result and runbook above; they must not be read as today's status.
+
 
 Date: 2026-09-30. Not production-ready.
 
