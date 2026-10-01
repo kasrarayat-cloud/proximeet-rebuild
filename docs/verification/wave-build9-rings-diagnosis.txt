@@ -61,11 +61,16 @@ proposed. The current source and strict assertion are preserved for an interpret
 
 Concrete next step
 ------------------
-Use Rings-probe-plan.txt for a bounded native semantic diagnosis, before any full rerun. It first inspects
-the unchanged Build 9 app with VoiceOver/Accessibility Inspector, then uses a minimal separate controlled
-specimen only if the real-app observation needs explanation. Preserve wave.rings and the existing assertion.
-Only after that evidence should a product fix or a explicitly documented test-contract correction be
-chosen. No such probe was performed in this session.
+Use Rings-probe-plan.txt for a bounded native semantic diagnosis before any full rerun. First inspect
+the retained Build 9 simulator app with Accessibility Inspector on a compatible Mac. Simulator does
+not support VoiceOver, and Inspector simulated speech is not an actual VoiceOver result. Actual
+VoiceOver focus and speech require a physical iPhone running a matching, separately built and signed
+device artifact; Build 9's simulator app cannot be installed there.
+
+Use a separate minimal controlled specimen only if the Inspector/XCTest comparison needs explanation.
+Preserve wave.rings and the existing assertion. Keep Inspector findings and physical-device VoiceOver
+results distinct when deciding between a product fix and an explicitly documented test-contract
+correction. No probe, device build, installation or actual VoiceOver check was performed in this session.
 
 Authorization and separate layout defect
 ----------------------------------------
@@ -77,6 +82,7 @@ or excuse these rings failures, and still requires native confirmation.
 
 Primary documentation consulted
 -------------------------------
+https://developer.apple.com/documentation/accessibility/performing-accessibility-testing-for-your-app
 https://developer.apple.com/documentation/swiftui/view-accessibility
 https://developer.apple.com/documentation/xcuiautomation/xcuielementsnapshot
 https://developer.apple.com/documentation/xcuiautomation/xcuielementsnapshot/dictionaryrepresentation
@@ -84,25 +90,30 @@ https://developer.apple.com/documentation/xcuiautomation/xcuielementsnapshot/dic
 See Rings-diagnostic-readback.json for each observed role line and Main-rings-diagnostic-manifest.json
 for exact source test identities, payloads, sizes and hashes.
 
-
 Proposed bounded native rings probe — NOT RUN OR AUTHORIZED AS A NEW CLOUD BUILD
 
 Purpose: decide whether the remaining wave.rings node is an inert XCTest wrapper or an accessible
 focus stop, before selecting a product change or revising the test contract. Keep the reviewed app
 source at 5aed3e0a2335f14d127718f6789fc5bf043bb970 and preserve its identifier and strict assertion.
 
-1. Use the downloaded Main-Test-Products.zip from Build 9. Its inventory confirms a compiled
-   Debug-iphonesimulator/Proximeet.app with bundle identifier com.goseng.proximeet and iPhoneSimulator
-   platform (SDK iphonesimulator26.5). This artifact has not been launched in this workspace. A compatible
-   Mac/iOS simulator or another suitable interactive native environment is still required. This
-   workspace has no interactive iOS simulator/VoiceOver surface. Do not start another full cloud run
-   merely to obtain the app; it is already retained in the review package.
-2. Inspect two real states first: the default-size Wave demo menu (separate rings) and incoming accepted
-   invitation (joined rings). With system VoiceOver active, record sequential forward/backward focus
-   traversal and explore-by-touch across the ring region. Record actual announced items and focus
-   rectangles. Confirm neighboring named controls/text remain accessible. Use Accessibility Inspector
-   to capture element exposure/properties in parallel. The existing XCTest snapshot remains comparison
-   evidence; its hasFocus flag and isHittable are not substitutes for this observation.
+1. Use the retained Main-Test-Products.zip from Build 9 for inspection on a compatible Mac and iOS
+   Simulator. It contains Debug-iphonesimulator/Proximeet.app, bundle identifier com.goseng.proximeet,
+   built for iPhoneSimulator with SDK iphonesimulator26.5. It cannot be installed on a physical iPhone.
+   The artifact has not been launched in this workspace. Do not start another cloud run merely to
+   obtain it; the simulator app is already retained. This workspace has no interactive Mac/Inspector
+   or physical iPhone/VoiceOver surface.
+2. Inspect the default-size Wave demo menu (separate rings) and incoming accepted invitation
+   (joined rings) with Accessibility Inspector on the compatible Mac. Retain the Inspector hierarchy,
+   element properties and navigation observations alongside XCTest snapshots. Clearly label any
+   Inspector simulated speech as simulated; it is not an actual VoiceOver result.
+
+   VoiceOver is unavailable in iOS Simulator. Actual VoiceOver focus, speech, sequential traversal
+   and explore-by-touch must be checked on a physical iPhone running a matching device build.
+   That requires a separately built and signed device artifact; Build 9's simulator app cannot serve
+   this purpose. No such device build, installation or VoiceOver check has been performed here.
+   Any additional build/signing/delivery step remains outside the consumed cloud-run authorization.
+   On that physical device, record forward/backward focus traversal and exploration across both ring
+   poses, and confirm neighboring meaningful text and controls remain accessible.
 3. If the observations still leave the snapshot behavior unexplained, use a separate minimal SwiftUI
    probe containing the same WaveHaloRings component and same ancestor containment/hiding pattern.
    Keep its wave.rings identifier. Compare at most three clearly labeled diagnostic variants:
@@ -111,20 +122,27 @@ source at 5aed3e0a2335f14d127718f6789fc5bf043bb970 and preserve its identifier a
       the separate probe; demonstrate that the observation method detects a real accessible stop.
    C. The current hidden ring with the dynamic ancestor-hiding modifier removed only in the probe;
       preserve ring geometry, identifier and hidden(true) to isolate ancestor propagation.
-   Read a snapshot and actual system-accessibility behavior for each. Do not copy positive-control
+   Record XCTest snapshots and Accessibility Inspector observations for each variant on Simulator.
+   These cannot establish actual VoiceOver behavior. Any VoiceOver comparison requires equivalent
+   probe variants on a physical iPhone, with the device artifact and configuration recorded separately. Do not copy positive-control
    labeling or probing code into the product. Stop after obtaining a clear discriminating result.
 4. Decision:
-   - If unchanged product rings are a focus stop or spoken item, repair that demonstrated exposure and
-     compare again while preserving the identifier and visual/motion system.
-   - If unchanged product rings are skipped and the controlled probe establishes that hidden decoration
-     can remain an inert XCTest Other node, document a proposed test-contract correction separately.
-     Do not alter the current assertion or retroactively turn Build 9 green. Review the new accessibility
-     verification approach on its merits before any later full verification.
+   - If physical-device VoiceOver focuses or announces the product rings, repair that demonstrated
+     exposure and compare again while preserving the identifier and visual/motion system. An Inspector
+     finding alone must be reported as an Inspector finding, not a confirmed VoiceOver defect.
+   - If physical-device VoiceOver skips the rings and controlled Inspector/XCTest comparisons support
+     an inert diagnostic wrapper, document a proposed test-contract correction separately. If only
+     Simulator inspection is available, leave the VoiceOver outcome pending. Do not alter the current
+     assertion or retroactively turn Build 9 green.
    - If inconclusive, keep verification failed/unknown and retain observations; do not choose speculative
      modifier combinations or repeat the full suite hoping for a different result.
 
-Evidence to retain: exact app/probe source identity, OS/Xcode/device, system VoiceOver state, sequential
-focus/speech recording, Inspector readback, snapshots, both ring poses, positive-control result, and
-an explicit conclusion separating XCTest structure from assistive-technology behavior.
+Evidence to retain: exact app/probe source identity, platform, artifact type, OS/Xcode/device,
+Inspector readback, XCTest snapshots, both ring poses and the positive-control result. Keep Inspector
+simulated speech separate from physical-device VoiceOver recordings. For actual VoiceOver checks,
+also retain the device build identity, VoiceOver settings and sequential focus/speech observations.
+State explicitly which checks remain unperformed.
+
+Apple reference: https://developer.apple.com/documentation/accessibility/performing-accessibility-testing-for-your-app
 
 This proposal creates no native results, no production sign-off and no permission for additional compute.
