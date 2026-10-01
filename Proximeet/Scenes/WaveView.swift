@@ -457,6 +457,9 @@ struct WaveView: View {
             WristbandBodyText(text: WaveCopy.invitationPurpose(screen, counterpart: counterpart) ?? "", size: 16,
                               lineHeight: 23, color: RoomStyle.ink, alignment: .center)
                 .frame(minHeight: 48 * scale, alignment: .top)
+                // Preserve the approved two-line minimum, but reserve all wrapped lines before
+                // placing the preference below. The inner text alone having ideal height is not enough.
+                .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
                 .accessibilityIdentifier("wave.invitation.purpose")
                 .padding(.horizontal, 4)
