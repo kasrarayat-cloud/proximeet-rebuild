@@ -35,9 +35,12 @@ specific branches; TestFlight's branch trigger was restricted to `testflight/int
   Main build/runtime and Small runtime logs; that limited absence is not a device or production sign-off.
 
 The exact compiled simulator app is retained from Build 9's Main Test Products artifact (41,450,968 bytes),
-with `com.goseng.proximeet`, iPhoneSimulator platform and SDK iphonesimulator26.5. A compatible interactive
-Mac/iOS simulator is required to perform VoiceOver/Accessibility Inspector work; this workspace has no
-such surface. No new cloud build is needed merely to obtain that app. See the focused investigation plan
+with `com.goseng.proximeet`, iPhoneSimulator platform and SDK iphonesimulator26.5. It can support
+Accessibility Inspector investigation on a compatible Mac and iOS Simulator; no new cloud build is needed
+merely to obtain it. Inspector simulated speech is not actual VoiceOver. [Apple documents that VoiceOver
+requires a physical device](https://developer.apple.com/documentation/accessibility/performing-accessibility-testing-for-your-app).
+The simulator app cannot be installed on an iPhone; a matching signed device build has not been produced.
+This workspace has neither an interactive Mac/Inspector nor a physical iPhone/VoiceOver surface. See the focused investigation plan
 in `docs/verification/wave-build9-rings-diagnosis.txt`. No grounded additional rings source fix is claimed.
 
 Evidence is packaged as **Wave-Build9-Review.zip**, with unchanged selected screenshots/recordings,
