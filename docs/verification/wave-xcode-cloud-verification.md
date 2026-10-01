@@ -1,4 +1,60 @@
-# Wave verification in Xcode Cloud: the authorized run
+# Wave verification in Xcode Cloud: repair continuation
+
+Updated: 1 October 2026. **Build 8 FAILED at `0fe14dc3fe934950e1fa3f72035dc9959e3a9c5c`:
+275/287 passed. The repaired candidate has not run.** The founder authorized the repair, publishing only
+the Wave branch and **one additional manual verification build capped at 160 compute minutes**.
+There is no automatic retry, Codemagic, archive, TestFlight distribution or billing change in this scope.
+
+## Current procedure (supersedes the historical procedure below)
+
+1. Inspect the actual start conditions of every existing product workflow before publishing. Last observed:
+   Wave and Room were manual; TestFlight's automatic trigger was limited to `testflight/internal-20260928`.
+   Refresh this evidence; GitHub push history alone does not prove today's configuration. If Apple is signed
+   out, the user must complete authentication in the shared browser, after which the lead continues.
+2. Publish the reviewed changed files on **`wave/approved-20260930T173856Z`**, preserving its current
+   `0fe14dc3fe934950e1fa3f72035dc9959e3a9c5c` history. Verify the new exact head and file contents.
+   Observe that publishing does not automatically start a build; avoid a duplicate manual start.
+3. Reuse **Wave Verification**, workflow `8aa8688e-79e8-4c32-8fb4-e81c0c3aa893`, product
+   `11E47465-2769-4E60-8E70-D2DAA60FD414`, team `981723c2-e4fb-48c8-86d6-a4d9e4b1a8a6`.
+   Check manual start on the exact Wave branch, clean build, and exactly two Test actions on scheme
+   **Proximeet**: `WaveVerificationMain` on **iPhone 17 Pro Max**, `WaveVerificationSmall` on
+   **iPhone 17e**. Build 8 used Xcode **26.6 (17F113)**, macOS **26.5.1 (25F80)** and iOS **26.5**;
+   preserve that environment. No archive or TestFlight post-action. Do not create a duplicate workflow.
+4. Start one build at the repaired head and verify Apple's built commit, destinations and plans. Retain
+   build/action IDs and start times. Main must execute **280** (30 UI + 250 domain), Small **7**.
+   All **287** exact selected identities must finish once, with no failure, skip, omission or budget cut.
+5. The new `ci_scripts/ci_pre_xcodebuild.sh` runs **D2's eight source readers** on the macOS Main
+   `build-for-testing` host, using its checked-out repository and an isolated SwiftPM scratch directory.
+   It calls `xcrun --sdk macosx swift test`, checks exact start/pass identities and the eight-test summary,
+   and fails on timeout (300 seconds), skip, duplicate, missing result or nonzero exit. Require the
+   `D2_BEGIN`, eight `D2_PASSED` identities and `D2_RESULT` (8 passed, 0 failed/skipped/repeated), with
+   the repaired commit, in Main's custom-script logs. A green simulator action alone is insufficient.
+   D2 is **additional to**, not included in, the 287 simulator executions. No separate workflow/action.
+6. Monitor actual Apple usage throughout. Existing UI budgets are Main 104 + Small 36 minutes; the
+   unchanged 20-minute setup allowance must also absorb D2. Guards and D2's timeout cannot cap every
+   Apple setup/upload phase. Cancel before exceeding 160 compute minutes; record incomplete verification
+   honestly. No automatic retry or second repaired build is authorized.
+7. Download and audit results for both actions, warnings and runtime logs. Require the full W1 journey and
+   complete screen/panel captures. Review the blocked-menu paired stills, video and real Leave transition.
+   If `wave.rings` still appears, use the newly attached exact snapshot diagnostic; do not delete the
+   identifier or weaken the assertion to manufacture a pass. Snapshot absence does not replace VoiceOver.
+8. Report source checks, native results and manual review separately. VoiceOver, system Reduce Motion,
+   physical-device motion and founder visual approval remain pending until actually performed. Archive and
+   TestFlight delivery require a subsequent authorized delivery step after verification success.
+
+The eight D2 tests remain the identities listed in historical §8. They were previously VPS-only because
+simulator test hosts do not contain the repository. The new route uses the build host, where source exists.
+The CI hook's behavior has to be confirmed natively; local mock/parser checks are not domain-test passes.
+Apple documents `CI_WORKFLOW_ID`, `CI_TEST_PLAN`, `CI_XCODEBUILD_ACTION`, `CI_COMMIT` and
+`CI_PRIMARY_REPOSITORY_PATH` in its environment-variable reference and the hook in its custom-script guide.
+
+## Historical authorized-run preparation — 30 September 2026
+
+The following is retained for inventory, rationale and the original approval record. Build 8 consumed that
+original one-run authorization. Its status/ownership and VPS-only statements are historical; use the current
+procedure above for the separately authorized repair continuation. The original 287 selections and excluded
+older Places rows remain unchanged.
+
 
 **Status: AUTHORIZED, NOT RUN.** On 30 September 2026 the founder authorized pushing only this Wave
 feature branch, creating a manual **Wave Verification** workflow, and starting **one** Xcode Cloud
