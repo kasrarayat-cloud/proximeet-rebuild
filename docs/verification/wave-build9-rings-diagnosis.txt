@@ -1,3 +1,8 @@
+Continuation note — 1 October 2026
+The accepted-card layout/test patch mentioned below is now applied in source, after completion of the
+Build 9 audit. It remains natively unverified. Rings code and its strict assertion are unchanged.
+The following diagnosis and probe plan are retained from the Build 9 closeout; no probe has been run.
+
 Wave Build 9 rings — final read-only diagnosis
 1 October 2026
 
