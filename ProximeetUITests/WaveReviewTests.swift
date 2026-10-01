@@ -1132,6 +1132,7 @@ final class WaveReviewTests: XCTestCase {
     /// capture; under an overlay nothing of the Wave page, the Room or Places in the tree; the first
     /// element at rest below the status bar; every text grown and inside its column or overlay, and
     /// every button brought into view, hittable and at least 44 pt, from the top down; a closing capture.
+    /// The blocked menu additionally records paired captures and proves Leave from that scrolled state.
     private func checkAtLargestText(_ checks: [WaveLargestCheck]) {
         for check in checks {
             let app = launchWave(check.fixture, extra: Self.largestText)
@@ -1167,8 +1168,41 @@ final class WaveReviewTests: XCTestCase {
                 }
             }
             capture("wave-\(check.name)-largest-end-\(width)pt-fixture", app)
+            if check.fixture.menuBlocked {
+                softly { proveBlockedMenuLeaveAfterScroll(ui, state, width: width) }
+            }
             app.terminate()
         }
+    }
+
+    /// Build 8's blocked-menu end still had a blank Leave area while its recording showed Leave.
+    /// Keep that exact scrolled state alive, retain both capture APIs with geometry for visual review,
+    /// then prove the visible action works there. Hittability and a successful tap do not by themselves
+    /// settle whether the label was drawn; the paired stills and the recording remain review evidence.
+    private func proveBlockedMenuLeaveAfterScroll(_ ui: WaveUI, _ state: String, width: Int) {
+        let app = ui.app
+        waitQuietly(0.8)
+        XCTAssertTrue(ui.menuBlocked.exists, "\(state): the blocked menu remains active before the Leave review.")
+        assertButton(ui.leave, WaveText.leave, state)
+        attachNote("\(state): paired captures before Leave, with the app kept running. "
+                   + "wave.leave frame=\(Self.rect(ui.leave.frame)), enabled=\(ui.leave.isEnabled), "
+                   + "hittable=\(ui.leave.isHittable), label=\(String(reflecting: ui.leave.label)). "
+                   + "Snapshot presence and hittability are not proof of rendered text.")
+        capture("wave-demo-menu-blocked-largest-settled-app-\(width)pt-fixture", app)
+        let screen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screen.name = "wave-demo-menu-blocked-largest-settled-screen-\(width)pt-fixture"
+        screen.lifetime = .keepAlways
+        add(screen)
+        waitQuietly(0.8)
+        guard revealThenTap("wave.leave", in: nil, ui, state) else { return }
+        guard ui.screen(.sessionEnded).waitForExistence(timeout: 15) else {
+            XCTFail("\(state): Leave from the scrolled blocked menu ends the Wave.")
+            return
+        }
+        XCTAssertFalse(ui.menuBlocked.exists, "\(state): the blocked menu is gone after Leave.")
+        XCTAssertEqual(app.alerts.count, 0, "\(state): Leave asks nothing.")
+        assertButton(ui.returnToPlaces, WaveText.returnToPlaces, "\(state): ended")
+        capture("wave-demo-menu-blocked-largest-left-\(width)pt-fixture", app)
     }
 
     /// A Leave at the largest text, on a fresh launch: revealed (in its panel's own viewport, or above
@@ -1698,7 +1732,7 @@ final class WaveReviewTests: XCTestCase {
     /// `menuBlocked`: the menu once its counterpart is blocked (three disabled choices, one generic line).
     private func assertScreen(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI, _ state: String,
                               menuBlocked: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
-        let nodes = readTree(ui.app, file: file, line: line)
+        let nodes = readTree(ui.app, recordUnexpectedRingsIn: state, file: file, line: line)
         let ids = Set(nodes.map { $0.identifier })
         let screens = nodes.map { $0.identifier }.filter { $0.hasPrefix("wave.screen.") }
         XCTAssertEqual(screens, ["wave.screen.\(screen.rawValue)"], "\(state): exactly this screen (\(screen.figma)).",
@@ -2087,7 +2121,8 @@ final class WaveReviewTests: XCTestCase {
 
     /// Every element of the app in one snapshot (one round trip), with its words, frame, selection and
     /// the overlay container it sits in (the nearest `wavePanel.*` above it, or itself).
-    private func readTree(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> [WaveNode] {
+    private func readTree(_ app: XCUIApplication, recordUnexpectedRingsIn state: String? = nil,
+                          file: StaticString = #filePath, line: UInt = #line) -> [WaveNode] {
         let root: any XCUIElementSnapshot
         do {
             root = try app.snapshot()
@@ -2106,7 +2141,40 @@ final class WaveReviewTests: XCTestCase {
             nodes.append(WaveNode(identifier: node.identifier, label: node.label, value: (node.value as? String) ?? "",
                                   type: node.elementType, frame: node.frame, panel: panel))
         }
+        if let state, nodes.contains(where: { $0.identifier == "wave.rings" }) {
+            recordUnexpectedRings(root, app, state)
+        }
         return nodes
+    }
+
+    /// Failure-only evidence from the very snapshot used by assertScreen's unchanged absence check.
+    /// XCTest's snapshot includes containers: finding this identifier does not establish VoiceOver
+    /// focus or speech. Keep node roles, labels, frames, descendants and the snapshot dictionary so a
+    /// native failure can be diagnosed without weakening the assertion or inferring VoiceOver behavior.
+    private func recordUnexpectedRings(_ root: any XCUIElementSnapshot, _ app: XCUIApplication, _ state: String) {
+        var details = ["\(state): wave.rings appeared in the snapshot used by assertScreen.",
+                       "This is XCTest snapshot evidence, not a VoiceOver focus or speech result."]
+        var stack: [(node: any XCUIElementSnapshot, depth: Int, inRings: Bool)] = [(root, 0, false)]
+        while let entry = stack.popLast() {
+            let node = entry.node
+            let inRings = entry.inRings || node.identifier == "wave.rings"
+            if inRings {
+                details.append(String(repeating: "  ", count: entry.depth)
+                               + "role=\(node.elementType) identifier=\(String(reflecting: node.identifier)) "
+                               + "label=\(String(reflecting: node.label)) frame=\(Self.rect(node.frame)) "
+                               + "children=\(node.children.count)")
+            }
+            for child in node.children.reversed() {
+                stack.append((child, entry.depth + 1, inRings))
+            }
+        }
+        details.append("Exact failing snapshot dictionary (debug evidence only):")
+        details.append(String(reflecting: root.dictionaryRepresentation))
+        let attachment = XCTAttachment(string: details.joined(separator: "\n"))
+        attachment.name = "wave-rings-unexpected-snapshot"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        capture("wave-rings-unexpected-screen", app)
     }
 
     /// Where a sample could show up: its name (any case, so the upper-case Wave lines count) or initials
@@ -2411,8 +2479,9 @@ final class WaveReviewTests: XCTestCase {
     ///
     /// Short, momentum-free drags (press 0.05 s, slow, held 0.2 s before release), each touching down
     /// inside the element's scroll view on nothing that is a control of the element's own layer (10 pt
-    /// clear), never within 40 pt of either screen edge (the leading edge is the back swipe), and 0.7 s
-    /// after the last. Every look and drag prints a `WAVE_SCROLL` line.
+    /// clear), never within 40 pt of the leading screen edge (the back swipe). The usual points also
+    /// avoid the trailing 40 pt; a page-only fallback uses the trailing gutter, 16 pt inside the screen
+    /// and scroll view. Drags start 0.7 s after the last. Every look and drag prints a `WAVE_SCROLL` line.
     @discardableResult
     private func reveal(_ identifier: String, _ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> Bool {
         var trace: [String] = []
@@ -2622,11 +2691,11 @@ final class WaveReviewTests: XCTestCase {
     /// What the Wave keeps in the bar below its scrolling content (`WaveView.actionBar`): never scrolled.
     private static let barIdentifiers: Set<String> = ["wave.leave", "wave.returnToPlaces"]
 
-    /// Where a drag touches down (`RoomReviewTests.revealTouch`): inside the scroll view (across its
-    /// middle, a third in, or 12 pt into either side margin of the column), never within 40 pt of a screen
-    /// edge, at a height from which the whole drag stays in the band (nearest its middle first), 10 pt or
-    /// more from every control of the target's layer, and preferably 60 pt or more from the last drag's
-    /// touch-down.
+    /// Where a drag touches down: first search the existing middle/column candidates, 40 pt clear of
+    /// both screen edges. If they are all occupied, a page (never an overlay) may use the trailing gutter,
+    /// 16 pt inside both the screen and scroll view; PlacesEdgeBack owns only the leading edge. All
+    /// candidates stay at least 40 pt from that leading edge, keep the whole drag in the vertical band,
+    /// remain 10 pt clear of every control of the target's layer, and prefer 60 pt from the last touch.
     private func revealTouch(_ look: WaveRevealLook, scroller: CGRect, travel: CGFloat, fingerUp: Bool, bandTop: CGFloat,
                              bandBottom: CGFloat, awayFrom previous: CGPoint?) -> CGPoint? {
         let fractions: [CGFloat] = [0.5, 0.33, 0.67]
@@ -2635,6 +2704,13 @@ final class WaveReviewTests: XCTestCase {
         let margin = (screenWidth - min(376, screenWidth - 64)) / 2
         xs += [margin + 12, screenWidth - margin - 12]
         xs = xs.filter { $0 >= 40 && $0 <= screenWidth - 40 }
+        var searches = [xs]
+        if look.panel == nil {
+            let trailingX = min(look.screen.maxX, scroller.maxX) - 16
+            if trailingX >= max(look.screen.minX + 40, scroller.minX + 16) {
+                searches.append([trailingX])
+            }
+        }
         let lowest = fingerUp ? bandTop + travel : bandTop
         let highest = fingerUp ? bandBottom : bandBottom - travel
         guard lowest <= highest else { return nil }
@@ -2648,20 +2724,22 @@ final class WaveReviewTests: XCTestCase {
             offset += 8
         }
         let avoided = look.controls.map { $0.insetBy(dx: -10, dy: -10) }
-        for spaced in [true, false] {
-            for y in ys {
-                for x in xs {
-                    let point = CGPoint(x: x, y: y)
-                    if avoided.contains(where: { $0.contains(point) }) {
-                        continue
-                    }
-                    if spaced, let previous {
-                        let dx = previous.x - x, dy = previous.y - y
-                        if (dx * dx + dy * dy).squareRoot() < 60 {
+        for candidates in searches {
+            for spaced in [true, false] {
+                for y in ys {
+                    for x in candidates {
+                        let point = CGPoint(x: x, y: y)
+                        if avoided.contains(where: { $0.contains(point) }) {
                             continue
                         }
+                        if spaced, let previous {
+                            let dx = previous.x - x, dy = previous.y - y
+                            if (dx * dx + dy * dy).squareRoot() < 60 {
+                                continue
+                            }
+                        }
+                        return point
                     }
-                    return point
                 }
             }
         }
