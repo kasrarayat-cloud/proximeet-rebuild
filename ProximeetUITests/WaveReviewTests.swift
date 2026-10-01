@@ -1160,6 +1160,10 @@ final class WaveReviewTests: XCTestCase {
                     switch item {
                     case .text(let id, let figma):
                         assertUnclipped(id, grownFrom: figma, within: bounds, ui, state)
+                        if check.fixture.screen == .inAccepted, check.panel == nil,
+                           id == "wave.invitation.purpose" {
+                            assertAcceptedPurposePrecedesPreference(ui, state)
+                        }
                     case .button(let id):
                         assertReachableButton(id, ui, state)
                     case .disabledButton(let id, let label):
@@ -2400,6 +2404,35 @@ final class WaveReviewTests: XCTestCase {
         let width = ui.app.frame.width
         let margin = (width - min(376, width - 64)) / 2
         return margin...(width - margin)
+    }
+
+    /// Build 9 Small passed the individual growth/reachability checks while these two rendered text
+    /// frames overlapped by 106 pt. Read both from the same settled snapshot after revealing purpose,
+    /// before another scroll: independent boxes can be tall enough and still collide with each other.
+    private func assertAcceptedPurposePrecedesPreference(_ ui: WaveUI, _ state: String) {
+        let nodes = readTree(ui.app)
+        let purposes = nodes.filter { $0.identifier == "wave.invitation.purpose" && $0.type == .staticText }
+        let preferences = nodes.filter { $0.identifier == "wave.invitation.preference" && $0.type == .staticText }
+        guard purposes.count == 1, preferences.count == 1,
+              let purpose = purposes.first, let preference = preferences.first else {
+            XCTFail("\(state): one purpose and one preference text must exist in the same snapshot.")
+            return
+        }
+        let upper = purpose.frame, lower = preference.frame
+        guard upper.minY.isFinite, upper.maxY.isFinite, lower.minY.isFinite, lower.maxY.isFinite,
+              upper.height > 0, lower.height > 0 else {
+            XCTFail("\(state): invitation text frames must have finite, positive heights.")
+            return
+        }
+        let gap = lower.minY - upper.maxY
+        attachNote("\(state): accepted-card text separation in one snapshot: purpose=\(Self.rect(upper)); "
+                   + "preference=\(Self.rect(lower)); vertical gap=\(Self.pt(gap)) pt.")
+        XCTAssertGreaterThanOrEqual(gap, -1,
+                                   "\(state): purpose ends above preference; text must not overlap "
+                                   + "(purpose \(Self.rect(upper)), preference \(Self.rect(lower))).")
+        if gap < -1 {
+            capture("wave-in-accepted-largest-text-overlap-\(Int(ui.app.frame.width.rounded()))pt-fixture", ui.app)
+        }
     }
 
     /// A text, brought into view: its words, a box grown well past its Figma height (at least 1.3 times
