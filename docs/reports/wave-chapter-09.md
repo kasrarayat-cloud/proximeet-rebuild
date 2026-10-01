@@ -1,3 +1,56 @@
+# Wave chapter 09: Build 9 failed — audited native evidence
+
+Updated: 1 October 2026. **Native verification remains FAILED. Build 9 completed on the repaired source.**
+
+## Current result — supersedes the historical plan below
+
+Build **9** (`2a82205c-c26b-46e9-8abf-9837e9573c48`) ran the manual Wave Verification workflow at
+`5aed3e0a2335f14d127718f6789fc5bf043bb970`, branch `wave/approved-20260930T173856Z`.
+Xcode 26.6 (17F113), iOS 26.5: Main iPhone 17 Pro Max **269/280**, Small iPhone 17e **7/7**:
+**276/287 native tests passed; 11 failed.** All expected identities ran once, with no skips, omissions,
+repeats or budget cutoff. The eight separate D2 source readers **passed 8/8 on Apple's macOS build host**
+at that exact commit, confirmed from the full Main build log. They are not included in the 287.
+
+Apple reports **49 minutes elapsed and 73 compute minutes**. The one additional authorized native run
+has been used; no automatic retry, archive, TestFlight delivery, Codemagic run or billing/security change
+was performed. Before publication, actual workflow inspection found Wave and Room manual-only on their
+specific branches; TestFlight's branch trigger was restricted to `testflight/internal-20260928`.
+
+- Main's 250 domain tests, 16 Places/Room UI tests and 3 Wave UI tests passed. The other 11 Wave methods
+  still fail the unchanged rings-absence assertion. The accessibility-boundary hypothesis did not resolve
+  it. Each exact diagnostic contains an unnamed, childless XCTest Other node tagged `wave.rings`; ten
+  are the separate pose, one is joined. This does not establish VoiceOver focus/speech or justify claiming
+  the test invalid. Keep the strict assertion and identifier pending a focused native investigation.
+- Small's former scroll-helper failure is resolved in this native run. Paired app/screen captures show
+  Leave fully visible, and its real tap reaches the ended state with Return to Places.
+- Visual defect confirmed on both phones: at largest accessibility text, the accepted invitation's
+  purpose overlaps its intent/approach. Small's original recording also shows it. A reviewed candidate
+  patch is at `docs/verification/wave-build9-layout-candidate.patch`; it is **unapplied and not natively
+  verified**. It preserves the approved layout system and adds a same-snapshot separation assertion.
+- Main's approved default capture loop stopped before its first capture (**0/24**). W1 has **1/12**
+  journey captures and a **51.128-second incomplete original recording**. Largest-text evidence has
+  **49/49 selected captures per phone**; that does not replace the missing default set or walkthrough.
+- The ten unique Main compiler warning locations are in tests (four unused-result warnings and six
+  previously recorded actor-isolation warnings). No negative-frame warning text appeared in the examined
+  Main build/runtime and Small runtime logs; that limited absence is not a device or production sign-off.
+
+The exact compiled simulator app is retained from Build 9's Main Test Products artifact (41,450,968 bytes),
+with `com.goseng.proximeet`, iPhoneSimulator platform and SDK iphonesimulator26.5. A compatible interactive
+Mac/iOS simulator is required to perform VoiceOver/Accessibility Inspector work; this workspace has no
+such surface. No new cloud build is needed merely to obtain that app. See the focused investigation plan
+in `docs/verification/wave-build9-rings-diagnosis.txt`. No grounded additional rings source fix is claimed.
+
+Evidence is packaged as **Wave-Build9-Review.zip**, with unchanged selected screenshots/recordings,
+exact native log audit, missing-capture inventory, failure snapshots/provenance, simulator test products,
+and the unapplied layout patch. **Wave-Build9-Report.html** is a self-contained readable report.
+VoiceOver, system Reduce Motion, motion quality, real-device testing, founder visual review and production
+readiness remain pending. The tested product/test source has not changed after Build 9.
+
+## Historical Build 8 report and pre-Build 9 authorization
+
+The text below is retained as historical context. Its future-tense repair/run statements have been
+superseded by the completed Build 9 result and consumed one-run authorization above.
+
 # Wave chapter 09: Build 8 and the repair candidate
 
 Updated: 1 October 2026. **Native verification remains FAILED. The repair candidate has not run.**
