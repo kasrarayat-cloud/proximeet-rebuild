@@ -68,6 +68,9 @@ struct WaveView: View {
         let overlay = wave.overlay
         return ZStack {
             page(width: width, bottomInset: proxy.safeAreaInsets.bottom, covered: overlay != nil)
+                // Give modal hiding its own container; the page's children keep their individual
+                // accessibility properties, including the decorative rings' hidden state.
+                .accessibilityElement(children: .contain)
                 .accessibilityHidden(overlay != nil)
                 .allowsHitTesting(overlay == nil)
             if let overlay {
@@ -91,6 +94,7 @@ struct WaveView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.bottom, Self.contentBottom(screen))
+                .accessibilityElement(children: .contain)
                 .accessibilityHidden(covered)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -1079,8 +1083,11 @@ struct WaveHaloRings: View {
         .frame(width: max(0, width), height: 128 * k, alignment: .top)
         // Decoration: a ring stroke never takes a tap from the state row or Demo cases.
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        // Make one explicit decorative accessibility boundary and hide it after its properties are
+        // assigned. Keep the identifier so native tests can still detect accidental exposure.
+        .accessibilityElement(children: .ignore)
         .accessibilityIdentifier("wave.rings")
+        .accessibilityHidden(true)
     }
 }
 
