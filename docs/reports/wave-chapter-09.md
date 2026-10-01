@@ -1,3 +1,32 @@
+# Wave chapter 09: continued source repair — native verification pending
+
+Updated: 1 October 2026, after the founder asked to continue the interrupted job.
+
+The confirmed largest-text accepted-card overlap now has its reviewed repair **applied in source**.
+The purpose's outer frame reserves its full wrapped-text height while retaining the approved 48-point
+minimum, typography, spacing, colors, components, navigation and motion. The existing largest-screen
+test now checks purpose/preference separation from one snapshot on both selected phone sizes.
+
+- Only `Proximeet/Scenes/WaveView.swift` and `ProximeetUITests/WaveReviewTests.swift` change product/test behavior.
+- The applied bytes exactly match the reviewed candidate patch retained in `docs/verification/wave-build9-layout-candidate.patch`.
+- Source review passed independently, and the project validator passed **13/13**. All 14 Wave test method
+  identities/order, test plans, rings identifier and strict rings-absence assertion are unchanged.
+- This workspace has no Swift compiler, Xcode, interactive Mac/Accessibility Inspector or physical iPhone.
+  **No native compilation or test has run on this source repair.** Normal-size appearance and the
+  largest-text overlap correction remain unverified. Earlier native passes do not carry to this source.
+- The 11 rings failures remain unresolved. The bounded Inspector/device investigation is recorded in
+  `docs/verification/wave-build9-rings-diagnosis.txt`; no speculative rings edit or test weakening was made.
+- Build 9 remains the latest completed native result: **276/287 passed, 11 failed; D2 8/8 passed** on
+  tested source `5aed3e0a2335f14d127718f6789fc5bf043bb970`, **73 compute minutes**. No further build,
+  archive, TestFlight delivery, Codemagic run or billing/security change was started in this continuation.
+
+The reviewed patch document and Build 9 evidence remain provenance for the original proposal and failed
+native run. Their “unapplied” wording describes that earlier checkpoint; this section supersedes it for
+current source status. Product verification, VoiceOver, motion quality and founder device review remain
+pending. The source manifest is refreshed after these edits, with approved design assets unchanged.
+
+## Historical Build 9 closeout
+
 # Wave chapter 09: Build 9 failed — audited native evidence
 
 Updated: 1 October 2026. **Native verification remains FAILED. Build 9 completed on the repaired source.**
