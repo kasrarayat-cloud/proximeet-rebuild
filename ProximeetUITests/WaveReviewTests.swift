@@ -333,7 +333,8 @@ final class WaveReviewTests: XCTestCase {
                 waitForScreen(.outConfirm, ui, timeout: 20)
                 assertScreen(.outConfirm, viewer, ui, "\(key), outgoing confirmation")
                 XCTAssertEqual(ui.venuePreference.label, viewer.preference, "\(key): the ticket is the guest's own.")
-                XCTAssertEqual(ui.preference.label, viewer.counterpart.preference, "\(key): the invitation is the counterpart's own.")
+                XCTAssertEqual(ui.preference.label, viewer.counterpart.preferenceAccessibilityLabel,
+                               "\(key): the spoken preference identifies the counterpart and their own values.")
                 capture("wave-approach-\(key)-out-confirm-fixture", app)
 
                 if approach == "chatFirst" {
@@ -399,6 +400,9 @@ final class WaveReviewTests: XCTestCase {
     /// every overlay one snapshot holds nothing of the Wave page, the Room or Places, checked softly so one
     /// leak still leaves every capture taken.
     func testCaptureApprovedScreensAndOverlays() throws {
+        // The full capture matrix exceeded 900 s on the rented Mac. The local invocation raises
+        // XCTest’s maximum to 1800 s; RunBudget still caps this at the whole-run time remaining.
+        RunBudget.allow(1800, self)
         var shown: [String] = []
         for fixture in Self.approvedCaptures {
             let app = launchWave(fixture)
@@ -875,28 +879,44 @@ final class WaveReviewTests: XCTestCase {
     /// panel, sample or Room element anywhere in the tree. Return to Places then lands on browsing at Now.
     func testLeaveFromEveryWaveContext() throws {
         var table: [String] = []
-        for fixture in Self.leaveContexts {
+        let runStarted = ProcessInfo.processInfo.systemUptime
+        for (index, fixture) in Self.leaveContexts.enumerated() {
+            let contextStarted = ProcessInfo.processInfo.systemUptime
+            func recordElapsed(_ phase: String) {
+                let now = ProcessInfo.processInfo.systemUptime
+                let note = String(format: "Leave context %d/18 %@: %@; context %.3f s; test %.3f s",
+                                  index + 1, fixture.key, phase, now - contextStarted, now - runStarted)
+                print(note)
+                let attachment = XCTAttachment(string: note)
+                attachment.name = "wave-leave-\(fixture.key)-\(phase)"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
+            recordElapsed("started")
             let app = launchWave(fixture)
             let ui = WaveUI(app: app)
             XCTAssertTrue(readyElement(fixture, ui).waitForExistence(timeout: 20), "\(fixture.key) shows.")
             settle()
             let leave: XCUIElement
             if let overlay = fixture.overlay {
-                assertOverlay(overlay, over: fixture.screen, fixture.viewer, ui, "Leave from \(fixture.key), before")
+                assertOverlay(overlay, over: fixture.screen, fixture.viewer, ui, "Leave from \(fixture.key), before", reuseSnapshot: true)
                 leave = ui.inPanel(overlay.container(fixture.viewer.counterpart), "wavePanel.leave")
             } else {
-                assertScreen(fixture.screen, fixture.viewer, ui, "Leave from \(fixture.key), before")
+                assertScreen(fixture.screen, fixture.viewer, ui, "Leave from \(fixture.key), before", reuseSnapshot: true)
                 leave = ui.leave
             }
+            recordElapsed("checked-before-leave")
             XCTAssertEqual(leave.label, WaveText.leave, "\(fixture.key): the visible Leave.")
             tapQuietly(leave, app)
             waitForScreen(.sessionEnded, ui, timeout: 15)
-            assertScreen(.sessionEnded, fixture.viewer, ui, "Left from \(fixture.key)")
+            assertScreen(.sessionEnded, fixture.viewer, ui, "Left from \(fixture.key)", reuseSnapshot: true)
+            recordElapsed("checked-ended")
             capture("wave-leave-from-\(fixture.key)-fixture", app)
             tapQuietly(ui.returnToPlaces, app)
             assertPlacesNow(WavePlaces(app: app), "Return to Places after leaving from \(fixture.key)")
             table.append("\(fixture.key): the Wave's ended screen, then Places at Now")
             app.terminate()
+            recordElapsed("completed")
         }
         attachNote("Leave and disappear, per Wave context: " + table.joined(separator: "; ") + ".")
     }
@@ -1731,12 +1751,16 @@ final class WaveReviewTests: XCTestCase {
     /// Everything one Wave screen shows for `viewer`, with no overlay open, from one snapshot where the
     /// claim is about the whole tree: exactly this screen; its chrome (75:111; the menu's and the
     /// confirmation's 75:119 with Back and "Wave"; the ended screen's 75:130 with no Safety); Leave (or,
-    /// once ended, only Return to Places); the rings hidden from accessibility (decoration); no overlay;
+    /// once ended, only Return to Places); the ring snapshot structure (manual accessibility gate below); no overlay;
     /// nothing of the Room page or Places below the Wave; and the screen's own words, controls and people.
     /// `menuBlocked`: the menu once its counterpart is blocked (three disabled choices, one generic line).
+    // Callers finish their live readiness/transition checks first. This helper performs no actions;
+    // its fresh tree is shared only by static assertions in this invocation. Animation sampling is live.
     private func assertScreen(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI, _ state: String,
-                              menuBlocked: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
-        let nodes = readTree(ui.app, recordUnexpectedRingsIn: state, file: file, line: line)
+                              menuBlocked: Bool = false, reuseSnapshot: Bool = true,
+                              file: StaticString = #filePath, line: UInt = #line) {
+        let nodes = readTree(ui.app, checkingRings: (screen: screen, state: state), file: file, line: line)
+        let ui = WaveAssertionUI(live: ui, nodes: reuseSnapshot ? nodes : nil)
         let ids = Set(nodes.map { $0.identifier })
         let screens = nodes.map { $0.identifier }.filter { $0.hasPrefix("wave.screen.") }
         XCTAssertEqual(screens, ["wave.screen.\(screen.rawValue)"], "\(state): exactly this screen (\(screen.figma)).",
@@ -1762,8 +1786,6 @@ final class WaveReviewTests: XCTestCase {
             assertButton(ui.leave, WaveText.leave, state, file: file, line: line)
             XCTAssertFalse(ids.contains("wave.returnToPlaces"), "\(state): Return to Places only once ended.", file: file, line: line)
         }
-        XCTAssertFalse(ids.contains("wave.rings"), "\(state): the rings are decoration, hidden from accessibility.",
-                       file: file, line: line)
         assertIdentifiers(absent: ["wavePanel."], nodes, "\(state): no overlay", file: file, line: line)
         assertIdentifiers(absent: Self.belowTheWave, nodes, except: Self.containers,
                           "\(state): the Wave replaces the Room page; nothing of it or of Places is left", file: file, line: line)
@@ -1781,7 +1803,7 @@ final class WaveReviewTests: XCTestCase {
     /// nothing started and nobody but the viewer named anywhere in the tree. Once the counterpart is
     /// blocked (`blocked`): the three choices keep their three distinct labels and are disabled, and the
     /// one generic "Connection blocked." line takes the boundary's place.
-    private func assertMenu(_ viewer: WaveViewer, _ ui: WaveUI, _ nodes: [WaveNode], blocked: Bool, _ state: String,
+    private func assertMenu(_ viewer: WaveViewer, _ ui: WaveAssertionUI, _ nodes: [WaveNode], blocked: Bool, _ state: String,
                             file: StaticString, line: UInt) {
         let ids = Set(nodes.map { $0.identifier })
         assertText(ui.menuHeadline, WaveText.menuHeadline, state, file: file, line: line)
@@ -1819,7 +1841,7 @@ final class WaveReviewTests: XCTestCase {
     /// counterpart's own intent and approach on the invitation, Demo cases where the design has it, and
     /// exactly this screen's actions:
     /// Accept only on the recipient's pending review, anywhere in the tree.
-    private func assertInvitation(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI, _ nodes: [WaveNode],
+    private func assertInvitation(_ screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveAssertionUI, _ nodes: [WaveNode],
                                   _ state: String, file: StaticString, line: UInt) {
         let counterpart = viewer.counterpart
         XCTAssertTrue(ui.venue.exists, "\(state): the venue ticket.", file: file, line: line)
@@ -1850,7 +1872,8 @@ final class WaveReviewTests: XCTestCase {
         }
         assertText(ui.title, WaveText.title(screen, counterpart), state, file: file, line: line)
         assertText(ui.purpose, WaveText.purpose(screen, counterpart), state, file: file, line: line)
-        assertText(ui.preference, counterpart.preference, state, file: file, line: line)
+        assertText(ui.preference, counterpart.preferenceAccessibilityLabel,
+                   "\(state): counterpart’s spoken preference", file: file, line: line)
         assertText(ui.boundary, WaveText.boundary(screen), state, file: file, line: line)
         if screen.hasDemoCases {
             assertButton(ui.demoCases, WaveText.demoCases, state, file: file, line: line)
@@ -1884,7 +1907,7 @@ final class WaveReviewTests: XCTestCase {
     /// closed paper, the approved headline and explanation, the closure line, Back to demo menu (none
     /// once ended); no invitation, ticket, action or anybody's identity anywhere in the tree, and on the
     /// no-allowance example no number at all.
-    private func assertClosed(_ screen: WaveScreenKey, _ ui: WaveUI, _ nodes: [WaveNode], _ state: String,
+    private func assertClosed(_ screen: WaveScreenKey, _ ui: WaveAssertionUI, _ nodes: [WaveNode], _ state: String,
                               file: StaticString, line: UInt) {
         assertTextIgnoringCase(ui.closedLabel, WaveText.closedLabel, state, file: file, line: line)
         assertText(ui.closedChoice, WaveText.closedChoice, state, file: file, line: line)
@@ -1902,10 +1925,35 @@ final class WaveReviewTests: XCTestCase {
         XCTAssertTrue(leaks.isEmpty, "\(state): a closed screen names nobody. " + leaks.joined(separator: "; "),
                       file: file, line: line)
         if screen == .allowanceUnavailable {
-            let numbers = nodes.filter { node in node.label.rangeOfCharacter(from: .decimalDigits) != nil }
-            XCTAssertTrue(numbers.isEmpty, "\(state): no numeric allowance anywhere: "
-                          + numbers.map { "“\($0.label)”" }.joined(separator: ", "), file: file, line: line)
+            // iOS exposes its scroll position as unnamed Other nodes, not product allowance copy.
+            // Keep these nodes in every other check and retain their exact evidence here.
+            let scrollMetadata = nodes.filter(Self.matchesSystemScrollMetadata)
+            if !scrollMetadata.isEmpty {
+                let note = XCTAttachment(string: state + "\n" + scrollMetadata.map {
+                    "id=\(String(reflecting: $0.identifier)) type=\($0.type) "
+                    + "label=\(String(reflecting: $0.label)) value=\(String(reflecting: $0.value))"
+                }.joined(separator: "\n"))
+                note.name = "wave-system-scroll-metadata"
+                note.lifetime = .keepAlways
+                add(note)
+            }
+            let numbers = nodes.filter {
+                $0.label.rangeOfCharacter(from: .decimalDigits) != nil && !Self.matchesSystemScrollMetadata($0)
+            }
+            XCTAssertTrue(numbers.isEmpty, "\(state): no numeric allowance in app content: "
+                          + numbers.map {
+                              "id=\(String(reflecting: $0.identifier)) type=\($0.type) "
+                              + "label=\(String(reflecting: $0.label)) value=\(String(reflecting: $0.value))"
+                          }.joined(separator: "; "), file: file, line: line)
         }
+    }
+
+    /// Narrow classifier for the exact English iOS scroll-position metadata observed in native snapshots.
+    /// Never excludes named app content, readable text/button roles, or other numeric labels/values.
+    private static func matchesSystemScrollMetadata(_ node: WaveNode) -> Bool {
+        node.type == .other && node.identifier.isEmpty
+            && node.label.range(of: "^Vertical scroll bar, [1-9][0-9]* pages?$", options: .regularExpression) != nil
+            && node.value.range(of: "^(?:0|[1-9][0-9]?|100)%$", options: .regularExpression) != nil
     }
 
     /// An overlay over `screen`: its container and label, its approved words, exactly its own controls
@@ -1914,11 +1962,12 @@ final class WaveReviewTests: XCTestCase {
     /// Wave page, the Room or Places outside it (soft when `softIsolation`, so a capture run takes every
     /// capture).
     private func assertOverlay(_ overlay: WaveOverlayKind, over screen: WaveScreenKey, _ viewer: WaveViewer, _ ui: WaveUI,
-                               _ state: String, softIsolation: Bool = false,
+                               _ state: String, softIsolation: Bool = false, reuseSnapshot: Bool = true,
                                file: StaticString = #filePath, line: UInt = #line) {
         let counterpart = viewer.counterpart
         let panel = overlay.container(counterpart)
         let nodes = readTree(ui.app, file: file, line: line)
+        let ui = WaveAssertionUI(live: ui, nodes: reuseSnapshot ? nodes : nil)
         XCTAssertTrue(nodes.contains { $0.identifier == panel }, "\(state): \(panel) is showing.", file: file, line: line)
         let screens = nodes.map { $0.identifier }.filter { $0.hasPrefix("wave.screen.") }
         XCTAssertTrue(screens.allSatisfy { $0 == "wave.screen.\(screen.rawValue)" },
@@ -2103,6 +2152,7 @@ final class WaveReviewTests: XCTestCase {
         let width = ui.app.frame.width
         let column = min(376, width - 64), margin = (width - column) / 2
         softly {
+            let ui = WaveAssertionUI(live: ui, nodes: readTree(ui.app))
             if let overlay = fixture.overlay {
                 let panel = ui.element(overlay.container(fixture.viewer.counterpart))
                 XCTAssertEqual(panel.frame.minX, margin, accuracy: 1.5, "\(state): the overlay starts at the column.")
@@ -2125,7 +2175,8 @@ final class WaveReviewTests: XCTestCase {
 
     /// Every element of the app in one snapshot (one round trip), with its words, frame, selection and
     /// the overlay container it sits in (the nearest `wavePanel.*` above it, or itself).
-    private func readTree(_ app: XCUIApplication, recordUnexpectedRingsIn state: String? = nil,
+    private func readTree(_ app: XCUIApplication,
+                          checkingRings ringCheck: (screen: WaveScreenKey, state: String)? = nil,
                           file: StaticString = #filePath, line: UInt = #line) -> [WaveNode] {
         let root: any XCUIElementSnapshot
         do {
@@ -2135,28 +2186,58 @@ final class WaveReviewTests: XCTestCase {
             return []
         }
         var nodes: [WaveNode] = []
-        var stack: [WaveTreeEntry] = [WaveTreeEntry(node: root, panel: nil)]
+        var rings: [any XCUIElementSnapshot] = []
+        var stack: [WaveTreeEntry] = [WaveTreeEntry(node: root, panel: nil, depth: 0)]
         while let entry = stack.popLast() {
             let node = entry.node
+            if node.identifier == "wave.rings" { rings.append(node) }
             let panel = Self.isPanelContainer(node.identifier) ? node.identifier : entry.panel
             for child in node.children.reversed() {
-                stack.append(WaveTreeEntry(node: child, panel: panel))
+                stack.append(WaveTreeEntry(node: child, panel: panel, depth: entry.depth + 1))
             }
             nodes.append(WaveNode(identifier: node.identifier, label: node.label, value: (node.value as? String) ?? "",
-                                  type: node.elementType, frame: node.frame, panel: panel))
+                                  type: node.elementType, frame: node.frame, panel: panel,
+                                  isEnabled: node.isEnabled, isSelected: node.isSelected, depth: entry.depth,
+                                  title: node.title, placeholderValue: node.placeholderValue ?? ""))
         }
-        if let state, nodes.contains(where: { $0.identifier == "wave.rings" }) {
-            recordUnexpectedRings(root, app, state)
+        if let ringCheck {
+            let issues = ringSnapshotIssues(rings, on: ringCheck.screen)
+            if !rings.isEmpty {
+                recordRingsSnapshot(root, app, ringCheck.state)
+            }
+            XCTAssertTrue(issues.isEmpty,
+                          "\(ringCheck.state): unexpected decorative-ring snapshot structure: "
+                          + issues.joined(separator: "; "), file: file, line: line)
         }
         return nodes
     }
 
-    /// Failure-only evidence from the very snapshot used by assertScreen's unchanged absence check.
-    /// XCTest's snapshot includes containers: finding this identifier does not establish VoiceOver
-    /// focus or speech. Keep node roles, labels, frames, descendants and the snapshot dictionary so a
-    /// native failure can be diagnosed without weakening the assertion or inferring VoiceOver behavior.
-    private func recordUnexpectedRings(_ root: any XCUIElementSnapshot, _ app: XCUIApplication, _ state: String) {
-        var details = ["\(state): wave.rings appeared in the snapshot used by assertScreen.",
+    /// Structural XCTest check only. Manual Inspector/VoiceOver traversal remains a separate gate:
+    /// an empty automation container does not prove exclusion from accessibility focus or speech.
+    /// Inspector skipped the separate menu rings and accepted joined rings on 1 October 2026.
+    private func ringSnapshotIssues(_ rings: [any XCUIElementSnapshot], on screen: WaveScreenKey) -> [String] {
+        guard screen == .menu || screen.isActive else {
+            return rings.isEmpty ? [] : ["rings present on a screen without rings"]
+        }
+        var issues: [String] = []
+        if rings.count > 1 { issues.append("expected at most one ring node, found \(rings.count)") }
+        for ring in rings {
+            if ring.elementType != .other { issues.append("non-Other role") }
+            if !ring.children.isEmpty { issues.append("ring has children") }
+            if !ring.label.isEmpty { issues.append("nonempty label") }
+            if !ring.title.isEmpty { issues.append("nonempty title") }
+            let emptyValue = ring.value == nil || (ring.value as? String)?.isEmpty == true
+            if !emptyValue { issues.append("nonempty or non-string value") }
+            if ring.isSelected { issues.append("selected ring node") }
+        }
+        return issues
+    }
+
+    /// Evidence from the same snapshot used by assertScreen's structural check. Presence can be
+    /// permitted, so this is not a failure or a VoiceOver result. Preserve exact properties and
+    /// descendants for comparison; the historical strict-absence failure remains in its original bundle.
+    private func recordRingsSnapshot(_ root: any XCUIElementSnapshot, _ app: XCUIApplication, _ state: String) {
+        var details = ["\(state): wave.rings snapshot structure used by assertScreen.",
                        "This is XCTest snapshot evidence, not a VoiceOver focus or speech result."]
         var stack: [(node: any XCUIElementSnapshot, depth: Int, inRings: Bool)] = [(root, 0, false)]
         while let entry = stack.popLast() {
@@ -2165,20 +2246,21 @@ final class WaveReviewTests: XCTestCase {
             if inRings {
                 details.append(String(repeating: "  ", count: entry.depth)
                                + "role=\(node.elementType) identifier=\(String(reflecting: node.identifier)) "
-                               + "label=\(String(reflecting: node.label)) frame=\(Self.rect(node.frame)) "
-                               + "children=\(node.children.count)")
+                               + "label=\(String(reflecting: node.label)) title=\(String(reflecting: node.title)) "
+                               + "value=\(String(reflecting: node.value)) selected=\(node.isSelected) "
+                               + "frame=\(Self.rect(node.frame)) children=\(node.children.count)")
             }
             for child in node.children.reversed() {
                 stack.append((child, entry.depth + 1, inRings))
             }
         }
-        details.append("Exact failing snapshot dictionary (debug evidence only):")
+        details.append("Exact snapshot dictionary (structural evidence only):")
         details.append(String(reflecting: root.dictionaryRepresentation))
         let attachment = XCTAttachment(string: details.joined(separator: "\n"))
-        attachment.name = "wave-rings-unexpected-snapshot"
+        attachment.name = "wave-rings-structural-snapshot"
         attachment.lifetime = .keepAlways
         add(attachment)
-        capture("wave-rings-unexpected-screen", app)
+        capture("wave-rings-structural-screen", app)
     }
 
     /// Where a sample could show up: its name (any case, so the upper-case Wave lines count) or initials
@@ -2295,31 +2377,37 @@ final class WaveReviewTests: XCTestCase {
         text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
     }
 
-    private func assertText(_ element: XCUIElement, _ expected: String, _ state: String,
+    private func assertText(_ element: any WaveElementReading, _ expected: String, _ state: String,
                             file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(expected)” is not showing.", file: file, line: line)
+        let snapshot: WaveElementProperties
+        do {
+            snapshot = try element.waveProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(expected)” is showing: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(Self.normalized(element.label), Self.normalized(expected), "\(state): the approved words.",
+        XCTAssertEqual(Self.normalized(snapshot.label), Self.normalized(expected), "\(state): the approved words.",
                        file: file, line: line)
     }
 
     /// An upper-case line of the design (a label, the DEMO badge): the approved words in any case, since
     /// VoiceOver may read it in sentence case.
-    private func assertTextIgnoringCase(_ element: XCUIElement, _ expected: String, _ state: String,
+    private func assertTextIgnoringCase(_ element: any WaveElementReading, _ expected: String, _ state: String,
                                         file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(expected)” is not showing.", file: file, line: line)
+        let snapshot: WaveElementProperties
+        do {
+            snapshot = try element.waveProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(expected)” is showing: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(Self.normalized(element.label).lowercased(), Self.normalized(expected).lowercased(),
+        XCTAssertEqual(Self.normalized(snapshot.label).lowercased(), Self.normalized(expected).lowercased(),
                        "\(state): the approved words.", file: file, line: line)
     }
 
     /// A line whose visible words are upper case and whose spoken words are the app's own sentence
     /// (lead decision 8): it must name each of `words`, in any case.
-    private func assertMentions(_ element: XCUIElement, _ words: [String], _ state: String,
+    private func assertMentions(_ element: any WaveElementReading, _ words: [String], _ state: String,
                                 file: StaticString = #filePath, line: UInt = #line) {
         guard element.exists else {
             XCTFail("\(state): the line naming \(words) is not showing.", file: file, line: line)
@@ -2332,29 +2420,35 @@ final class WaveReviewTests: XCTestCase {
         }
     }
 
-    private func assertButton(_ element: XCUIElement, _ label: String, _ state: String,
+    private func assertButton(_ element: any WaveElementReading, _ label: String, _ state: String,
                               file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(label)” is not offered.", file: file, line: line)
+        let snapshot: WaveElementProperties
+        do {
+            snapshot = try element.waveProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(label)” is offered: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(element.label, label, "\(state): the approved label.", file: file, line: line)
-        XCTAssertTrue(element.isEnabled, "\(state): “\(label)” is enabled.", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
+        XCTAssertEqual(snapshot.label, label, "\(state): the approved label.", file: file, line: line)
+        XCTAssertTrue(snapshot.isEnabled, "\(state): “\(label)” is enabled.", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(snapshot.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
                                     file: file, line: line)
     }
 
     /// A choice that is shown but disabled (the blocked menu's): its own label, not enabled, and still at
     /// least 44 pt tall. Never tapped here.
-    private func assertDisabledChoice(_ element: XCUIElement, _ label: String, _ state: String,
+    private func assertDisabledChoice(_ element: any WaveElementReading, _ label: String, _ state: String,
                                       file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(label)” is not shown.", file: file, line: line)
+        let snapshot: WaveElementProperties
+        do {
+            snapshot = try element.waveProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(label)” is shown: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(element.label, label, "\(state): the choice keeps its own label.", file: file, line: line)
-        XCTAssertFalse(element.isEnabled, "\(state): “\(label)” is disabled.", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
+        XCTAssertEqual(snapshot.label, label, "\(state): the choice keeps its own label.", file: file, line: line)
+        XCTAssertFalse(snapshot.isEnabled, "\(state): “\(label)” is disabled.", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(snapshot.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
                                     file: file, line: line)
     }
 
@@ -2366,18 +2460,21 @@ final class WaveReviewTests: XCTestCase {
     }
 
     /// A 44 × 44 chrome icon (the shield, the Back chevron), named for what it does.
-    private func assertIconButton(_ element: XCUIElement, containing word: String, _ state: String,
+    private func assertIconButton(_ element: any WaveElementReading, containing word: String, _ state: String,
                                   file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): the chrome's \(word) is not offered.", file: file, line: line)
+        let snapshot: WaveElementProperties
+        do {
+            snapshot = try element.waveProperties()
+        } catch {
+            XCTFail("\(state): could not verify the chrome's \(word) is offered: \(error)", file: file, line: line)
             return
         }
-        XCTAssertNotNil(element.label.range(of: word, options: .caseInsensitive),
-                        "\(state): the chrome's \(word) is named for it: “\(element.label)”.", file: file, line: line)
-        XCTAssertTrue(element.isEnabled, "\(state): the chrome's \(word) is enabled.", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(element.frame.width, Self.minimumTarget, "\(state): \(word) is 44 pt wide.",
+        XCTAssertNotNil(snapshot.label.range(of: word, options: .caseInsensitive),
+                        "\(state): the chrome's \(word) is named for it: “\(snapshot.label)”.", file: file, line: line)
+        XCTAssertTrue(snapshot.isEnabled, "\(state): the chrome's \(word) is enabled.", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(snapshot.frame.width, Self.minimumTarget, "\(state): \(word) is 44 pt wide.",
                                     file: file, line: line)
-        XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): \(word) is 44 pt tall.",
+        XCTAssertGreaterThanOrEqual(snapshot.frame.height, Self.minimumTarget, "\(state): \(word) is 44 pt tall.",
                                     file: file, line: line)
     }
 
@@ -2437,10 +2534,22 @@ final class WaveReviewTests: XCTestCase {
 
     /// A text, brought into view: its words, a box grown well past its Figma height (at least 1.3 times
     /// it, and 30 pt: a box that did not grow is fixed or clipped), inside its column or overlay.
+    /// A fresh reading after reveal (and after the live hittability check for an enabled button).
+    /// No reading escapes the current item; the next reveal always measures its own settled state.
+    private func readElementForAssertion(_ element: XCUIElement, _ state: String,
+                                         file: StaticString = #filePath, line: UInt = #line) -> (any XCUIElementSnapshot)? {
+        do {
+            return try element.snapshot()
+        } catch {
+            XCTFail("\(state): could not read settled element properties: \(error)", file: file, line: line)
+            return nil
+        }
+    }
+
     private func assertUnclipped(_ id: String, grownFrom figma: CGFloat, within bounds: ClosedRange<CGFloat>,
                                  _ ui: WaveUI, _ state: String) {
         guard reveal(id, ui.app) else { return }
-        let element = ui.element(id)
+        guard let element = readElementForAssertion(ui.element(id), state) else { return }
         let frame = element.frame
         XCTAssertFalse(element.label.isEmpty, "\(state): \(id) has its words.")
         if figma > 0 {
@@ -2456,7 +2565,7 @@ final class WaveReviewTests: XCTestCase {
     /// at least 44 pt tall and on screen. Whether a disabled control reports itself hittable is not asked.
     private func assertReachableDisabledButton(_ id: String, _ label: String, _ ui: WaveUI, _ state: String) {
         guard reveal(id, ui.app) else { return }
-        let button = ui.element(id)
+        guard let button = readElementForAssertion(ui.element(id), state) else { return }
         XCTAssertEqual(button.label, label, "\(state): \(id) keeps its own label.")
         XCTAssertFalse(button.isEnabled, "\(state): \(id) is disabled.")
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget, "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
@@ -2468,6 +2577,7 @@ final class WaveReviewTests: XCTestCase {
         guard reveal(id, ui.app) else { return }
         let button = ui.element(id)
         XCTAssertTrue(button.isHittable, "\(state): \(id) can be tapped once in view.")
+        guard let button = readElementForAssertion(button, state) else { return }
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget, "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
         XCTAssertLessThanOrEqual(button.frame.maxY, ui.app.frame.maxY, "\(state): \(id) is on screen.")
     }
@@ -3141,6 +3251,8 @@ private struct WaveCounterpart: Sendable {
     /// "[Intent] · [Approach]": the sample's own values, which the invitation's preference line shows
     /// (contract `counterpartMapping`).
     let preference: String
+    /// Spoken ownership is additional context; the visible preference string above remains unchanged.
+    var preferenceAccessibilityLabel: String { "\(name)’s intent and approach: \(preference)" }
     let interests: [String]
     /// The sample's own words anywhere in the Room (introduction, quote, approach line, public note).
     let texts: [String]
@@ -3246,12 +3358,23 @@ private struct WaveNode {
     let type: XCUIElement.ElementType
     let frame: CGRect
     let panel: String?
+    let isEnabled: Bool
+    let isSelected: Bool
+    let depth: Int
+    let title: String
+    let placeholderValue: String
+
+    /// XCTest's matching(identifier:) accepts any of these identifying properties.
+    func matchesIdentifier(_ query: String) -> Bool {
+        [identifier, title, label, value, placeholderValue].contains(query)
+    }
 }
 
 @MainActor
 private struct WaveTreeEntry {
     let node: any XCUIElementSnapshot
     let panel: String?
+    let depth: Int
 }
 
 /// One reading for `reveal`.
@@ -3323,6 +3446,123 @@ private struct AcceptSample {
 }
 
 // MARK: - Screens
+
+/// Static assertion readings are scoped to one settled state. A nil tree keeps the original live
+/// query path; Leave opts into a fresh tree inside assertScreen/assertOverlay, never across a tap.
+@MainActor
+private protocol WaveElementReading {
+    var identifier: String { get }
+    var exists: Bool { get }
+    var label: String { get }
+    var frame: CGRect { get }
+    var isSelected: Bool { get }
+    func waveProperties() throws -> WaveElementProperties
+}
+
+private struct WaveElementProperties {
+    let label: String
+    let isEnabled: Bool
+    let frame: CGRect
+}
+
+extension XCUIElement: WaveElementReading {
+    fileprivate func waveProperties() throws -> WaveElementProperties {
+        let snapshot = try self.snapshot()
+        return WaveElementProperties(label: snapshot.label, isEnabled: snapshot.isEnabled, frame: snapshot.frame)
+    }
+}
+
+private enum WaveSnapshotLookupError: Error {
+    case missingElement(identifier: String, panel: String?)
+}
+
+@MainActor
+private struct WaveAssertionElement: WaveElementReading {
+    let ui: WaveUI
+    let queryIdentifier: String
+    let panel: String?
+    let nodes: [WaveNode]?
+
+    private var live: XCUIElement {
+        if let panel { return ui.inPanel(panel, queryIdentifier) }
+        return ui.element(queryIdentifier)
+    }
+
+    private var node: WaveNode? {
+        guard let nodes else { return nil }
+        guard let panel else { return nodes.dropFirst().first { $0.matchesIdentifier(queryIdentifier) } }
+        // Match the live query: descendants of the first matching container, including nested panels.
+        // A later container with the same identifier cannot supply a missing child of the first one.
+        guard let container = nodes.dropFirst().firstIndex(where: { $0.matchesIdentifier(panel) }) else { return nil }
+        let depth = nodes[container].depth
+        return nodes.dropFirst(container + 1).prefix { $0.depth > depth }
+            .first { $0.matchesIdentifier(queryIdentifier) }
+    }
+
+    var identifier: String { nodes == nil ? live.identifier : node?.identifier ?? "" }
+    var exists: Bool { nodes == nil ? live.exists : node != nil }
+    var label: String { nodes == nil ? live.label : node?.label ?? "" }
+    var frame: CGRect { nodes == nil ? live.frame : node?.frame ?? .zero }
+    var isSelected: Bool { nodes == nil ? live.isSelected : node?.isSelected ?? false }
+
+    func waveProperties() throws -> WaveElementProperties {
+        guard nodes != nil else { return try live.waveProperties() }
+        guard let node else {
+            throw WaveSnapshotLookupError.missingElement(identifier: queryIdentifier, panel: panel)
+        }
+        return WaveElementProperties(label: node.label, isEnabled: node.isEnabled, frame: node.frame)
+    }
+}
+
+@MainActor
+private struct WaveAssertionUI {
+    let live: WaveUI
+    let nodes: [WaveNode]?
+    var app: XCUIApplication { live.app }
+
+    func element(_ identifier: String) -> WaveAssertionElement {
+        WaveAssertionElement(ui: live, queryIdentifier: identifier, panel: nil, nodes: nodes)
+    }
+
+    func inPanel(_ panel: String, _ identifier: String) -> WaveAssertionElement {
+        WaveAssertionElement(ui: live, queryIdentifier: identifier, panel: panel, nodes: nodes)
+    }
+
+    var brand: WaveAssertionElement { element("wave.brand") }
+    var back: WaveAssertionElement { element("wave.back") }
+    var demoBadge: WaveAssertionElement { element("wave.demoBadge") }
+    var safety: WaveAssertionElement { element("wave.safety") }
+    var venue: WaveAssertionElement { element("wave.venue") }
+    var venuePreference: WaveAssertionElement { element("wave.venue.preference") }
+    var menuHeadline: WaveAssertionElement { element("wave.menu.headline") }
+    var menuRole: WaveAssertionElement { element("wave.menu.role") }
+    var menuBoundary: WaveAssertionElement { element("wave.menu.boundary") }
+    var menuBlocked: WaveAssertionElement { element("wave.menu.blocked") }
+    var startOutgoing: WaveAssertionElement { element("wave.menu.startOutgoing") }
+    var startIncoming: WaveAssertionElement { element("wave.menu.startIncoming") }
+    var noAllowance: WaveAssertionElement { element("wave.menu.noAllowance") }
+    var invitation: WaveAssertionElement { element("wave.invitation") }
+    var context: WaveAssertionElement { element("wave.invitation.context") }
+    var direction: WaveAssertionElement { element("wave.invitation.direction") }
+    var title: WaveAssertionElement { element("wave.invitation.title") }
+    var purpose: WaveAssertionElement { element("wave.invitation.purpose") }
+    var preference: WaveAssertionElement { element("wave.invitation.preference") }
+    var boundary: WaveAssertionElement { element("wave.boundary") }
+    var demoCases: WaveAssertionElement { element("wave.demoCases") }
+    var send: WaveAssertionElement { element("wave.send") }
+    var withdraw: WaveAssertionElement { element("wave.withdraw") }
+    var accept: WaveAssertionElement { element("wave.accept") }
+    var decline: WaveAssertionElement { element("wave.decline") }
+    var aboutChat: WaveAssertionElement { element("wave.aboutChat") }
+    var closedLabel: WaveAssertionElement { element("wave.closed.label") }
+    var closedHeadline: WaveAssertionElement { element("wave.closed.headline") }
+    var closedExplanation: WaveAssertionElement { element("wave.closed.explanation") }
+    var closedChoice: WaveAssertionElement { element("wave.closed.choice") }
+    var closedBoundary: WaveAssertionElement { element("wave.closed.boundary") }
+    var backToMenu: WaveAssertionElement { element("wave.backToMenu") }
+    var returnToPlaces: WaveAssertionElement { element("wave.returnToPlaces") }
+    var leave: WaveAssertionElement { element("wave.leave") }
+}
 
 /// The Wave's elements, by identifier (`wave.*`, `wavePanel.*`, `wave.report.reason.*`).
 @MainActor

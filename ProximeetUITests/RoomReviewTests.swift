@@ -377,21 +377,25 @@ final class RoomReviewTests: XCTestCase {
     /// with both blocked, "No sample introductions to show." and never a claim that the room is empty.
     /// The blocks survive the tabs, a profile's Back, a closed report preview and the global safety.
     func testNotesFilteringAndBothBlockOrders() throws {
+        let runStarted = ProcessInfo.processInfo.systemUptime
+        recordNotesElapsed("Both block orders started", since: runStarted)
         var app = launchRoom(.populated)
         var room = RoomUI(app: app)
         XCTAssertTrue(room.card("maya").waitForExistence(timeout: 15))
         settle()
-        assertPeople(room, blocked: [], "Before any block")
+        assertPeople(room, blocked: [], "Before any block", reuseSnapshot: true)
         selectTab("notes", room)
-        assertNotes(room, blocked: [], "Room notes before any block")
+        assertNotes(room, blocked: [], "Room notes before any block", reuseSnapshot: true)
         selectTab("people", room)
 
         block(Self.maya, from: .profile, room)
         assertAfterBlock(room, blocked: ["maya"], named: "maya-first")
         assertBlocksSurvive(room, blocked: ["maya"], "Maya blocked")
+        recordNotesElapsed("Maya blocked completed", since: runStarted)
         block(Self.jules, from: .note, room)
         assertAfterBlock(room, blocked: ["maya", "jules"], named: "maya-then-jules")
         assertBlocksSurvive(room, blocked: ["maya", "jules"], "Maya, then Jules blocked")
+        recordNotesElapsed("Maya, then Jules blocked completed", since: runStarted)
         app.terminate()
 
         app = launchRoom(.populated)
@@ -401,9 +405,11 @@ final class RoomReviewTests: XCTestCase {
         block(Self.jules, from: .profile, room)
         assertAfterBlock(room, blocked: ["jules"], named: "jules-first")
         assertBlocksSurvive(room, blocked: ["jules"], "Jules blocked")
+        recordNotesElapsed("Jules blocked completed", since: runStarted)
         block(Self.maya, from: .profile, room)
         assertAfterBlock(room, blocked: ["maya", "jules"], named: "jules-then-maya")
         assertBlocksSurvive(room, blocked: ["maya", "jules"], "Jules, then Maya blocked")
+        recordNotesElapsed("Jules, then Maya blocked completed", since: runStarted)
     }
 
     // MARK: - The unsent report
@@ -1489,6 +1495,8 @@ final class RoomReviewTests: XCTestCase {
     /// The entry (66:112): the approved words, the large venue ticket with the actual preference, and
     /// only Enter room demo and Back; no run, so no Safety, Leave, tabs or sample.
     private func assertEntry(_ room: RoomUI, preference: String, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertText(room.entryHeadline, RoomText.entryHeadline, state)
         assertText(room.entrySupport, RoomText.entrySupport, state)
         assertText(room.entryVenue, "Common Ground. \(RoomText.entrySession). \(preference)", state)
@@ -1498,7 +1506,7 @@ final class RoomReviewTests: XCTestCase {
         assertButton(room.entryBack, RoomText.entryBack, state)
         assertText(room.brand, "Proximeet", state)
         assertText(room.demoBadge, "Demo", state)
-        let nodes = readTree(room.app)
+        let nodes = tree.nodes
         assertIdentifiers(absent: ["room.leave", "room.safety", "roomWaiting.", "roomEnded.", "roomPanel."], nodes, state)
         let leaks = sampleLeaks(nodes, of: Self.actors, hostNotes: true, structure: true)
         XCTAssertTrue(leaks.isEmpty, "\(state): the entry shows no sample. " + leaks.joined(separator: "; "))
@@ -1507,6 +1515,8 @@ final class RoomReviewTests: XCTestCase {
     /// Waiting (66:113): the sealed envelope, the approved words, the labelled demo control, Safety and
     /// Leave; no sample name, initials, note, count, tab or card anywhere in the tree.
     private func assertWaiting(_ room: RoomUI, preference: String, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertText(room.envelope, RoomText.envelope, state)
         assertText(room.waitingHeadline, RoomText.waitingHeadline, state)
         assertText(room.waitingExplanation, RoomText.waitingExplanation, state)
@@ -1515,7 +1525,7 @@ final class RoomReviewTests: XCTestCase {
         assertButton(room.leave, RoomText.leave, state)
         assertChrome(room, state)
         assertVenue(room, preference: preference, state)
-        let nodes = readTree(room.app)
+        let nodes = tree.nodes
         assertIdentifiers(absent: ["roomEntry.", "roomEnded.", "roomPanel."], nodes, state)
         let leaks = sampleLeaks(nodes, of: Self.actors, hostNotes: true, structure: true)
         XCTAssertTrue(leaks.isEmpty, "\(state): waiting shows no sample. " + leaks.joined(separator: "; "))
@@ -1523,9 +1533,11 @@ final class RoomReviewTests: XCTestCase {
 
     /// Still waiting: the demo control is there and nothing of the sample is.
     private func assertStillWaiting(_ room: RoomUI, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         XCTAssertTrue(room.waitingHeadline.exists, "\(state): still waiting.")
         XCTAssertTrue(room.showPopulated.exists, "\(state): the demo control is still offered.")
-        let nodes = readTree(room.app)
+        let nodes = tree.nodes
         let leaks = sampleLeaks(nodes, of: Self.actors, hostNotes: true, structure: true)
         XCTAssertTrue(leaks.isEmpty, "\(state): nothing revealed the sample. " + leaks.joined(separator: "; "))
     }
@@ -1534,11 +1546,13 @@ final class RoomReviewTests: XCTestCase {
     /// Leave, Safety, sample, note or panel. Leave asked nothing.
     private func assertEnded(_ room: RoomUI, _ state: String, file: StaticString = #filePath, line: UInt = #line) {
         waitForLabel(room.endedStatus, RoomText.endedStatus)
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         XCTAssertTrue(room.endedEnvelope.exists, "\(state): the closed envelope.", file: file, line: line)
         assertText(room.endedHeadline, RoomText.endedHeadline, state, file: file, line: line)
         assertText(room.endedExplanation, RoomText.endedExplanation, state, file: file, line: line)
         assertButton(room.returnToPlaces, RoomText.returnToPlaces, state, file: file, line: line)
-        let nodes = readTree(room.app)
+        let nodes = tree.nodes
         assertIdentifiers(absent: ["room.leave", "room.safety", "roomEntry.", "roomWaiting.", "roomPanel."], nodes, state,
                           file: file, line: line)
         let leaks = sampleLeaks(nodes, of: Self.actors, hostNotes: true, structure: true)
@@ -1551,8 +1565,13 @@ final class RoomReviewTests: XCTestCase {
     /// sample (its own name, line and introduction), the boundary line for the blocks, and, with both
     /// blocked, the filtered empty card, never a claim that the room is empty. Blocked samples are absent
     /// from the tree and, on the 440-pt iPhone, from the screen.
-    private func assertPeople(_ room: RoomUI, blocked: Set<String>, _ state: String) {
+    // All callers check a settled page; the live tab wait precedes this call-local reading.
+    // Preserve the original Notes opt-in and its elapsed records; other callers only enable static reuse.
+    private func assertPeople(_ room: RoomUI, blocked: Set<String>, _ state: String, reuseSnapshot: Bool = false, useSnapshot: Bool = true) {
+        let started = reuseSnapshot ? ProcessInfo.processInfo.systemUptime : nil
         XCTAssertTrue(waitFor(room.tab("people"), selected: true), "\(state): People is selected.")
+        let tree = (reuseSnapshot || useSnapshot) ? readAssertionTree(room.app) : nil
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertTabs(room, selected: "people", state)
         assertText(room.peopleFraming, RoomText.peopleFraming, state)
         for actor in Self.actors {
@@ -1577,17 +1596,21 @@ final class RoomReviewTests: XCTestCase {
         }
         assertButton(room.leave, RoomText.leave, state)
         assertChrome(room, state)
-        let nodes = readTree(room.app)
+        let nodes = tree?.nodes ?? readTree(room.app)
         assertNoEmptyClaim(nodes, state)
         assertSampleAbsent(nodes, blocked, state)
         softlyCardsDrawn(room.app, cards: Self.actors.count - blocked.count, state)
+        if let started { recordNotesElapsed(state, since: started) }
     }
 
     /// Room notes (66:116 / 66:120 / 66:123 / 66:126): Room notes selected, the framing, the host's note
     /// and icebreaker whatever is blocked, Jules's public note with its "…" only while he is visible, and
     /// "Blocked sample notes stay hidden." only while he is blocked. No cards here.
-    private func assertNotes(_ room: RoomUI, blocked: Set<String>, _ state: String) {
+    private func assertNotes(_ room: RoomUI, blocked: Set<String>, _ state: String, reuseSnapshot: Bool = false, useSnapshot: Bool = true) {
+        let started = reuseSnapshot ? ProcessInfo.processInfo.systemUptime : nil
         XCTAssertTrue(waitFor(room.tab("notes"), selected: true), "\(state): Room notes is selected.")
+        let tree = (reuseSnapshot || useSnapshot) ? readAssertionTree(room.app) : nil
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertTabs(room, selected: "notes", state)
         assertText(room.notesFraming, RoomText.notesFraming, state)
         if room.hostNote.exists {
@@ -1622,11 +1645,12 @@ final class RoomReviewTests: XCTestCase {
         }
         assertButton(room.leave, RoomText.leave, state)
         assertChrome(room, state)
-        let nodes = readTree(room.app)
+        let nodes = tree?.nodes ?? readTree(room.app)
         assertIdentifiers(absent: ["room.card.", "room.empty", "roomProfile."], nodes, state)
         assertNoEmptyClaim(nodes, state)
         assertSampleAbsent(nodes, blocked, state)
         softlyNoteDrawn(room.app, present: !blocked.contains(Self.jules.key), state)
+        if let started { recordNotesElapsed(state, since: started) }
     }
 
     /// A fictional profile (66:117 / 66:124 / 66:118 / 66:121): the profile chrome, the sample's own
@@ -1636,6 +1660,8 @@ final class RoomReviewTests: XCTestCase {
     private func assertProfile(_ room: RoomUI, _ actor: SampleActor, userIntent: String, _ state: String,
                                file: StaticString = #filePath, line: UInt = #line) {
         waitForLabel(room.profileName, actor.name)
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertText(room.profileTitle, RoomText.profileTitle, state, file: file, line: line)
         assertButton(room.profileBack, "Back", state, file: file, line: line)
         assertButton(room.profileSafety, "Safety", state, file: file, line: line)
@@ -1659,12 +1685,20 @@ final class RoomReviewTests: XCTestCase {
 
     /// The compact venue ticket on waiting, People, Room notes and the profiles.
     private func assertVenue(_ room: RoomUI, preference: String, _ state: String) {
+        assertVenue(RoomAssertionUI(live: room, tree: readAssertionTree(room.app)), preference: preference, state)
+    }
+
+    private func assertVenue(_ room: RoomAssertionUI, preference: String, _ state: String) {
         assertText(room.venue, "Common Ground. \(RoomText.compactSession). \(preference)", state)
         assertText(room.venuePreference, preference, state)
     }
 
     /// The root chrome: Proximeet, the Demo badge and the Safety shield.
     private func assertChrome(_ room: RoomUI, _ state: String) {
+        assertChrome(RoomAssertionUI(live: room, tree: readAssertionTree(room.app)), state)
+    }
+
+    private func assertChrome(_ room: RoomAssertionUI, _ state: String) {
         assertText(room.brand, "Proximeet", state)
         assertText(room.demoBadge, "Demo", state)
         assertButton(room.safety, "Safety", state)
@@ -1673,7 +1707,7 @@ final class RoomReviewTests: XCTestCase {
         }
     }
 
-    private func assertTabs(_ room: RoomUI, selected: String, _ state: String) {
+    private func assertTabs(_ room: RoomAssertionUI, selected: String, _ state: String) {
         assertText(room.tabs, RoomText.tabs, state)
         for (key, title) in [("people", RoomText.peopleTab), ("notes", RoomText.notesTab)] {
             let tab = room.tab(key)
@@ -1693,7 +1727,7 @@ final class RoomReviewTests: XCTestCase {
     /// shows: in builds 6abc1b80-6abc3ebe the scroll helper took an element outside every scroll view
     /// at y 592.33 on the smaller iPhone for the Room's bar, and its geometry is that of "Preview room
     /// demo" left in the tree under the Room; its identifier was never logged).
-    private func assertPanel(_ room: RoomUI, _ panel: String, _ state: String) {
+    private func assertPanel(_ room: RoomAssertionUI, _ panel: String, _ state: String) {
         XCTAssertTrue(room.element(panel).exists, "\(state): \(panel) is showing.")
         assertText(room.inPanel(panel, "roomPanel.label"), RoomText.overlayLabel, state)
         assertButton(room.inPanel(panel, "roomPanel.leave"), RoomText.leave, state)
@@ -1730,6 +1764,8 @@ final class RoomReviewTests: XCTestCase {
 
     /// The global safety (66:127).
     private func assertGlobalSafety(_ room: RoomUI, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         let panel = Panel.globalSafety
         assertPanel(room, panel, state)
         assertText(room.inPanel(panel, "roomPanel.title"), RoomText.safetyTitle, state)
@@ -1740,6 +1776,8 @@ final class RoomReviewTests: XCTestCase {
 
     /// A sample's safety (66:128–66:131).
     private func assertActorSafety(_ room: RoomUI, _ actor: SampleActor, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         let panel = Panel.actorSafety(actor.key)
         assertPanel(room, panel, state)
         assertText(room.inPanel(panel, "roomPanel.title"), "\(actor.name) · safety", state)
@@ -1751,6 +1789,8 @@ final class RoomReviewTests: XCTestCase {
 
     /// An unsent report preview (66:132 / 66:133) with exactly `selected` chosen (none when nil).
     private func assertReport(_ room: RoomUI, _ actor: SampleActor, selected: String?, _ state: String) {
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         let panel = Panel.report(actor.key)
         assertPanel(room, panel, state)
         assertText(room.inPanel(panel, "roomPanel.title"), "Report \(actor.name)", state)
@@ -1768,7 +1808,7 @@ final class RoomReviewTests: XCTestCase {
         }
         assertButton(room.inPanel(panel, "roomPanel.closePreview"), RoomText.closePreview, state)
         XCTAssertFalse(room.inPanel(panel, "roomPanel.block").exists, "\(state): a report blocks nothing.")
-        assertNothingSubmits(readTree(room.app), state)
+        assertNothingSubmits(tree.nodes, state)
     }
 
     /// The Wave's menu (74:568, chapter 09), opened by a same-intent profile's Preview Wave demo: the
@@ -1780,12 +1820,14 @@ final class RoomReviewTests: XCTestCase {
         XCTAssertTrue(room.waveMenu.waitForExistence(timeout: 10), "\(state): Preview Wave demo opens the Wave's menu.",
                       file: file, line: line)
         settle()
+        let tree = readAssertionTree(room.app)
+        let room = RoomAssertionUI(live: room, tree: tree)
         assertText(room.element("wave.menu.headline"), RoomText.waveMenuHeadline, state, file: file, line: line)
         assertText(room.element("wave.menu.role"), RoomText.waveRole(name), state, file: file, line: line)
         assertButton(room.element("wave.menu.startOutgoing"), RoomText.waveStartOutgoing, state, file: file, line: line)
         assertButton(room.element("wave.menu.startIncoming"), RoomText.waveStartIncoming, state, file: file, line: line)
         assertIdentifiers(absent: ["roomProfile.", "room.card.", "room.tab", "room.leave", "roomPanel.", "wave.invitation",
-                                   "wavePanel."], readTree(room.app), "\(state): only the menu, nothing started",
+                                   "wavePanel."], tree.nodes, "\(state): only the menu, nothing started",
                           file: file, line: line)
     }
 
@@ -1808,13 +1850,13 @@ final class RoomReviewTests: XCTestCase {
     /// Checks the filtered People, then Room notes, then People again, after a block.
     private func assertAfterBlock(_ room: RoomUI, blocked: Set<String>, named key: String) {
         let state = "Blocked \(blocked.sorted().joined(separator: " and ")) (\(key))"
-        assertPeople(room, blocked: blocked, "\(state), People")
+        assertPeople(room, blocked: blocked, "\(state), People", reuseSnapshot: true)
         capture("room-blocks-\(key)-people-fixture", room.app)
         selectTab("notes", room)
-        assertNotes(room, blocked: blocked, "\(state), Room notes")
+        assertNotes(room, blocked: blocked, "\(state), Room notes", reuseSnapshot: true)
         capture("room-blocks-\(key)-notes-fixture", room.app)
         selectTab("people", room)
-        assertPeople(room, blocked: blocked, "\(state), People again")
+        assertPeople(room, blocked: blocked, "\(state), People again", reuseSnapshot: true)
     }
 
     /// The blocks stay applied through everything that is not Leave: the tabs, the global safety opened
@@ -1822,16 +1864,16 @@ final class RoomReviewTests: XCTestCase {
     /// Back, and its report preview (a reason selected) closed back to the profile and People.
     private func assertBlocksSurvive(_ room: RoomUI, blocked: Set<String>, _ state: String) {
         selectTab("notes", room)
-        assertNotes(room, blocked: blocked, "\(state), Room notes")
+        assertNotes(room, blocked: blocked, "\(state), Room notes", reuseSnapshot: true)
         selectTab("people", room)
-        assertPeople(room, blocked: blocked, "\(state), after the tabs")
+        assertPeople(room, blocked: blocked, "\(state), after the tabs", reuseSnapshot: true)
 
         room.safety.tap()
         waitForPanel(Panel.globalSafety, room)
         room.inPanel(Panel.globalSafety, "roomPanel.close").tap()
         XCTAssertTrue(waitForAbsence(room.element(Panel.globalSafety)))
         settle()
-        assertPeople(room, blocked: blocked, "\(state), after the global safety")
+        assertPeople(room, blocked: blocked, "\(state), after the global safety", reuseSnapshot: true)
 
         if let visible = Self.actors.first(where: { !blocked.contains($0.key) }) {
             openProfile(visible, room)
@@ -1839,7 +1881,7 @@ final class RoomReviewTests: XCTestCase {
             room.profileBack.tap()
             XCTAssertTrue(room.card(visible.key).waitForExistence(timeout: 10))
             settle()
-            assertPeople(room, blocked: blocked, "\(state), after a profile's Back")
+            assertPeople(room, blocked: blocked, "\(state), after a profile's Back", reuseSnapshot: true)
 
             openProfile(visible, room)
             room.profileSafety.tap()
@@ -1859,7 +1901,7 @@ final class RoomReviewTests: XCTestCase {
             room.profileBack.tap()
             XCTAssertTrue(room.card(visible.key).waitForExistence(timeout: 10))
             settle()
-            assertPeople(room, blocked: blocked, "\(state), after a closed report preview")
+            assertPeople(room, blocked: blocked, "\(state), after a closed report preview", reuseSnapshot: true)
         }
 
         selectTab("notes", room)
@@ -1869,7 +1911,7 @@ final class RoomReviewTests: XCTestCase {
         XCTAssertTrue(waitForAbsence(room.element(Panel.globalSafety)))
         XCTAssertTrue(waitFor(room.tab("notes"), selected: true), "\(state): Close returns to Room notes.")
         settle()
-        assertNotes(room, blocked: blocked, "\(state), Room notes after the global safety")
+        assertNotes(room, blocked: blocked, "\(state), Room notes after the global safety", reuseSnapshot: true)
         selectTab("people", room)
     }
 
@@ -1931,6 +1973,42 @@ final class RoomReviewTests: XCTestCase {
             nodes.append(RoomNode(identifier: node.identifier, label: node.label, value: value, type: node.elementType))
         }
         return nodes
+    }
+
+    /// One fresh reading for a settled assertion state, after any required live readiness wait.
+    /// An empty tree after a snapshot error is still a visible failure, never a live-query fallback.
+    private func readAssertionTree(_ app: XCUIApplication,
+                                   file: StaticString = #filePath, line: UInt = #line) -> RoomAssertionTree {
+        let root: any XCUIElementSnapshot
+        do {
+            root = try app.snapshot()
+        } catch {
+            XCTFail("The accessibility tree could not be read: \(error.localizedDescription)", file: file, line: line)
+            return RoomAssertionTree(elements: [])
+        }
+        var elements: [RoomSnapshotNode] = []
+        var stack: [(node: any XCUIElementSnapshot, ancestors: [Int])] = [(root, [])]
+        while let (node, ancestors) = stack.popLast() {
+            let index = elements.count
+            stack.append(contentsOf: node.children.reversed().map { ($0, ancestors + [index]) })
+            let content = RoomNode(identifier: node.identifier, label: node.label, value: (node.value as? String) ?? "",
+                                   type: node.elementType)
+            elements.append(RoomSnapshotNode(content: content, title: node.title,
+                                             placeholderValue: node.placeholderValue ?? "", frame: node.frame,
+                                             isEnabled: node.isEnabled, isSelected: node.isSelected, ancestors: ancestors))
+        }
+        return RoomAssertionTree(elements: elements)
+    }
+
+    /// Monotonic diagnostics for all 34 page checks and the four completed block-survival scenarios.
+    private func recordNotesElapsed(_ state: String, since started: TimeInterval) {
+        let seconds = ProcessInfo.processInfo.systemUptime - started
+        let note = "ROOM_NOTES_ELAPSED \(state): " + String(format: "%.3f s", seconds)
+        print(note)
+        let attachment = XCTAttachment(string: note)
+        attachment.name = "room-notes-elapsed-\(state)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     /// Where a sample could show up in the tree: its name or initials in any words, its introduction,
@@ -2041,25 +2119,31 @@ final class RoomReviewTests: XCTestCase {
         text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
     }
 
-    private func assertText(_ element: XCUIElement, _ expected: String, _ state: String,
+    private func assertText(_ element: any RoomElementReading, _ expected: String, _ state: String,
                             file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(expected)” is not showing.", file: file, line: line)
+        let snapshot: RoomElementProperties
+        do {
+            snapshot = try element.roomProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(expected)” is showing: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(Self.normalized(element.label), Self.normalized(expected), "\(state): the approved words.",
+        XCTAssertEqual(Self.normalized(snapshot.label), Self.normalized(expected), "\(state): the approved words.",
                        file: file, line: line)
     }
 
-    private func assertButton(_ element: XCUIElement, _ label: String, _ state: String,
+    private func assertButton(_ element: any RoomElementReading, _ label: String, _ state: String,
                               file: StaticString = #filePath, line: UInt = #line) {
-        guard element.exists else {
-            XCTFail("\(state): “\(label)” is not offered.", file: file, line: line)
+        let snapshot: RoomElementProperties
+        do {
+            snapshot = try element.roomProperties()
+        } catch {
+            XCTFail("\(state): could not verify “\(label)” is offered: \(error)", file: file, line: line)
             return
         }
-        XCTAssertEqual(element.label, label, "\(state): the approved label.", file: file, line: line)
-        XCTAssertTrue(element.isEnabled, "\(state): “\(label)” is enabled.", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(element.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
+        XCTAssertEqual(snapshot.label, label, "\(state): the approved label.", file: file, line: line)
+        XCTAssertTrue(snapshot.isEnabled, "\(state): “\(label)” is enabled.", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(snapshot.frame.height, Self.minimumTarget, "\(state): “\(label)” is 44 pt tall or more.",
                                     file: file, line: line)
     }
 
@@ -2069,7 +2153,8 @@ final class RoomReviewTests: XCTestCase {
         let width = room.app.frame.width
         let column = min(376, width - 64), margin = (width - column) / 2
         softly {
-            var wide: [XCUIElement] = []
+            let room = RoomAssertionUI(live: room, tree: readAssertionTree(room.app))
+            var wide: [RoomAssertionElement] = []
             switch shown {
             case .entry: wide = [room.enter, room.entryBack]
             case .waiting: wide = [room.showPopulated, room.leave]
@@ -2107,10 +2192,22 @@ final class RoomReviewTests: XCTestCase {
 
     /// A text, brought into view: its words, a box grown well past its Figma height (at least 1.3 times
     /// it, and 30 pt: a box that did not grow is fixed or clipped), inside its column or panel.
+    /// A fresh reading after reveal (and after the live hittability check for an enabled button).
+    /// No reading escapes the current item; the next reveal always measures its own settled state.
+    private func readElementForAssertion(_ element: XCUIElement, _ state: String,
+                                         file: StaticString = #filePath, line: UInt = #line) -> (any XCUIElementSnapshot)? {
+        do {
+            return try element.snapshot()
+        } catch {
+            XCTFail("\(state): could not read settled element properties: \(error)", file: file, line: line)
+            return nil
+        }
+    }
+
     private func assertUnclipped(_ id: String, grownFrom figma: CGFloat, within bounds: ClosedRange<CGFloat>,
                                  _ room: RoomUI, _ state: String) {
         guard reveal(id, room.app) else { return }
-        let element = room.element(id)
+        guard let element = readElementForAssertion(room.element(id), state) else { return }
         let frame = element.frame
         XCTAssertFalse(element.label.isEmpty, "\(state): \(id) has its words.")
         if figma > 0 {
@@ -2127,6 +2224,7 @@ final class RoomReviewTests: XCTestCase {
         guard reveal(id, room.app) else { return }
         let button = room.element(id)
         XCTAssertTrue(button.isHittable, "\(state): \(id) can be tapped once in view.")
+        guard let button = readElementForAssertion(button, state) else { return }
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget,
                                     "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
         XCTAssertLessThanOrEqual(button.frame.maxY, room.app.frame.maxY, "\(state): \(id) is on screen.")
@@ -2889,6 +2987,158 @@ private struct RevealEntry {
 }
 
 // MARK: - Screens
+
+/// Static assertion inputs live only within one settled page check; no reading crosses a tap.
+@MainActor
+private protocol RoomElementReading {
+    var identifier: String { get }
+    var exists: Bool { get }
+    var label: String { get }
+    var frame: CGRect { get }
+    var isSelected: Bool { get }
+    func roomProperties() throws -> RoomElementProperties
+}
+
+private struct RoomElementProperties {
+    let label: String
+    let isEnabled: Bool
+    let frame: CGRect
+}
+
+extension XCUIElement: RoomElementReading {
+    fileprivate func roomProperties() throws -> RoomElementProperties {
+        let snapshot = try self.snapshot()
+        return RoomElementProperties(label: snapshot.label, isEnabled: snapshot.isEnabled, frame: snapshot.frame)
+    }
+}
+
+private struct RoomSnapshotNode {
+    let content: RoomNode
+    let title: String
+    let placeholderValue: String
+    let frame: CGRect
+    let isEnabled: Bool
+    let isSelected: Bool
+
+    var ancestors: [Int] = []
+
+    /// Match XCTest's identifying properties while retaining the actual identifier in content.
+    func matchesIdentifier(_ query: String) -> Bool {
+        [content.identifier, title, content.label, content.value, placeholderValue].contains(query)
+    }
+}
+
+private struct RoomAssertionTree {
+    let elements: [RoomSnapshotNode]
+    var nodes: [RoomNode] { elements.map { $0.content } }
+}
+
+private enum RoomSnapshotLookupError: Error {
+    case missingElement(identifier: String)
+}
+
+@MainActor
+private struct RoomAssertionElement: RoomElementReading {
+    let ui: RoomUI
+    let queryIdentifier: String
+    let tree: RoomAssertionTree?
+    var container: String? = nil
+
+    private var live: XCUIElement {
+        container.map { ui.inPanel($0, queryIdentifier) } ?? ui.element(queryIdentifier)
+    }
+    private var node: RoomSnapshotNode? {
+        // app.descendants(matching:) excludes the application root, as does this lookup.
+        guard let elements = tree?.elements else { return nil }
+        let containerIndex: Int?
+        if let container {
+            containerIndex = elements.indices.dropFirst().first { elements[$0].matchesIdentifier(container) }
+            guard containerIndex != nil else { return nil }
+        } else {
+            containerIndex = nil
+        }
+        return elements.indices.dropFirst().first { index in
+            elements[index].matchesIdentifier(queryIdentifier)
+                && (containerIndex.map { elements[index].ancestors.contains($0) } ?? true)
+        }.map { elements[$0] }
+    }
+
+    var identifier: String { tree == nil ? live.identifier : node?.content.identifier ?? "" }
+    var exists: Bool { tree == nil ? live.exists : node != nil }
+    var label: String { tree == nil ? live.label : node?.content.label ?? "" }
+    var frame: CGRect { tree == nil ? live.frame : node?.frame ?? .zero }
+    var isSelected: Bool { tree == nil ? live.isSelected : node?.isSelected ?? false }
+
+    func roomProperties() throws -> RoomElementProperties {
+        guard tree != nil else { return try live.roomProperties() }
+        guard let node else { throw RoomSnapshotLookupError.missingElement(identifier: queryIdentifier) }
+        return RoomElementProperties(label: node.content.label, isEnabled: node.isEnabled, frame: node.frame)
+    }
+}
+
+@MainActor
+private struct RoomAssertionUI {
+    let live: RoomUI
+    let tree: RoomAssertionTree?
+    var app: XCUIApplication { live.app }
+    func element(_ id: String) -> RoomAssertionElement {
+        RoomAssertionElement(ui: live, queryIdentifier: id, tree: tree)
+    }
+    func inPanel(_ panel: String, _ id: String) -> RoomAssertionElement {
+        RoomAssertionElement(ui: live, queryIdentifier: id, tree: tree, container: panel)
+    }
+    func tab(_ key: String) -> RoomAssertionElement { element("room.tab.\(key)") }
+    func card(_ actor: String) -> RoomAssertionElement { element("room.card.\(actor)") }
+    func reason(_ key: String) -> RoomAssertionElement { element("room.report.reason.\(key)") }
+    var screen: RoomAssertionElement { element("room.screen") }
+    var brand: RoomAssertionElement { element("room.brand") }
+    var demoBadge: RoomAssertionElement { element("room.demoBadge") }
+    var safety: RoomAssertionElement { element("room.safety") }
+    var leave: RoomAssertionElement { element("room.leave") }
+    var venue: RoomAssertionElement { element("room.venue") }
+    var venuePreference: RoomAssertionElement { element("room.venue.preference") }
+    var entryHeadline: RoomAssertionElement { element("roomEntry.headline") }
+    var entrySupport: RoomAssertionElement { element("roomEntry.support") }
+    var entryVenue: RoomAssertionElement { element("roomEntry.venue") }
+    var entryPreference: RoomAssertionElement { element("roomEntry.preference") }
+    var entryBoundary: RoomAssertionElement { element("roomEntry.boundary") }
+    var enter: RoomAssertionElement { element("roomEntry.enter") }
+    var entryBack: RoomAssertionElement { element("roomEntry.back") }
+    var envelope: RoomAssertionElement { element("roomWaiting.envelope") }
+    var waitingHeadline: RoomAssertionElement { element("roomWaiting.headline") }
+    var waitingExplanation: RoomAssertionElement { element("roomWaiting.explanation") }
+    var demoControl: RoomAssertionElement { element("roomWaiting.demoControl") }
+    var showPopulated: RoomAssertionElement { element("roomWaiting.showPopulated") }
+    var tabs: RoomAssertionElement { element("room.tabs") }
+    var peopleFraming: RoomAssertionElement { element("room.peopleFraming") }
+    var boundary: RoomAssertionElement { element("room.boundary") }
+    var empty: RoomAssertionElement { element("room.empty") }
+    var emptyTitle: RoomAssertionElement { element("room.empty.title") }
+    var emptyExplanation: RoomAssertionElement { element("room.empty.explanation") }
+    var notesFraming: RoomAssertionElement { element("room.notesFraming") }
+    var hostNote: RoomAssertionElement { element("room.note.host") }
+    var icebreaker: RoomAssertionElement { element("room.note.icebreaker") }
+    var julesNote: RoomAssertionElement { element("room.note.public.jules") }
+    var julesNoteMore: RoomAssertionElement { element("room.note.public.jules.more") }
+    var hiddenNotesBoundary: RoomAssertionElement { element("room.notes.hiddenBoundary") }
+    var profileBack: RoomAssertionElement { element("roomProfile.back") }
+    var profileTitle: RoomAssertionElement { element("roomProfile.title") }
+    var profileSafety: RoomAssertionElement { element("roomProfile.safety") }
+    var profileCard: RoomAssertionElement { element("roomProfile.card") }
+    var profileLabel: RoomAssertionElement { element("roomProfile.label") }
+    var profileName: RoomAssertionElement { element("roomProfile.name") }
+    var profileLine: RoomAssertionElement { element("roomProfile.line") }
+    var profileAbout: RoomAssertionElement { element("roomProfile.about") }
+    var profileInterests: RoomAssertionElement { element("roomProfile.interests") }
+    var profileBoundary: RoomAssertionElement { element("roomProfile.boundary") }
+    var profileAction: RoomAssertionElement { element("roomProfile.action") }
+    var waveMenu: RoomAssertionElement { element("wave.screen.demo-menu") }
+    var endedEnvelope: RoomAssertionElement { element("roomEnded.envelope") }
+    var endedStatus: RoomAssertionElement { element("roomEnded.status") }
+    var endedHeadline: RoomAssertionElement { element("roomEnded.headline") }
+    var endedExplanation: RoomAssertionElement { element("roomEnded.explanation") }
+    var returnToPlaces: RoomAssertionElement { element("roomEnded.returnToPlaces") }
+}
 
 /// The Room's elements, by identifier (the contract's `room.*`, `roomEntry.*`, `roomWaiting.*`,
 /// `roomProfile.*`, `roomPanel.*` and `roomEnded.*`).
