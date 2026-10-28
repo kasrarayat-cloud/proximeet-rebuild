@@ -2194,10 +2194,22 @@ final class RoomReviewTests: XCTestCase {
     /// it, and 30 pt: a box that did not grow is fixed or clipped), inside its column or panel.
     /// A fresh reading after reveal (and after the live hittability check for an enabled button).
     /// No reading escapes the current item; the next reveal always measures its own settled state.
-    private func readElementForAssertion(_ element: XCUIElement, _ state: String,
+    // These callers use app.descendants(.any).matching(identifier:).firstMatch, never a scoped query.
+    // Keep the same fresh-read boundary, but resolve the first descendant in one app snapshot using
+    // the identifying properties and preorder already audited by RoomAssertionElement.
+    private func readElementForAssertion(_ identifier: String, _ app: XCUIApplication, _ state: String,
                                          file: StaticString = #filePath, line: UInt = #line) -> (any XCUIElementSnapshot)? {
         do {
-            return try element.snapshot()
+            let root = try app.snapshot()
+            var stack: [any XCUIElementSnapshot] = Array(root.children.reversed())
+            while let node = stack.popLast() {
+                if [node.identifier, node.title, node.label, (node.value as? String) ?? "",
+                    node.placeholderValue ?? ""].contains(identifier) {
+                    return node
+                }
+                stack.append(contentsOf: node.children.reversed())
+            }
+            throw RoomSnapshotLookupError.missingElement(identifier: identifier)
         } catch {
             XCTFail("\(state): could not read settled element properties: \(error)", file: file, line: line)
             return nil
@@ -2207,7 +2219,7 @@ final class RoomReviewTests: XCTestCase {
     private func assertUnclipped(_ id: String, grownFrom figma: CGFloat, within bounds: ClosedRange<CGFloat>,
                                  _ room: RoomUI, _ state: String) {
         guard reveal(id, room.app) else { return }
-        guard let element = readElementForAssertion(room.element(id), state) else { return }
+        guard let element = readElementForAssertion(id, room.app, state) else { return }
         let frame = element.frame
         XCTAssertFalse(element.label.isEmpty, "\(state): \(id) has its words.")
         if figma > 0 {
@@ -2224,7 +2236,7 @@ final class RoomReviewTests: XCTestCase {
         guard reveal(id, room.app) else { return }
         let button = room.element(id)
         XCTAssertTrue(button.isHittable, "\(state): \(id) can be tapped once in view.")
-        guard let button = readElementForAssertion(button, state) else { return }
+        guard let button = readElementForAssertion(id, room.app, state) else { return }
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget,
                                     "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
         XCTAssertLessThanOrEqual(button.frame.maxY, room.app.frame.maxY, "\(state): \(id) is on screen.")

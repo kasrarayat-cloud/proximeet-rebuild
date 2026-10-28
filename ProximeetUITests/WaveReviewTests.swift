@@ -2536,10 +2536,22 @@ final class WaveReviewTests: XCTestCase {
     /// it, and 30 pt: a box that did not grow is fixed or clipped), inside its column or overlay.
     /// A fresh reading after reveal (and after the live hittability check for an enabled button).
     /// No reading escapes the current item; the next reveal always measures its own settled state.
-    private func readElementForAssertion(_ element: XCUIElement, _ state: String,
+    // These callers use app.descendants(.any).matching(identifier:).firstMatch, never a scoped query.
+    // Keep the same fresh-read boundary, but resolve the first descendant in one app snapshot using
+    // the identifying properties and preorder already audited by WaveAssertionElement.
+    private func readElementForAssertion(_ identifier: String, _ app: XCUIApplication, _ state: String,
                                          file: StaticString = #filePath, line: UInt = #line) -> (any XCUIElementSnapshot)? {
         do {
-            return try element.snapshot()
+            let root = try app.snapshot()
+            var stack: [any XCUIElementSnapshot] = Array(root.children.reversed())
+            while let node = stack.popLast() {
+                if [node.identifier, node.title, node.label, (node.value as? String) ?? "",
+                    node.placeholderValue ?? ""].contains(identifier) {
+                    return node
+                }
+                stack.append(contentsOf: node.children.reversed())
+            }
+            throw WaveSnapshotLookupError.missingElement(identifier: identifier, panel: nil)
         } catch {
             XCTFail("\(state): could not read settled element properties: \(error)", file: file, line: line)
             return nil
@@ -2549,7 +2561,7 @@ final class WaveReviewTests: XCTestCase {
     private func assertUnclipped(_ id: String, grownFrom figma: CGFloat, within bounds: ClosedRange<CGFloat>,
                                  _ ui: WaveUI, _ state: String) {
         guard reveal(id, ui.app) else { return }
-        guard let element = readElementForAssertion(ui.element(id), state) else { return }
+        guard let element = readElementForAssertion(id, ui.app, state) else { return }
         let frame = element.frame
         XCTAssertFalse(element.label.isEmpty, "\(state): \(id) has its words.")
         if figma > 0 {
@@ -2565,7 +2577,7 @@ final class WaveReviewTests: XCTestCase {
     /// at least 44 pt tall and on screen. Whether a disabled control reports itself hittable is not asked.
     private func assertReachableDisabledButton(_ id: String, _ label: String, _ ui: WaveUI, _ state: String) {
         guard reveal(id, ui.app) else { return }
-        guard let button = readElementForAssertion(ui.element(id), state) else { return }
+        guard let button = readElementForAssertion(id, ui.app, state) else { return }
         XCTAssertEqual(button.label, label, "\(state): \(id) keeps its own label.")
         XCTAssertFalse(button.isEnabled, "\(state): \(id) is disabled.")
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget, "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
@@ -2577,7 +2589,7 @@ final class WaveReviewTests: XCTestCase {
         guard reveal(id, ui.app) else { return }
         let button = ui.element(id)
         XCTAssertTrue(button.isHittable, "\(state): \(id) can be tapped once in view.")
-        guard let button = readElementForAssertion(button, state) else { return }
+        guard let button = readElementForAssertion(id, ui.app, state) else { return }
         XCTAssertGreaterThanOrEqual(button.frame.height, Self.minimumTarget, "\(state): \(id) is \(Self.pt(button.frame.height)) pt tall.")
         XCTAssertLessThanOrEqual(button.frame.maxY, ui.app.frame.maxY, "\(state): \(id) is on screen.")
     }

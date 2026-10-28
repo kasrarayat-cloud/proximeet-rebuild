@@ -66,16 +66,28 @@ struct BirthdayView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.basedOnSize)
+            // Reserve a native Done row while typing, without a keyboard accessory host.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if focus != nil {
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        Button {
+                            submitTyped()
+                        } label: {
+                            Text("Done")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("birthday.keyboardDone")
+                    }
+                    .padding(.horizontal, 32)
+                    .background(BirthdayStyle.ground)
+                }
+            }
         }
         .background(BirthdayStyle.ground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { submitTyped() }
-                    .accessibilityIdentifier("birthday.keyboardDone")
-            }
-        }
         .onAppear { session.reevaluateBirthday() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { session.reevaluateBirthday() }

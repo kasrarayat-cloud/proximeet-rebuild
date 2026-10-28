@@ -67,6 +67,25 @@ struct GuestListView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     actions(bottomInset: proxy.safeAreaInsets.bottom)
                 }
+                // Reserve Done's own row so it cannot overlap either action.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if focus != nil {
+                        HStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            Button {
+                                focus = nil
+                            } label: {
+                                Text("Done")
+                                    .frame(minWidth: 44, minHeight: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("guestList.keyboardDone")
+                        }
+                        .padding(.horizontal, 32)
+                        .background(GuestListStyle.ground)
+                    }
+                }
                 .onChange(of: focus) { previous, field in
                     if previous == .name && field != .name {
                         nameTouched = true
@@ -92,15 +111,6 @@ struct GuestListView: View {
         .background(GuestListStyle.ground.ignoresSafeArea())
         .background(RepeatTapGuard())
         .toolbar(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    focus = nil
-                }
-                .accessibilityIdentifier("guestList.keyboardDone")
-            }
-        }
         .onChange(of: session.introduction.name) {
             nameTouched = true
         }
@@ -262,12 +272,6 @@ struct GuestListView: View {
 
     // MARK: - Actions
 
-    /// iOS 26 floats the keyboard toolbar's Done above the keyboard's safe area: on build
-    /// 6ab75905 (iPhone 17 Pro Max) Done lay at y 569–605 against a safe-area edge at 597, over
-    /// the bottom-right corner of Back's 376 × 44 target. While a field is focused the actions
-    /// keep this much more room, so Done never lies over Back or the primary action.
-    private static let keyboardDoneClearance: CGFloat = 36
-
     /// 376 × 60 at y 812 and 376 × 44 at y 880, kept above the keyboard (safe-area inset). At
     /// rest the pair ends 32 pt above the screen's bottom edge, as in Figma.
     private func actions(bottomInset: CGFloat) -> some View {
@@ -289,9 +293,9 @@ struct GuestListView: View {
         .padding(.horizontal, 32)
         .padding(.top, 25)
         // At rest (no field focused, no keyboard), 32 pt above the screen edge, which may reach
-        // 2 pt into the home indicator area. While a field is focused, clear of the keyboard's
-        // floating Done; while a keyboard is still leaving, 8 pt above it.
-        .padding(.bottom, focus != nil ? 8 + Self.keyboardDoneClearance : (bottomInset < 60 ? 32 - bottomInset : 8))
+        // 2 pt into the home indicator area. While a field is focused, leave an 8-pt gap
+        // above Done's separately reserved row; while a keyboard is still leaving, 8 pt above it.
+        .padding(.bottom, focus != nil ? 8 : (bottomInset < 60 ? 32 - bottomInset : 8))
         .background(GuestListStyle.ground.ignoresSafeArea(edges: .bottom))
     }
 
