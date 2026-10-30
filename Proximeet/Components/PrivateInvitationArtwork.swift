@@ -119,10 +119,10 @@ private struct InvitationBusinessCard: View {
                 }
                 .padding(3)
             VStack(alignment: .leading, spacing: 11) {
-                Image(systemName: "briefcase")
-                    .font(.system(size: 19, weight: .light))
-                    .foregroundStyle(Color(hex: 0x353D40))
-                    .accessibilityHidden(true)
+                InvitationBriefcaseMark()
+                    .stroke(Color(hex: 0x353D40), style: StrokeStyle(lineWidth: 1, lineCap: .round,
+                                                                  lineJoin: .round))
+                    .frame(width: 19, height: 19)
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Color(hex: 0x50585A))
                     .frame(width: mark == .corner ? 49 : 63, height: 2)
@@ -158,6 +158,27 @@ private struct InvitationCardCorner: Shape {
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
             path.closeSubpath()
+        }
+    }
+}
+
+/// A printed mark in the illustration, drawn as geometry rather than an accessibility image node.
+private struct InvitationBriefcaseMark: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            let width = rect.width
+            let height = rect.height
+            path.addRoundedRect(in: CGRect(x: width * 0.08, y: height * 0.30,
+                                           width: width * 0.84, height: height * 0.57),
+                                cornerSize: CGSize(width: width * 0.08, height: height * 0.08))
+            path.move(to: CGPoint(x: width * 0.34, y: height * 0.30))
+            path.addLine(to: CGPoint(x: width * 0.34, y: height * 0.14))
+            path.addLine(to: CGPoint(x: width * 0.66, y: height * 0.14))
+            path.addLine(to: CGPoint(x: width * 0.66, y: height * 0.30))
+            path.move(to: CGPoint(x: width * 0.08, y: height * 0.53))
+            path.addLine(to: CGPoint(x: width * 0.92, y: height * 0.53))
+            path.move(to: CGPoint(x: width * 0.50, y: height * 0.47))
+            path.addLine(to: CGPoint(x: width * 0.50, y: height * 0.62))
         }
     }
 }

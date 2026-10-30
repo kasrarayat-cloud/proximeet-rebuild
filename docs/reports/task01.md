@@ -637,3 +637,10 @@ Exact internal commands for the first native compile and domain test (the contro
 ```
 
 The generated native test selection changed only the selected UI target/test identities; original 900/1,200-second method allowances and the source test plans stayed intact. Actual test command vectors, owned simulator identity and result bundle paths are recorded in that root's `test-large/receipt.json`; source/evidence copies remain immutable. The revision's successful native UI, smaller-device screenshots, archive and internal upload are still pending at this report append. Their receipts must identify the subsequent manifest and cannot rewrite the failed first invocation.
+
+
+### Business decorative-image correction after native evidence — 29 October 2026
+
+The second native snapshot (`d77e25b4r2`, payload `1d83b34e0e00a598f0853986831e411351f17904ce2ff79b855f300b2b598421`) again passed all 263 domain tests and native compilation. Its two functional tests failed the same strict artwork structure check. The new diagnostic attachment established the actual cause: each Business artwork root contained two Image nodes with identifier `briefcase` and label `Briefcase`, despite explicit leaf and parent accessibility hiding. This is captured XCTest structure, not a claim about a physical VoiceOver session. The run stopped before its regression/small phases and archive/upload; the failed evidence remains retained.
+
+The corrective source change replaces the decorative SF Symbol with a 19-point stroked native briefcase Path, preserving its color and visible role on the stationery. The artwork file now contains no Image views. The strict accessibility assertions remain unchanged. The previously measured Dating probe correction and 27-point spacing adjustment remain. The next native snapshot must compile this actual change and pass the four-intent functional, existing journey/motion, and smaller-device selections before archive/upload.
