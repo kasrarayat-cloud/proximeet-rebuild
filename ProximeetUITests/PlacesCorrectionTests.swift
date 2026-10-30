@@ -268,8 +268,8 @@ final class PlacesCorrectionTests: XCTestCase {
     /// on the same place: Afterglow's detail → Later; the explanation → Common Ground's detail;
     /// browsing → Signal (both choices kept; Continue preview reopens the category left). A swipe
     /// that is not completed, and a swipe that starts mid-screen, change nothing. After changing the
-    /// band to Dating through Signal and the Wristband, Common Ground's detail says "Not available
-    /// for Dating", and each completed swipe goes back exactly one stage. A double tap on the header
+    /// band to Dating through Signal and the Wristband, Common Ground now permits its preview
+    /// for that band, and each completed swipe goes back exactly one stage. A double tap on the header
     /// Back stops one stage up. Last, with the app's Reduce Motion preview flag, a swipe from a detail
     /// still goes back one stage and an uncompleted one still changes nothing.
     ///
@@ -384,9 +384,9 @@ final class PlacesCorrectionTests: XCTestCase {
         XCTAssertTrue(places.tab("upcoming").isSelected)
         choose("now", places)
         openDetail(places, app, "Common Ground")
-        XCTAssertEqual(places.primary.label, "Not available for Dating")
-        XCTAssertFalse(places.primary.isEnabled)
-        XCTAssertEqual(places.lastLine.label, "Your Dating band doesn’t match this session.")
+        XCTAssertEqual(places.primary.label, "Preview check-in")
+        XCTAssertTrue(places.primary.isEnabled, "The four-intent Common Ground demo preserves the selected Dating band.")
+        XCTAssertEqual(places.lastLine.label, "Sample session · not a reservation")
         capture("correction-gesture-dating-common-ground-fixture", app)
         edgeSwipe(app, completing: true)
         waitForLabel(places.headline, "Find your kind of place.")

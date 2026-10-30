@@ -227,7 +227,7 @@ final class DemoSession {
     private var roomRunCount = 0
 
     /// Preview room demo on the explanation: the Room entry, and only above an eligible explanation
-    /// (Social or Business at Common Ground, with the actual approach). Opening it starts no run.
+    /// (a permitted band at Common Ground, with the actual approach). Opening it starts no run.
     @discardableResult
     func previewRoomDemo() -> Bool {
         guard room == nil, let preview = RoomPreview.open(after: flow) else { return false }

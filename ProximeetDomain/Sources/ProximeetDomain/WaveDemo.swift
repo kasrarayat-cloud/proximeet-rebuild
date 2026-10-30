@@ -7,14 +7,15 @@ import Foundation
 ///
 /// Nothing here is a real Wave: no delivery, notification, receipt, conversation, chat, Keep, quota,
 /// timer or clock. There is one viewer (`WaveParticipant.viewer`) throughout; the counterpart is the one
-/// sample of the viewer's own intent (Social → Maya, Business → Jules). Each explicit start creates a
+/// sample of the viewer's own intent (Social → Maya, Business → Jules, Activity → Sam, Dating → Riley).
+/// Each explicit start creates a
 /// fresh immutable invitation identity; nothing turns an outgoing invitation into an incoming one, and no
 /// closed invitation ever becomes pending or accepted again. The run keeps every closed one, append-only, in
 /// `RoomRun.closedInvitations` for as long as the run exists (in memory only).
 public enum WaveCopy {
     // Chrome
     public static let brand = "Proximeet"
-    public static let composeBrand = "Wave"
+    public static let composeBrand = "Private invitation"
 
     // Menu (74:568)
     public static let menuHeadline = ["Every hello", "needs a choice."]
@@ -103,7 +104,13 @@ public enum WaveCopy {
     }
     public static func invitationTitle(_ screen: WaveScreen, counterpart: RoomActor) -> String? {
         switch screen {
-        case .outgoingConfirm: return "Send a little hello."
+        case .outgoingConfirm:
+            switch counterpart.intent {
+            case .business: return "An idea worth sharing."
+            case .social: return "A little company."
+            case .activity: return "A plan to join."
+            case .dating: return "A spark to explore."
+            }
         case .outgoingPending: return "Waiting for \(counterpart.name)."
         case .incomingReview: return "An invitation for you."
         case .incomingAccepted: return "You both said yes."
@@ -112,12 +119,22 @@ public enum WaveCopy {
     }
     public static func invitationPurpose(_ screen: WaveScreen, counterpart: RoomActor) -> String? {
         switch screen {
-        case .outgoingConfirm: return "A Wave invites a conversation.\n\(counterpart.name) chooses whether to accept."
+        case .outgoingConfirm:
+            switch counterpart.intent {
+            case .business: return "A private hello about ideas and opportunities."
+            case .social: return "A private hello for coffee and conversation."
+            case .activity: return "A private hello for a walk, workout, or game."
+            case .dating: return "A private hello to see if the interest is mutual."
+            }
         case .outgoingPending: return "Only \(counterpart.name) can accept.\nYou can withdraw at any time."
         case .incomingReview: return "Accept only if you want to.\nNo explanation needed to decline."
         case .incomingAccepted: return "A temporary private chat\ncan open next."
         default: return nil
         }
+    }
+    /// The recipient keeps the choice, separately from the intent-specific invitation wording.
+    public static func recipientChoice(counterpart: RoomActor) -> String {
+        "\(counterpart.name) chooses whether to accept."
     }
     public static func boundary(_ screen: WaveScreen) -> String? {
         switch screen {
@@ -129,7 +146,7 @@ public enum WaveCopy {
         }
     }
     public static let demoCases = "Demo cases"
-    public static let send = "Send demo Wave"
+    public static let send = "Send private invitation"
     public static let withdraw = "Withdraw Wave"
     public static let accept = "Accept Wave"
     public static let decline = "Decline Wave"

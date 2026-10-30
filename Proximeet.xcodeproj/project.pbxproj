@@ -18,6 +18,7 @@
 		2C4569A07025A8AA82A26E01 /* SignalReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 50A5C3A70DB9F979B11AA344 /* SignalReviewTests.swift */; };
 		34447E70E0D3EEC0E10E81C2 /* BandOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 746B8699332625989FCA280E /* BandOption.swift */; };
 		36BCE8422677F7BC20BF760D /* ProximeetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586B8C2BE5175B1718607857 /* ProximeetApp.swift */; };
+		3C5B159F8F6A762E6E9E531E /* PrivateInvitationReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = B96EDC42CEEDE5A223C347F9 /* PrivateInvitationReviewTests.swift */; };
 		3D6DB46F672571395E246748 /* RoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CBCC9927A389B44BBE4DDFB /* RoomView.swift */; };
 		3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29FA62256BD7E4755C13781C /* IntentStyle.swift */; };
 		44504F04444EE2A7F545AC28 /* BandStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C657DF6EF59BFED0A1F42CC0 /* BandStage.swift */; };
@@ -50,6 +51,7 @@
 		C83708C29AB8F57779D1FF5D /* DebugFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E16DD049F4A75A514AFBD6 /* DebugFixtures.swift */; };
 		D4A4409D3A5DBBBDC8822D3B /* RepeatTapGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */; };
 		DBDE63CD1A82675CE1423C90 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C4C935CE1E2A2750941D4F6 /* Assets.xcassets */; };
+		E782A463C0BE0EBDB52DB94E /* PrivateInvitationArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273A49B36F62C84ACEB3AA22 /* PrivateInvitationArtwork.swift */; };
 		F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = 5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */; };
 		F1442D9D2AECBE5EF87BAD62 /* WaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96962722D76B8F0E74958F48 /* WaveView.swift */; };
 		F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */ = {isa = PBXBuildFile; fileRef = C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */; };
@@ -74,6 +76,7 @@
 		0C37F5E2F57F26B553A6A63C /* BirthdayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayView.swift; sourceTree = "<group>"; };
 		1158A2EB143832C9ECF157FD /* PassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassView.swift; sourceTree = "<group>"; };
 		26260C95BB498A2DFED925E1 /* BirthdayWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayWheels.swift; sourceTree = "<group>"; };
+		273A49B36F62C84ACEB3AA22 /* PrivateInvitationArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateInvitationArtwork.swift; sourceTree = "<group>"; };
 		29FA62256BD7E4755C13781C /* IntentStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentStyle.swift; sourceTree = "<group>"; };
 		303BF33E5B6CA1B7BBD66478 /* RunBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunBudget.swift; sourceTree = "<group>"; };
 		3C808A64B77F06AC2C52124A /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 		A0FD7C6FA5E70188F98C8BE0 /* SignatureStudio.skybox */ = {isa = PBXFileReference; lastKnownFileType = file.skybox; path = SignatureStudio.skybox; sourceTree = "<group>"; };
 		A351651C609FD65199E5C4CA /* Manrope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Manrope.swift; sourceTree = "<group>"; };
 		AE48D38C12B4EDFA6D4F4345 /* Adaptations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adaptations.swift; sourceTree = "<group>"; };
+		B96EDC42CEEDE5A223C347F9 /* PrivateInvitationReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateInvitationReviewTests.swift; sourceTree = "<group>"; };
 		BCE0E9C34F158759B57E69D4 /* SignalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalView.swift; sourceTree = "<group>"; };
 		BDF237F350246522364A5DB3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		BEBF4AD5F388E4A893AA059C /* GuestListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestListView.swift; sourceTree = "<group>"; };
@@ -162,6 +166,7 @@
 				E2B9055BE62D6166F7331A15 /* Fabric.swift */,
 				29FA62256BD7E4755C13781C /* IntentStyle.swift */,
 				FF619E10369A2C250F60F6C1 /* PlacesEdgeBack.swift */,
+				273A49B36F62C84ACEB3AA22 /* PrivateInvitationArtwork.swift */,
 				68B88D08000A40BA45A7F44F /* RepeatTapGuard.swift */,
 				4CD0E074FCA9BBC54744B7E1 /* SignalTag.swift */,
 				C15580091C077DBBC980EAFE /* SignatureBandHero.swift */,
@@ -195,6 +200,7 @@
 				5136C5A73391A81A9EB42327 /* PassReviewTests.swift */,
 				5FC224A57F59EC845FFFC640 /* PlacesCorrectionTests.swift */,
 				C04952D2F77AF2AEDF990DF6 /* PlacesReviewTests.swift */,
+				B96EDC42CEEDE5A223C347F9 /* PrivateInvitationReviewTests.swift */,
 				3FC2D6B016804A7082CC2DC1 /* RoomReviewTests.swift */,
 				303BF33E5B6CA1B7BBD66478 /* RunBudget.swift */,
 				50A5C3A70DB9F979B11AA344 /* SignalReviewTests.swift */,
@@ -384,6 +390,7 @@
 				5AA025BE0C984EA8EE55EAB0 /* PassReviewTests.swift in UISources */,
 				F050FB4612A18C31A50BCC7A /* PlacesCorrectionTests.swift in UISources */,
 				F4BC1241D8AA6F1067C19EB6 /* PlacesReviewTests.swift in UISources */,
+				3C5B159F8F6A762E6E9E531E /* PrivateInvitationReviewTests.swift in UISources */,
 				ABB887D0441BA7D39FA9A024 /* RoomReviewTests.swift in UISources */,
 				9337C78DED8EF4ECBD6F532E /* RunBudget.swift in UISources */,
 				2C4569A07025A8AA82A26E01 /* SignalReviewTests.swift in UISources */,
@@ -408,6 +415,7 @@
 				F5B5D91DDDCDFEDD23B50C24 /* Fabric.swift in Sources */,
 				3EEB21BC97FB9D781F3F4094 /* IntentStyle.swift in Sources */,
 				6D5B1CB3B9755A0643103CDA /* PlacesEdgeBack.swift in Sources */,
+				E782A463C0BE0EBDB52DB94E /* PrivateInvitationArtwork.swift in Sources */,
 				D4A4409D3A5DBBBDC8822D3B /* RepeatTapGuard.swift in Sources */,
 				0529859D1916D2390BBAF93F /* SignalTag.swift in Sources */,
 				123C654DBC4670BC5DDD2240 /* SignatureBandHero.swift in Sources */,

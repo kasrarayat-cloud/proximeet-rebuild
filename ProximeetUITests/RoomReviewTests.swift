@@ -689,39 +689,37 @@ final class RoomReviewTests: XCTestCase {
 
     // MARK: - Refused entry
 
-    /// Direct launches. The Room fixture `room-waiting` with Dating and with Activity (Okay to say
-    /// hello): the app refuses at the explanation's own guard, so Common Ground's detail shows with its
-    /// primary disabled ("Not available for …"), a tap on it opens nothing, and no Room element exists.
-    /// A deeper stale route (`room-populated` with a profile and its safety, Dating; until chapter 09 it
-    /// was the profile's Wave information, which left the app) is refused the same way. Without an
-    /// approach there is no Room fixture at all: the app opens at Welcome.
+    /// The four-intent revision admits Dating and Activity at Common Ground, while retaining the
+    /// explicit waiting gate and refusing stale profiles from another sample pair. Missing choices
+    /// remain refused. The test identity stays stable; the old catalog-specific refusals are superseded.
     func testIneligibleAndStaleEntryIsRefused() throws {
         for band in ["dating", "activity"] {
             let app = launchRoom(.waiting, band: band, approach: "okayToSayHello")
-            let places = RoomPlaces(app: app)
-            let title = Self.intentTitles[band] ?? band
-            waitForLabel(places.placeName, "Common Ground")
+            let room = RoomUI(app: app)
+            waitForLabel(room.waitingHeadline, RoomText.waitingHeadline)
             settle()
-            XCTAssertEqual(places.placePrimary.label, "Not available for \(title)")
-            XCTAssertFalse(places.placePrimary.isEnabled, "\(title): the primary is disabled.")
-            XCTAssertEqual(places.placeBoundary.label, "Your \(title) band doesn’t match this session.")
-            XCTAssertFalse(places.explanationHeadline.exists, "\(title): the explanation is never shown.")
-            assertNoRoom(app, "\(title), a waiting fixture")
-            places.placePrimary.tap()
-            hold(0.6)
-            XCTAssertFalse(places.explanationHeadline.exists, "\(title): the disabled action opens nothing.")
-            assertNoRoom(app, "\(title), after a tap on the disabled action")
-            capture("room-refused-\(band)-common-ground-fixture", app)
+            assertWaiting(room, preference: Self.preference(band, "okayToSayHello"), "\(band): deliberate waiting gate")
+            for actor in ["maya", "jules", "sam", "riley"] {
+                XCTAssertFalse(room.card(actor).exists, "\(band): no sample appears before Show populated example.")
+            }
+            room.showPopulated.tap()
+            XCTAssertTrue(room.card("sam").waitForExistence(timeout: 10))
+            XCTAssertTrue(room.card("riley").exists)
+            XCTAssertFalse(room.card("maya").exists)
+            XCTAssertFalse(room.card("jules").exists)
+            XCTAssertEqual(room.venuePreference.label, Self.preference(band, "okayToSayHello"))
+            capture("room-four-intent-\(band)-common-ground-fixture", app)
             app.terminate()
         }
 
         let deep = launchRoom(RoomState(key: "maya-safety-0", stage: "room-populated", profile: "maya", panel: "actor-safety",
                                         shown: .actorSafety(actor: "maya", blocked: [])), band: "dating", approach: "chatFirst")
-        let refused = RoomPlaces(app: deep)
-        waitForLabel(refused.placeName, "Common Ground")
-        settle()
-        XCTAssertEqual(refused.placePrimary.label, "Not available for Dating")
-        assertNoRoom(deep, "Dating, a stale profile and its safety")
+        let refused = RoomUI(app: deep)
+        XCTAssertTrue(refused.card("sam").waitForExistence(timeout: 10))
+        XCTAssertTrue(refused.card("riley").exists)
+        XCTAssertFalse(refused.card("maya").exists, "A stale profile cannot expose another sample group.")
+        XCTAssertFalse(refused.profileName.exists)
+        assertIdentifiers(absent: ["roomPanel.", "wave."], readTree(deep), "Dating refuses Maya's stale profile and safety")
         deep.terminate()
 
         let missing = XCUIApplication()

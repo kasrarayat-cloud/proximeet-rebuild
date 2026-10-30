@@ -1276,17 +1276,13 @@ final class WaveReviewTests: XCTestCase {
     // MARK: - Reduce Motion
 
     /// Direct launches (fixture `wave-in-review`) on the 440 × 956 iPhone. With the app-level preview
-    /// flag `-ProximeetReduceMotionPreview YES` (not the system setting): Accept Wave shows the accepted
-    /// result, with the same words, and no frame just after the tap shows a ring part-way through the
-    /// 800-ms move. The frames are read (`XCUIScreen`, no element lookup) in x 74–92, y 57–75 of the ring
-    /// frame (75:140/75:147, 376 × 128, anchored on the invitation card): ground in both poses (inside the
-    /// separate first ring's hole, 10 pt left of the joined one), which ring 1's rim crosses at about
-    /// 16-78 % of a move, while a crossfade or an instant change never draws there. Before judging, the
-    /// anchor is proved: the separate first ring's rim is drawn at x 57–63 before Accept; after it, the
-    /// joined first ring's rim at x 105–112 and nothing at x 57–63. The same frames without the flag are
-    /// attached as a control (a note, not a claim: a sample may miss a move).
+    /// flag `-ProximeetReduceMotionPreview YES` (not the system setting): Accept shows the accepted
+    /// result with the same words and no sampled frame shows a ring part-way through its 800-ms move.
+    /// The 29 October design reserves rings for Dating, on a 376 × 220 artwork canvas. The probes below
+    /// follow its separate/accepted ring geometry; all original anchor, sweep and final-pose assertions
+    /// remain. Default motion is attached as an observational control because sampling can miss a move.
     func testReduceMotionPreviewAcceptJoinsWithoutAMove() throws {
-        let viewer = WaveViewer.alex
+        let viewer = WaveViewer(name: "Alex", band: "dating", approach: "chatFirst")
         let reduced = sampleAccept(extra: Self.reduceMotionPreview, viewer, "Reduce Motion")
         let control = sampleAccept(extra: [], viewer, "default motion")
         attachNote("Reduce Motion: \(reduced.map { $0.summary } ?? "no sample"). Default motion (control): "
@@ -1360,19 +1356,26 @@ final class WaveReviewTests: XCTestCase {
             pixels?.sweepAfter = settled.fraction(in: RingProbe.sweep.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
         }
         capture("wave-accept-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))-\(Int(width.rounded()))pt-fixture", app)
+        // App-scoped captures can omit system-composited chrome/footer in this simulator. Pair the
+        // existing capture with the full screen at the same settled state; neither substitutes for pixels.
+        let fullScreen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        fullScreen.name = "wave-accept-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))-full-screen"
+        fullScreen.lifetime = .keepAlways
+        add(fullScreen)
         sample.pixels = pixels
         return sample
     }
 
-    /// The top-left of the 376 × 128 ring frame on the 440-pt iPhone: the invitation card's (75:180,
-    /// 376 × 316, the rings drawn first at its top), or 128 above it if the card's container holds only
-    /// the ivory slip. Nil when the card is not 376 wide (another phone or text size).
+    /// Native XCTest reports the union of painted artwork and the slip, not the full 376 × 220
+    /// layout canvas. Probes below are calibrated relative to that measured invitation frame. If only
+    /// the slip is exposed, its preceding 220-pt art slot supplies the fallback. Other widths do not
+    /// use these unscaled geometry probes. Before/final anchors must satisfy the independent checks.
     private func ringsOrigin(_ ui: WaveUI) -> CGPoint? {
         let card = ui.invitation
         guard card.exists else { return nil }
         let frame = card.frame
         guard abs(frame.width - 376) <= 1.5 else { return nil }
-        return CGPoint(x: frame.minX, y: frame.height >= 250 ? frame.minY : frame.minY - 128)
+        return CGPoint(x: frame.minX, y: frame.height >= 250 ? frame.minY : frame.minY - 220)
     }
 
     /// Anything brighter than the #050606 ground: the darkest rim stop is #333D40.
@@ -1380,25 +1383,29 @@ final class WaveReviewTests: XCTestCase {
 
     // MARK: - Refused entry
 
-    /// Direct launches. The Wave fixture `wave-menu` with Dating and with Activity (Okay to say hello):
-    /// refused where Places refuses, so Common Ground's detail shows with its primary disabled ("Not
-    /// available for …") and no Room or Wave element exists. For a Social guest Jules is another intent:
-    /// his profile's action is Back to people, which returns to People and opens no Wave; for a Business
-    /// guest the same holds for Maya.
+    /// The current four-intent Common Ground catalog supersedes its old Dating/Activity refusal.
+    /// Future sessions still cannot open a Room or Wave, and a different-intent profile still refuses.
     func testIneligibleAndOtherIntentNeverReachTheWave() throws {
-        for band in ["dating", "activity"] {
-            let viewer = WaveViewer(name: "Alex", band: band, approach: "okayToSayHello")
-            let app = launchWave(WaveFixture(key: "demo-menu-\(band)", screen: .menu, viewer: viewer))
+        for (band, category, venue, disabled) in [
+            ("dating", "later", "Afterglow", "Opens at 9 pm"),
+            ("activity", "upcoming", "Fieldwork", "Opens Saturday"),
+        ] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-ProximeetFixture", "place-detail", "-ProximeetFixtureBand", band,
+                                   "-ProximeetFixtureSignal", "okayToSayHello",
+                                   "-ProximeetFixtureCategory", category]
+            app.launch()
             let places = WavePlaces(app: app)
-            waitForLabel(places.placeName, "Common Ground")
+            waitForLabel(places.placeName, venue)
             settle()
-            XCTAssertEqual(places.placePrimary.label, "Not available for \(viewer.intentTitle)")
-            XCTAssertFalse(places.placePrimary.isEnabled, "\(band): the primary is disabled.")
+            XCTAssertEqual(places.placePrimary.label, disabled)
+            XCTAssertFalse(places.placePrimary.isEnabled, "\(band): the future session is disabled.")
             assertIdentifiers(absent: ["room", "wave"], readTree(app), "\(band): no Room, no Wave")
-            capture("wave-refused-\(band)-fixture", app)
+            capture("wave-refused-future-\(band)-fixture", app)
             app.terminate()
         }
-        for (band, other) in [("social", WaveCounterpart.jules), ("business", WaveCounterpart.maya)] {
+        for (band, other) in [("social", WaveCounterpart.jules), ("business", WaveCounterpart.maya),
+                              ("activity", WaveCounterpart.riley), ("dating", WaveCounterpart.sam)] {
             let viewer = WaveViewer(name: "Alex", band: band, approach: "chatFirst")
             let app = launchRoom(viewer, profile: other.key)
             let room = WaveRoomUI(app: app)
@@ -1765,7 +1772,7 @@ final class WaveReviewTests: XCTestCase {
         let screens = nodes.map { $0.identifier }.filter { $0.hasPrefix("wave.screen.") }
         XCTAssertEqual(screens, ["wave.screen.\(screen.rawValue)"], "\(state): exactly this screen (\(screen.figma)).",
                        file: file, line: line)
-        assertText(ui.brand, screen.hasBack ? WaveText.composeBrand : WaveText.brand, state, file: file, line: line)
+        assertText(ui.brand, (screen.hasBack || screen.isActive) ? WaveText.composeBrand : WaveText.brand, state, file: file, line: line)
         assertTextIgnoringCase(ui.demoBadge, WaveText.demoBadge, state, file: file, line: line)
         if screen == .sessionEnded {
             XCTAssertFalse(ids.contains("wave.safety"), "\(state): the ended chrome (75:130) has no Safety.", file: file, line: line)
@@ -1872,6 +1879,11 @@ final class WaveReviewTests: XCTestCase {
         }
         assertText(ui.title, WaveText.title(screen, counterpart), state, file: file, line: line)
         assertText(ui.purpose, WaveText.purpose(screen, counterpart), state, file: file, line: line)
+        assertText(ui.element("wave.intent.\(viewer.band)"), viewer.intentTitle, state, file: file, line: line)
+        if screen == .outConfirm {
+            assertText(ui.element("wave.invitation.consent"), "\(counterpart.name) chooses whether to accept.",
+                       state, file: file, line: line)
+        }
         assertText(ui.preference, counterpart.preferenceAccessibilityLabel,
                    "\(state): counterpart’s spoken preference", file: file, line: line)
         assertText(ui.boundary, WaveText.boundary(screen), state, file: file, line: line)
@@ -2190,7 +2202,7 @@ final class WaveReviewTests: XCTestCase {
         var stack: [WaveTreeEntry] = [WaveTreeEntry(node: root, panel: nil, depth: 0)]
         while let entry = stack.popLast() {
             let node = entry.node
-            if node.identifier == "wave.rings" { rings.append(node) }
+            if node.identifier == "wave.rings" || node.identifier.hasPrefix("wave.artwork.") { rings.append(node) }
             let panel = Self.isPanelContainer(node.identifier) ? node.identifier : entry.panel
             for child in node.children.reversed() {
                 stack.append(WaveTreeEntry(node: child, panel: panel, depth: entry.depth + 1))
@@ -2206,7 +2218,7 @@ final class WaveReviewTests: XCTestCase {
                 recordRingsSnapshot(root, app, ringCheck.state)
             }
             XCTAssertTrue(issues.isEmpty,
-                          "\(ringCheck.state): unexpected decorative-ring snapshot structure: "
+                          "\(ringCheck.state): unexpected decorative-artwork snapshot structure: "
                           + issues.joined(separator: "; "), file: file, line: line)
         }
         return nodes
@@ -2237,12 +2249,12 @@ final class WaveReviewTests: XCTestCase {
     /// permitted, so this is not a failure or a VoiceOver result. Preserve exact properties and
     /// descendants for comparison; the historical strict-absence failure remains in its original bundle.
     private func recordRingsSnapshot(_ root: any XCUIElementSnapshot, _ app: XCUIApplication, _ state: String) {
-        var details = ["\(state): wave.rings snapshot structure used by assertScreen.",
+        var details = ["\(state): Decorative artwork snapshot structure used by assertScreen.",
                        "This is XCTest snapshot evidence, not a VoiceOver focus or speech result."]
         var stack: [(node: any XCUIElementSnapshot, depth: Int, inRings: Bool)] = [(root, 0, false)]
         while let entry = stack.popLast() {
             let node = entry.node
-            let inRings = entry.inRings || node.identifier == "wave.rings"
+            let inRings = entry.inRings || node.identifier == "wave.rings" || node.identifier.hasPrefix("wave.artwork.")
             if inRings {
                 details.append(String(repeating: "  ", count: entry.depth)
                                + "role=\(node.elementType) identifier=\(String(reflecting: node.identifier)) "
@@ -2274,7 +2286,7 @@ final class WaveReviewTests: XCTestCase {
             for sample in samples {
                 for text in texts {
                     let words = text.components(separatedBy: CharacterSet.alphanumerics.inverted)
-                    if text.range(of: sample.name, options: .caseInsensitive) != nil || words.contains(sample.initials)
+                    if words.contains(where: { $0.caseInsensitiveCompare(sample.name) == .orderedSame }) || words.contains(sample.initials)
                         || sample.interests.contains(text) || sample.texts.contains(where: { text.contains($0) }) {
                         found.append("\(place) “\(text)” shows \(sample.name)")
                     }
@@ -3050,7 +3062,7 @@ final class WaveReviewTests: XCTestCase {
 /// a headline reads as one element (the comparison reads any line break as a space).
 private enum WaveText {
     static let brand = "Proximeet"
-    static let composeBrand = "Wave"
+    static let composeBrand = "Private invitation"
     static let demoBadge = "Demo"
     static let menuHeadline = "Every hello\nneeds a choice."
     static func role(_ name: String) -> String { "You are \(name) in both examples." }
@@ -3069,7 +3081,7 @@ private enum WaveText {
     static let leave = "Leave and disappear"
     static let venueName = "Common Ground"
     static let demoCases = "Demo cases"
-    static let send = "Send demo Wave"
+    static let send = "Send private invitation"
     static let withdraw = "Withdraw Wave"
     static let accept = "Accept Wave"
     static let decline = "Decline Wave"
@@ -3089,7 +3101,13 @@ private enum WaveText {
 
     static func title(_ screen: WaveScreenKey, _ counterpart: WaveCounterpart) -> String {
         switch screen {
-        case .outConfirm: return "Send a little hello."
+        case .outConfirm:
+            switch counterpart.key {
+            case "jules": return "An idea worth sharing."
+            case "sam": return "A plan to join."
+            case "riley": return "A spark to explore."
+            default: return "A little company."
+            }
         case .outPending: return "Waiting for \(counterpart.name)."
         case .inReview: return "An invitation for you."
         default: return "You both said yes."
@@ -3098,7 +3116,13 @@ private enum WaveText {
 
     static func purpose(_ screen: WaveScreenKey, _ counterpart: WaveCounterpart) -> String {
         switch screen {
-        case .outConfirm: return "A Wave invites a conversation.\n\(counterpart.name) chooses whether to accept."
+        case .outConfirm:
+            switch counterpart.key {
+            case "jules": return "A private hello about ideas and opportunities."
+            case "sam": return "A private hello for a walk, workout, or game."
+            case "riley": return "A private hello to see if the interest is mutual."
+            default: return "A private hello for coffee and conversation."
+            }
         case .outPending: return "Only \(counterpart.name) can accept.\nYou can withdraw at any time."
         case .inReview: return "Accept only if you want to.\nNo explanation needed to decline."
         default: return "A temporary private chat\ncan open next."
@@ -3281,6 +3305,18 @@ private struct WaveCounterpart: Sendable {
         texts: ["Design, ideas, and small businesses.", "Always curious about what people are building.",
                 "Open to a brief hello. No pressure to continue.", "One good question can change an evening."]
     )
+    static let sam = WaveCounterpart(
+        key: "sam", name: "Sam", initials: "SP", preference: "Activity · Chat first",
+        interests: ["Walking", "Outdoors", "Games"],
+        texts: ["Walks, fresh air, and a reason to get outside.", "A good route is even better with company."]
+    )
+    static let riley = WaveCounterpart(
+        key: "riley", name: "Riley", initials: "RK", preference: "Dating · Chat first",
+        interests: ["Coffee", "Music", "Conversation"],
+        texts: ["Good conversation and a little curiosity.", "Happy to take things one hello at a time."]
+    )
+    // Existing Social/Business cross-leak checks use their own two-person room. New four-intent
+    // tests inspect their actual counterpart separately, avoiding shared-interest false positives.
     static let all = [maya, jules]
 }
 
@@ -3293,8 +3329,22 @@ private struct WaveViewer: Sendable {
     static let alex = WaveViewer(name: "Alex", band: "social", approach: "chatFirst")
 
     /// The one sample of the guest's own intent: Maya for Social, Jules for Business.
-    var counterpart: WaveCounterpart { band == "business" ? .jules : .maya }
-    var other: WaveCounterpart { band == "business" ? .maya : .jules }
+    var counterpart: WaveCounterpart {
+        switch band {
+        case "business": return .jules
+        case "activity": return .sam
+        case "dating": return .riley
+        default: return .maya
+        }
+    }
+    var other: WaveCounterpart {
+        switch band {
+        case "business": return .maya
+        case "activity": return .riley
+        case "dating": return .sam
+        default: return .jules
+        }
+    }
 
     var intentTitle: String {
         ["social": "Social", "dating": "Dating", "business": "Business", "activity": "Activity"][band] ?? band
@@ -3416,17 +3466,15 @@ private struct WaveRevealEntry {
     let panel: String?
 }
 
-/// Where the ring probes sit in the 376 × 128 ring frame (75:140 / 75:147) on the 440-pt iPhone. From the
-/// masters' geometry: ring 1's rim (the 12-pt stroke of a 100 × 106 ellipse at 6, 6 in a 112 × 118 group)
-/// at group 54, 6 unrotated (separate) and at 110, 6 turned 7° clockwise about its top-left (joined).
+/// Probes relative to the measured invitation-frame origin, not the invisible layout-canvas origin.
+/// Native retained before/accepted frames on 29 October measured separate=0.8/0, sweep=0/0 and
+/// joined=0/1 with these rectangles (max RGB >= 48). The earlier x105 joined rectangle read only
+/// 0.228 in the test because it crossed the shadow. Its failed result remains retained. These probes
+/// keep the original independent anchor, no-sweep and final-pose thresholds.
 private enum RingProbe {
-    /// On the separate first ring's left rim; ground once joined (outside the joined first ring).
-    static let separateOnly = CGRect(x: 57, y: 57, width: 6, height: 16)
-    /// On the joined first ring's left rim; ground while separate (inside the separate first ring's hole).
-    static let joinedOnly = CGRect(x: 105, y: 65, width: 7, height: 13)
-    /// Ground in both poses (in the separate ring's hole, 10 pt left of the joined one), crossed by the
-    /// first ring's rim at about 16-78 % of a move between them.
-    static let sweep = CGRect(x: 74, y: 57, width: 18, height: 18)
+    static let separateOnly = CGRect(x: 54, y: 108, width: 5, height: 6)
+    static let joinedOnly = CGRect(x: 113, y: 108, width: 6, height: 6)
+    static let sweep = CGRect(x: 81, y: 107, width: 8, height: 8)
 }
 
 private struct AcceptFrame {

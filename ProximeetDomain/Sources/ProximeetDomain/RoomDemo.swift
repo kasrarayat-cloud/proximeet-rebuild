@@ -4,7 +4,7 @@ import Foundation
 /// could feel like, opened only from Common Ground's check-in explanation.
 ///
 /// Nothing here is a live room. No real person, check-in, location, camera, network, server, report
-/// or message exists; the two people are fictional samples; the "until 10 pm" label belongs to the
+/// or message exists; each room shows two fictional samples; the "until 10 pm" label belongs to the
 /// fixed Thursday 8 pm snapshot of Places, and no clock is read. The model is separate from `DemoFlow`
 /// and `DemoDraft`: it reads the actual intent and approach once, when the preview opens, and never
 /// writes to the draft or grants anything. It lives in memory only, so a relaunch restores no run.
@@ -84,11 +84,13 @@ public enum RoomCopy {
     public static func reportTitle(_ actor: RoomActor) -> String { "Report \(actor.name)" }
 }
 
-/// The two fictional sample people. Abstract initials, fictional names and words: never a real person,
-/// never a count of anyone, and never a privacy threshold. Two cards are two illustrations.
+/// Fictional sample people, one for each intent. Each room shows a pair of illustrations, never a
+/// count of real people or a privacy threshold. Samples never change intent to match the viewer.
 public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
     case maya
     case jules
+    case sam
+    case riley
 
     public var id: String { rawValue }
 
@@ -96,6 +98,8 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return "Maya"
         case .jules: return "Jules"
+        case .sam: return "Sam"
+        case .riley: return "Riley"
         }
     }
 
@@ -103,6 +107,8 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return "ML"
         case .jules: return "JR"
+        case .sam: return "SP"
+        case .riley: return "RK"
         }
     }
 
@@ -111,12 +117,14 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return .social
         case .jules: return .business
+        case .sam: return .activity
+        case .riley: return .dating
         }
     }
 
     public var approach: ApproachSignal {
         switch self {
-        case .maya: return .chatFirst
+        case .maya, .sam, .riley: return .chatFirst
         case .jules: return .okayToSayHello
         }
     }
@@ -129,6 +137,8 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return "Coffee, bookshops, and a good detour."
         case .jules: return "Design, ideas, and small businesses."
+        case .sam: return "Walks, fresh air, and a reason to get outside."
+        case .riley: return "Good conversation and a little curiosity."
         }
     }
 
@@ -137,6 +147,8 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return "Tell me about a place you’d go back to."
         case .jules: return "Always curious about what people are building."
+        case .sam: return "A good route is even better with company."
+        case .riley: return "Happy to take things one hello at a time."
         }
     }
 
@@ -146,6 +158,8 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .maya: return ["Coffee", "Bookshops", "Detours"]
         case .jules: return ["Design", "Ideas", "Small business"]
+        case .sam: return ["Walking", "Outdoors", "Games"]
+        case .riley: return ["Coffee", "Music", "Conversation"]
         }
     }
 
@@ -162,7 +176,7 @@ public enum RoomActor: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Only Jules wrote a public sample note.
     public var publicNote: String? {
         switch self {
-        case .maya: return nil
+        case .maya, .sam, .riley: return nil
         case .jules: return "One good question can change an evening."
         }
     }
@@ -316,16 +330,26 @@ public struct RoomRun: Equatable, Sendable {
     /// Waiting or populated.
     public var isActive: Bool { phase != .ended }
 
+    /// Two fictional cards keep the same compact demo layout. The original Social/Business pair is
+    /// unchanged; Activity/Dating use their own pair. Visibility never implies invitation eligibility:
+    /// the profile and every Wave transition still require the viewer's exact selected intent.
+    public var samplePeople: [RoomActor] {
+        switch intent {
+        case .social, .business: return [.maya, .jules]
+        case .activity, .dating: return [.sam, .riley]
+        }
+    }
+
     /// The sample cards on People, in order: only in the populated example, never a blocked actor.
     public var visiblePeople: [RoomActor] {
         guard phase == .populated else { return [] }
-        return RoomActor.allCases.filter { !blocked.contains($0) }
+        return samplePeople.filter { !blocked.contains($0) }
     }
 
     /// The authors of the public sample notes on Room notes: only Jules, and only while visible.
     public var visibleNoteAuthors: [RoomActor] {
         guard phase == .populated else { return [] }
-        return RoomActor.allCases.filter { $0.publicNote != nil && !blocked.contains($0) }
+        return samplePeople.filter { $0.publicNote != nil && !blocked.contains($0) }
     }
 
     /// The host announcement and icebreaker: shown on Room notes in the populated example, whatever is
@@ -374,7 +398,7 @@ public struct RoomRun: Equatable, Sendable {
 
     /// Whether a sample actor may be shown anywhere right now.
     public func showsSample(_ actor: RoomActor) -> Bool {
-        phase == .populated && !blocked.contains(actor)
+        phase == .populated && samplePeople.contains(actor) && !blocked.contains(actor)
     }
 
     /// Every invariant at once; used by tests and as a last line of defence.
@@ -648,7 +672,7 @@ public struct RoomRun: Equatable, Sendable {
 
     private static func isValidRoute(_ route: [RoomRoute], run: RoomRun) -> Bool {
         for level in route {
-            if let actor = level.actor, run.blocked.contains(actor) { return false }
+            if let actor = level.actor, !run.showsSample(actor) { return false }
         }
         guard let first = route.first else { return true }
         switch first {
@@ -718,7 +742,7 @@ public struct RoomPreview: Equatable, Sendable {
     }
 
     /// Whether a Room preview may exist above this flow: Common Ground's explanation is showing and the
-    /// actual intent (Social or Business), the approach and every earlier requirement still hold.
+    /// actual intent, the approach and every earlier requirement still hold.
     public static func allows(_ flow: DemoFlow) -> Bool {
         guard flow.currentScene == .placeExplanation,
               flow.placeVenue == CheckInExplanation.venue,

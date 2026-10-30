@@ -300,7 +300,7 @@ public struct DemoFlow: Equatable, Sendable {
     }
 
     /// Preview check-in on a detail: opens Common Ground's explanation, and only when the session is
-    /// open in the snapshot and permits the actual intent (Social or Business). Every other detail
+    /// open in the snapshot and permits the actual intent. Every other detail
     /// keeps it disabled; the destination is guarded here, not only by the button.
     @discardableResult
     public mutating func previewCheckIn() -> Bool {

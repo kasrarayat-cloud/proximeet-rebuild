@@ -1,9 +1,10 @@
 import SwiftUI
 import ProximeetDomain
 
-/// Chapter 09 — the approved Wave (handoff `LAYOUT_SPEC.json`, Figma page 74:567, review board 76:387: the
+/// Chapter 09 — the Wave state machine and safety flow originated in the handoff (`LAYOUT_SPEC.json`, Figma page 74:567, review board 76:387: the
 /// twelve screens 74:568–74:579, the seven overlays 74:580–74:586 and the report-reason variants
-/// 75:627–75:657), on the 440 × 956 reference canvas.
+/// 75:627–75:657). The approved 29 October private-invitation design replaces the common rings with
+/// category-specific native artwork, a compact intent badge, invitation copy and coloured primary actions.
 ///
 /// Shown by `RoomView`, in place of the Room's page and panels, while the shown run has a Wave: from
 /// "Preview Wave demo" on an eligible same-intent profile until the menu closes back to the still-valid
@@ -24,9 +25,9 @@ import ProximeetDomain
 ///
 /// Motion follows the prototype: every navigation, overlay and reason change is a 240 ms ease-out
 /// dissolve (the Figma CLOSE actions carry no transition, so Close follows the Room's own 240 ms
-/// precedent); Accept alone joins the Halo rings in one 800 ms ease-out move (75:419, SMART_ANIMATE),
-/// the only edge into 74:574, while the invitation's changed words crossfade in place. Reduce Motion
-/// turns the join into a 240 ms crossfade to the joined emblem with the same text; VoiceOver gets no
+/// precedent); Accept updates the artwork in one 800 ms ease-out transition: cards, bubbles and rings
+/// move together, while the Activity route brightens. The invitation's changed words crossfade in place. Reduce Motion
+/// turns the join into a 240 ms crossfade to the accepted artwork with the same text; VoiceOver gets no
 /// animation. The model always changes first; Block and Leave change it with animations disabled, so
 /// they win over a join in flight and nothing they close lingers. Nothing here reads a clock, runs a
 /// timer, stores, sends or logs anything; the one deferred step is moving VoiceOver focus on the next
@@ -69,7 +70,7 @@ struct WaveView: View {
         return ZStack {
             page(width: width, bottomInset: proxy.safeAreaInsets.bottom, covered: overlay != nil)
                 // Give modal hiding its own container; the page's children keep their individual
-                // accessibility properties, including the decorative rings' hidden state.
+                // accessibility properties, including the decorative artwork's hidden state.
                 .accessibilityElement(children: .contain)
                 .accessibilityHidden(overlay != nil)
                 .allowsHitTesting(overlay == nil)
@@ -175,7 +176,7 @@ struct WaveView: View {
                     backLeading(back)
                         .transition(.opacity)
                 } else {
-                    RoomChromeTitle(text: WaveCopy.brand)
+                    WaveChromeTitle(text: screen.showsCounterpart ? WaveCopy.composeBrand : WaveCopy.brand)
                         .accessibilityIdentifier("wave.brand")
                         .padding(.leading, 8)
                         .transition(.opacity)
@@ -189,7 +190,7 @@ struct WaveView: View {
                 safetyButton(screen)
             }
             .frame(width: 44, height: 44)
-            .padding(.leading, 16)
+            .padding(.leading, 8)
         }
         .frame(minHeight: 44)
         .padding(.horizontal, 24)
@@ -220,13 +221,13 @@ struct WaveView: View {
     /// The 75:119 leading pair: Back (44 × 44, the chevron of 75:122) and "Wave", 16 apart, shared by the
     /// menu and the unsent confirmation.
     private func backLeading(_ back: WaveBackControl) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 10) {
             RoomIconButton(pieces: RoomPaths.chevron, action: back.action)
                 .accessibilityLabel("Back")
                 .accessibilityHint(Text(verbatim: back.hint))
                 .accessibilityIdentifier("wave.back")
             // Spec order: Back → "Wave" (header) → DEMO → Safety, as the Room profile's chrome.
-            RoomChromeTitle(text: WaveCopy.composeBrand)
+            WaveChromeTitle(text: WaveCopy.composeBrand)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("wave.brand")
         }
@@ -278,8 +279,11 @@ struct WaveView: View {
                               color: RoomStyle.secondaryText, alignment: .leading)
                 .accessibilityIdentifier("wave.menu.role")
                 .padding(.top, 19)
-            WaveHaloRings(joined: false, width: width)
-                .padding(.top, 40)
+            PrivateInvitationIntentBadge(intent: wave.intent)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 24)
+            PrivateInvitationArtwork(intent: wave.intent, accepted: false, width: width)
+                .padding(.top, 12)
             // #A8B0AD on the ground either way (the boundary's own colour, well above AA).
             WristbandBodyText(text: blocked ? WaveCopy.menuBlocked : WaveCopy.menuBoundary, size: 16,
                               lineHeight: 24, color: RoomStyle.secondaryText, alignment: .center)
@@ -328,24 +332,28 @@ struct WaveView: View {
 
     // MARK: - Active invitations (74:569, 74:570, 74:572, 74:574)
 
-    /// The compact ticket (y 128), the state row (y 270–314), the invitation (rings and ivory slip,
-    /// 376 × 316 at y 316), the boundary (Regular 14/22, centred, in 52 at y 650) and the screen's own
-    /// actions: one 56-pt action at y 744, or, on the recipient's review, Accept (52 at y 706) and Decline
-    /// (outline 44 at y 770).
+    /// Category, fictional venue context, decorative objects and the readable invitation form one
+    /// scrolling column. Consent and demo disclosure precede the state's own action; Leave stays fixed.
     private func invitationContent(_ screen: WaveScreen, invitation: WaveInvitation, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            WaveVenueTicket(venue: wave.venue.name, preference: viewerPreference, width: width)
-                .padding(.top, 20)
+            WaveVenueTicket(venue: wave.venue.name, preference: viewerPreference, intent: wave.intent, width: width)
+                .padding(.top, 12)
             stateRow(screen, invitation: invitation)
-                .padding(.top, 10)
+                .padding(.top, 8)
             invitationCard(screen, invitation: invitation, width: width)
                 .padding(.top, 2)
+            if screen == .outgoingConfirm {
+                WristbandBodyText(text: WaveCopy.recipientChoice(counterpart: wave.counterpart), size: 14,
+                                  lineHeight: 22, color: RoomStyle.secondaryText, alignment: .center)
+                    .accessibilityIdentifier("wave.invitation.consent")
+                    .padding(.top, 10)
+            }
             WristbandBodyText(text: WaveCopy.boundary(screen) ?? "", size: 14, lineHeight: 22,
                               color: RoomStyle.secondaryText, alignment: .center)
-                .frame(minHeight: 52 * scale, alignment: .top)
+                .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
                 .accessibilityIdentifier("wave.boundary")
-                .padding(.top, 18)
+                .padding(.top, screen == .outgoingConfirm ? 4 : 10)
             // Each screen's actions replace the last ones in place: Accept and Decline fade out where they
             // were while About private chat fades in at y 744, as the prototype's Smart Animate does
             // (those layers are unmatched), rather than sliding.
@@ -367,21 +375,27 @@ struct WaveView: View {
     /// "OUTGOING · YOU ARE [NAME]" (Bold 14/24, #A8B0AD, 272 wide at y 280) and, on pending, review and
     /// accepted, the cyan "Demo cases" control (104 × 44 at 304, 270). When a long name or larger text
     /// cannot keep both on one line, the control moves below the words instead of squeezing them.
+    @ViewBuilder
     private func stateRow(_ screen: WaveScreen, invitation: WaveInvitation) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 0) {
-                stateContext(invitation.direction)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                ZStack {
-                    demoCasesSlot(screen, invitation: invitation)
+        if screen.conditions.isEmpty {
+            stateContext(invitation.direction)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 0) {
+                    stateContext(invitation.direction)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ZStack {
+                        demoCasesSlot(screen, invitation: invitation)
+                    }
+                    .frame(minWidth: 104, minHeight: 44)
                 }
-                .frame(minWidth: 104, minHeight: 44)
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                stateContext(invitation.direction)
-                    .padding(.vertical, 10)
-                demoCasesSlot(screen, invitation: invitation)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                VStack(alignment: .leading, spacing: 0) {
+                    stateContext(invitation.direction)
+                        .padding(.vertical, 10)
+                    demoCasesSlot(screen, invitation: invitation)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
         }
     }
@@ -403,7 +417,7 @@ struct WaveView: View {
                 perform(.openConditions(invitation.id), animation: dissolveAnimation)
             } label: {
                 WristbandText(text: WaveCopy.demoCases, face: .medium, size: 14, lineHeight: 24,
-                              color: RoomStyle.cyan, alignment: .center)
+                              color: wave.intent.tint, alignment: .center)
                     .padding(.horizontal, 8)
                     .frame(minWidth: 104, minHeight: 44)
                     .contentShape(RoundedRectangle(cornerRadius: 12, style: .circular))
@@ -416,14 +430,13 @@ struct WaveView: View {
         }
     }
 
-    /// The Wave invitation (75:154 / 75:167 / 75:180 / 75:193, 376 × 316): the Halo rings (376 × 128) drawn
-    /// first, then the ivory slip (376 × 188 from y 128, radius 24) over them, so a joined ring's lower edge
-    /// tucks under the paper as on the board.
+    /// The approved private invitation: category artwork on a 376 × 220 canvas above a scalable ivory
+    /// slip. The decorative objects are never the source of truth for invitation state or consent.
     private func invitationCard(_ screen: WaveScreen, invitation: WaveInvitation, width: CGFloat) -> some View {
         let joined = screen.rings == .joined
         return VStack(spacing: 0) {
             ZStack {
-                WaveHaloRings(joined: joined, width: width)
+                PrivateInvitationArtwork(intent: wave.intent, accepted: joined, width: width)
                     .id(ringIdentity(joined: joined))
                     .transition(.opacity)
             }
@@ -456,7 +469,7 @@ struct WaveView: View {
                 .padding(.top, 10)
             WristbandBodyText(text: WaveCopy.invitationPurpose(screen, counterpart: counterpart) ?? "", size: 16,
                               lineHeight: 23, color: RoomStyle.ink, alignment: .center)
-                .frame(minHeight: 48 * scale, alignment: .top)
+                .frame(minHeight: 46 * scale, alignment: .top)
                 // Preserve the approved two-line minimum, but reserve all wrapped lines before
                 // placing the preference below. The inner text alone having ideal height is not enough.
                 .fixedSize(horizontal: false, vertical: true)
@@ -475,9 +488,9 @@ struct WaveView: View {
                 .padding(.horizontal, 4)
                 .padding(.top, 6)
         }
-        .padding(.top, 21)
+        .padding(.top, 16)
         .padding(.horizontal, 20)
-        .padding(.bottom, 10)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity)
         .background(RoomStyle.ivory, in: RoundedRectangle(cornerRadius: 24, style: .circular))
     }
@@ -508,29 +521,28 @@ struct WaveView: View {
             Button(WaveCopy.send) {
                 perform(.send(id), animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 56))
+            .buttonStyle(PrivateInvitationButtonStyle(intent: wave.intent, height: 56))
             .accessibilityHint(Text(verbatim: "A local demo step. Nothing is sent to anyone."))
             .accessibilityIdentifier("wave.send")
-            .padding(.top, 38)
         case .outgoingPending:
             Button(WaveCopy.withdraw) {
                 perform(.withdraw(id), animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 56))
+            .buttonStyle(PrivateInvitationButtonStyle(intent: wave.intent, height: 56))
             .accessibilityHint(Text(verbatim: "Closes this outgoing example."))
             .accessibilityIdentifier("wave.withdraw")
-            .padding(.top, 38)
+            .padding(.top, 14)
         case .incomingReview:
             reviewActions(id)
         case .incomingAccepted:
             Button(WaveCopy.aboutPrivateChat) {
                 perform(.openChatInformation(id), animation: dissolveAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 56))
+            .buttonStyle(PrivateInvitationButtonStyle(intent: wave.intent, height: 56))
             .accessibilityHint(Text(verbatim: "Information only. No chat opens."))
             .accessibilityFocused($focus, equals: .aboutChat)
             .accessibilityIdentifier("wave.aboutChat")
-            .padding(.top, 38)
+            .padding(.top, 14)
         default:
             EmptyView()
         }
@@ -543,7 +555,7 @@ struct WaveView: View {
             Button(WaveCopy.accept) {
                 perform(.accept(id), animation: acceptAnimation)
             }
-            .buttonStyle(RoomButtonStyle(kind: .primary, height: 52))
+            .buttonStyle(PrivateInvitationButtonStyle(intent: wave.intent, height: 52))
             .accessibilityHint(Text(verbatim: "Accepts this fictional invitation. Nothing is sent."))
             .accessibilityIdentifier("wave.accept")
             Button(WaveCopy.decline) {
@@ -1051,106 +1063,75 @@ private enum WaveFocus: Hashable {
     case previewReport
 }
 
-// MARK: - The Halo rings (75:140 / 75:147)
-
-/// Two restrained brushed-steel rings, native ellipses in the 376 × 128 frame of the ring masters:
-/// separate (75:140: groups at 54, 6 and 210, 6, unrotated) until a still-valid incoming invitation is
-/// accepted, then joined (75:147: groups at 110, 6 and 154, 6, Figma −7° and +7° about each group's own
-/// top-left, drawn here as SwiftUI +7° and −7° about `.topLeading`, which is the same clockwise-then-
-/// counter-clockwise turn in y-down space). Ring 2 is the later child, so it draws over ring 1 wherever
-/// they overlap: a graphic metaphor, not a physical interlock. The pose comes only from the state; the
-/// rings never join on appear. Decoration: the state's words say what they show.
-struct WaveHaloRings: View {
-    let joined: Bool
-    let width: CGFloat
-
-    var body: some View {
-        // The frame scales with the column (k = width / 376), as the ticket's art does; 1 on the reference.
-        let k = min(1, max(0, width) / 376)
-        ZStack(alignment: .topLeading) {
-            // Two fixed identities, "Halo ring 1" and "Halo ring 2", as Smart Animate matches them by name:
-            // a change of pose moves and turns the same two rings rather than replacing them.
-            WaveHaloRing()
-                .rotationEffect(.degrees(joined ? 7 : 0), anchor: .topLeading)
-                .offset(x: joined ? 110 : 54, y: 6)
-                .id("Halo ring 1")
-            WaveHaloRing()
-                .rotationEffect(.degrees(joined ? -7 : 0), anchor: .topLeading)
-                .offset(x: joined ? 154 : 210, y: 6)
-                .id("Halo ring 2")
-        }
-        .frame(width: 376, height: 128, alignment: .topLeading)
-        .scaleEffect(k, anchor: .top)
-        // Top-aligned, so the scale anchor is the slot's own top edge: centred, the scaled rings sat
-        // 64 × (1 − k) pt too high below 440 pt (8.5 pt on the 390-pt phone) and lost their tuck under the slip.
-        .frame(width: max(0, width), height: 128 * k, alignment: .top)
-        // Decoration: a ring stroke never takes a tap from the state row or Demo cases.
-        .allowsHitTesting(false)
-        // Make one explicit decorative accessibility boundary and hide it after its properties are
-        // assigned. Keep the identifier so native tests can still detect accidental exposure.
-        .accessibilityElement(children: .ignore)
-        .accessibilityIdentifier("wave.rings")
-        .accessibilityHidden(true)
-    }
-}
-
-/// One ring group (112 × 118, no fill, no clip): the "Brushed metal rim", an ellipse 100 × 106 at 6, 6
-/// with a 12-pt centred stroke of the six-stop steel gradient (so its outer edge fills the group exactly)
-/// and a black drop shadow (45 %, 0, 5, Figma blur 7 ≈ SwiftUI radius 3.5) on the rim only; and the
-/// "Inner steel highlight", an ellipse 88 × 94 at 12, 12 with a 1-pt #CFD9D9 stroke at 70 % inside it,
-/// lying exactly on the rim's inner edge.
-struct WaveHaloRing: View {
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Ellipse()
-                .stroke(WaveStyle.rim, lineWidth: 12)
-                .frame(width: 100, height: 106)
-                .shadow(color: WaveStyle.rimShadow, radius: 3.5, x: 0, y: 5)
-                .padding(.leading, 6)
-                .padding(.top, 6)
-            Ellipse()
-                .strokeBorder(WaveStyle.highlight, lineWidth: 1)
-                .frame(width: 88, height: 94)
-                .padding(.leading, 12)
-                .padding(.top, 12)
-        }
-        .frame(width: 112, height: 118, alignment: .topLeading)
-    }
-}
-
 // MARK: - The venue ticket
 
-/// The Room's compact Common Ground ticket (75:134 = 67:134, 376 × 132, radius 22), with the Wave's own
-/// identifiers and third line: the viewer's actual name, intent and approach. Same layout, art and type as
-/// `RoomVenueTicket(compact: true)`, whose identifiers belong to the Room.
+/// Compact context for the private invitation. The selected intent leads, while the fictional venue,
+/// session and viewer preference remain visible and available to assistive technology.
 struct WaveVenueTicket: View {
     let venue: String
     let preference: String
+    let intent: BandIntent
     let width: CGFloat
-    @ScaledMetric(relativeTo: .title) private var nameScale: CGFloat = 1
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        RoomTicketLayout(compact: true, width: width, stacks: typeSize.isAccessibilitySize) {
-            RoundedRectangle(cornerRadius: 22, style: .circular)
-                .fill(RoomStyle.ivory)
-                .accessibilityHidden(true)
-            // Takes its whole slot, so the fitted scene is centred in it (Figma FIT); hidden from VoiceOver.
-            RoomVenueArt()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Text(venue)
-                .manrope(.extraBold, size: 23 * nameScale, designSize: 23, lineHeight: 30)
-                .foregroundStyle(RoomStyle.ink)
+        VStack(spacing: 4) {
+            PrivateInvitationIntentBadge(intent: intent)
+            WristbandText(text: "\(venue) · \(WaveCopy.session)", face: .regular, size: 12,
+                          lineHeight: 18, color: RoomStyle.secondaryText, alignment: .center)
                 .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-            WristbandText(text: WaveCopy.session, face: .regular, size: 14, lineHeight: 22, color: RoomStyle.ink)
-            WristbandText(text: preference, face: .semiBold, size: 14, lineHeight: 22, color: RoomStyle.ink)
+            WristbandText(text: preference, face: .semiBold, size: 14, lineHeight: 22,
+                          color: RoomStyle.secondaryText, alignment: .center)
                 .accessibilityIdentifier("wave.venue.preference")
         }
         .frame(width: width)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: "\(venue). \(WaveCopy.session). \(preference)"))
         .accessibilityIdentifier("wave.venue")
+    }
+}
+
+/// The intent is communicated by its word and symbol as well as its semantic colour.
+struct PrivateInvitationIntentBadge: View {
+    let intent: BandIntent
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 16
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: intent.symbolName)
+                .font(.system(size: size, weight: .semibold))
+                .accessibilityHidden(true)
+            Text(intent.title)
+                .manrope(.bold, size: size, designSize: 16, lineHeight: 24)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(intent.tint)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 9)
+        .overlay(Capsule().strokeBorder(intent.tint, lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(intent.title))
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityIdentifier("wave.intent.\(intent.rawValue)")
+    }
+}
+
+/// Primary invitation actions use the selected intent, with a dark, high-contrast label.
+struct PrivateInvitationButtonStyle: ButtonStyle {
+    let intent: BandIntent
+    let height: CGFloat
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 16
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .manrope(.bold, size: size, designSize: 16, lineHeight: 24)
+            .foregroundStyle(RoomStyle.ink)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: height)
+            .background(intent.tint, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }
 
@@ -1231,7 +1212,7 @@ struct WaveDemoBadge: View {
             .fixedSize()
             .foregroundStyle(RoomStyle.cyan)
             .padding(.horizontal, 8)
-            .frame(minWidth: 72, minHeight: 28)
+            .frame(minWidth: 48, minHeight: 28)
             .overlay {
                 RoundedRectangle(cornerRadius: 9, style: .circular)
                     .strokeBorder(RoomStyle.cyan, lineWidth: 0.6)
@@ -1239,6 +1220,19 @@ struct WaveDemoBadge: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Demo"))
             .accessibilityIdentifier("wave.demoBadge")
+    }
+}
+
+/// A longer invitation title keeps its readable size and may wrap instead of shrinking to fit.
+private struct WaveChromeTitle: View {
+    let text: String
+    @ScaledMetric(relativeTo: .headline) private var size: CGFloat = 16
+
+    var body: some View {
+        Text(text)
+            .manrope(.bold, size: size, designSize: 16, lineHeight: 22)
+            .foregroundStyle(.white)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -1294,35 +1288,6 @@ struct WaveLinkStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.6 : 1)
     }
-}
-
-// MARK: - Style
-
-/// The ring materials, the only paints Wave adds to the Room's tokens (`RoomStyle`).
-enum WaveStyle {
-    /// The rim's six-stop steel (75:142), running from (1/7, 1/7) to (6/7, 6/7) of the ellipse's box: the
-    /// Figma gradient transform [[0.7, 0.7, −0.2], [−0.7, 0.7, 0.5]] inverted, a top-left → bottom-right
-    /// diagonal.
-    static var rim: LinearGradient {
-        LinearGradient(
-            stops: [
-                Gradient.Stop(color: Color(hex: 0x333D40), location: 0),
-                Gradient.Stop(color: Color(hex: 0xE5EBE8), location: 0.22),
-                Gradient.Stop(color: Color(hex: 0x758082), location: 0.43),
-                Gradient.Stop(color: Color(hex: 0xF7FAF2), location: 0.57),
-                Gradient.Stop(color: Color(hex: 0x616E73), location: 0.76),
-                Gradient.Stop(color: Color(hex: 0xCCD4D4), location: 1),
-            ],
-            startPoint: UnitPoint(x: 1.0 / 7.0, y: 1.0 / 7.0),
-            endPoint: UnitPoint(x: 6.0 / 7.0, y: 6.0 / 7.0)
-        )
-    }
-
-    /// The rim's drop shadow: black at 45 %.
-    static var rimShadow: Color { Color.black.opacity(0.45) }
-
-    /// The inner steel highlight (75:143): #CFD9D9 at 70 %.
-    static var highlight: Color { Color(hex: 0xCFD9D9).opacity(0.7) }
 }
 
 #if DEBUG

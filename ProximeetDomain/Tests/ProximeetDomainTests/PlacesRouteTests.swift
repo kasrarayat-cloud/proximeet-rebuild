@@ -27,7 +27,7 @@ final class PlacesRouteTests: XCTestCase {
             "A warm listening room for records, conversation, and a little curiosity.",
             "A shared table for making, learning, and meeting through a small project.",
         ])
-        XCTAssertEqual(Venue.allCases.map(\.permittedIntents), [[.social, .business], [.social, .dating],
+        XCTAssertEqual(Venue.allCases.map(\.permittedIntents), [[.social, .business, .activity, .dating], [.social, .dating],
                                                                  [.activity, .business]])
         XCTAssertEqual(Venue.allCases.map(\.availability), [.open, .future(opens: "Opens at 9 pm"),
                                                             .future(opens: "Opens Saturday")])
@@ -50,16 +50,17 @@ final class PlacesRouteTests: XCTestCase {
 
     // MARK: - Eligibility: all twelve intent × venue combinations
 
-    /// The approved matrix (`LAYOUT_SPEC.json` eligibility.matrix), verbatim.
+    /// The original matrix, with Common Ground extended to all four intents by the approved
+    /// private-invitation design. Future sessions and mismatch explanations retain their guards.
     private static let matrix: [(Venue, BandIntent, Bool, String, String, String)] = [
         (.commonGround, .social, true, "Preview check-in", "Your profile stays private until check-in.",
          "Sample session · not a reservation"),
-        (.commonGround, .dating, false, "Not available for Dating", "Your Dating band doesn’t match this session.",
-         "Your Dating band doesn’t match this session."),
+        (.commonGround, .dating, true, "Preview check-in", "Your profile stays private until check-in.",
+         "Sample session · not a reservation"),
         (.commonGround, .business, true, "Preview check-in", "Your profile stays private until check-in.",
          "Sample session · not a reservation"),
-        (.commonGround, .activity, false, "Not available for Activity", "Your Activity band doesn’t match this session.",
-         "Your Activity band doesn’t match this session."),
+        (.commonGround, .activity, true, "Preview check-in", "Your profile stays private until check-in.",
+         "Sample session · not a reservation"),
         (.afterglow, .social, false, "Opens at 9 pm", "Your profile stays private until check-in.",
          "Sample session · not a reservation"),
         (.afterglow, .dating, false, "Opens at 9 pm", "Your profile stays private until check-in.",
@@ -93,11 +94,11 @@ final class PlacesRouteTests: XCTestCase {
         }
     }
 
-    func testOnlySocialOrBusinessAtCommonGroundCanPreviewCheckIn() {
+    func testAllFourIntentsAtCommonGroundCanPreviewCheckIn() {
         let eligible = Venue.allCases.flatMap { venue in BandIntent.allCases.map { (venue, $0) } }
             .filter { PlaceEligibility(venue: $0.0, intent: $0.1).canPreviewCheckIn }
-        XCTAssertEqual(eligible.map(\.0), [.commonGround, .commonGround])
-        XCTAssertEqual(eligible.map(\.1), [.social, .business])
+        XCTAssertEqual(eligible.map(\.0), [.commonGround, .commonGround, .commonGround, .commonGround])
+        XCTAssertEqual(eligible.map(\.1), BandIntent.allCases)
     }
 
     func testAMismatchIsExplainedBeforeAFutureLabel() {
@@ -275,10 +276,10 @@ final class PlacesRouteTests: XCTestCase {
         XCTAssertEqual(flow.placeEligibility, PlaceEligibility(venue: .afterglow, intent: .dating))
         XCTAssertEqual(flow.placeEligibility?.primaryLabel, "Opens at 9 pm", "Dating now matches Afterglow")
         XCTAssertTrue(flow.choosePlaceCategory(.now))
-        XCTAssertEqual(flow.placeEligibility?.canPreviewCheckIn, false, "Dating does not match Common Ground")
-        XCTAssertEqual(flow.placeEligibility?.primaryLabel, "Not available for Dating")
+        XCTAssertEqual(flow.placeEligibility?.canPreviewCheckIn, true, "Dating has its own private-invitation demo")
+        XCTAssertEqual(flow.placeEligibility?.primaryLabel, "Preview check-in")
         flow.openPlaceDetail()
-        XCTAssertFalse(flow.previewCheckIn(), "recomputed from the new intent")
+        XCTAssertTrue(flow.previewCheckIn(), "recomputed from the new intent")
         XCTAssertEqual(flow.draft.introduction, introduction, "the profile is kept")
     }
 

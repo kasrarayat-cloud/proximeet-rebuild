@@ -9,7 +9,7 @@ final class RoomDemoTests: XCTestCase {
     // MARK: - Eligibility and the two deliberate gates
 
     func testOnlyAnEligibleExplanationOpensTheEntry() {
-        for intent in [BandIntent.social, .business] {
+        for intent in BandIntent.allCases {
             for approach in ApproachSignal.allCases {
                 let flow = RoomFixture.onExplanation(intent, approach: approach)
                 let preview = RoomPreview.open(after: flow)
@@ -19,9 +19,11 @@ final class RoomDemoTests: XCTestCase {
                 XCTAssertEqual(preview?.preference, "\(intent.title) · \(approach.title)")
             }
         }
-        // Dating and Activity never reach the explanation, so no Room entry either.
-        for intent in [BandIntent.dating, .activity] {
+        // Matching a future session still does not open a Room: eligibility is not consent
+        // and the four-intent extension does not make unopened sessions available.
+        for (intent, category) in [(BandIntent.dating, PlaceCategory.later), (.activity, .upcoming)] {
             var flow = PlacesRoute.onPlaces(intent, approach: .chatFirst)
+            flow.choosePlaceCategory(category)
             flow.openPlaceDetail()
             flow.previewCheckIn()
             XCTAssertEqual(flow.currentScene, .placeDetail)

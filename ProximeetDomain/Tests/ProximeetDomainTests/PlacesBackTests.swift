@@ -99,7 +99,7 @@ final class PlacesBackTests: XCTestCase {
                 XCTAssertEqual(viaShared, viaOwn, "explanation, \(intent) / \(category)")
             }
         }
-        XCTAssertEqual(explanations, 2, "Social and Business at Common Ground")
+        XCTAssertEqual(explanations, 4, "All four intents at Common Ground")
     }
 
     // MARK: - Stale requests and scenes outside Places

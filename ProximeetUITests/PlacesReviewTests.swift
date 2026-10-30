@@ -37,7 +37,7 @@ final class PlacesReviewTests: XCTestCase {
         let permitted: [String]
         /// The future session's label; nil for the one session open in the snapshot.
         let opens: String?
-        /// The permitted-intent chips' row: widths 72 / 96 / 84 / 72 and 8 apart.
+        /// Chip widths 72 / 96 / 84 / 72; 8 apart in pairs, 4 apart in the approved four-intent row.
         let chipsWidth: CGFloat
     }
 
@@ -45,7 +45,7 @@ final class PlacesReviewTests: XCTestCase {
         VenueFacts(category: "now", key: "common-ground", name: "Common Ground", kind: "Fictional venue · Café",
                    schedule: "Today · 6–10 pm", host: "Host · Common Ground team",
                    brief: "Coffee, small tables, and room for an unhurried conversation.",
-                   permitted: ["social", "business"], opens: nil, chipsWidth: 176),
+                   permitted: ["social", "business", "activity", "dating"], opens: nil, chipsWidth: 336),
         VenueFacts(category: "later", key: "afterglow", name: "Afterglow", kind: "Fictional venue · Listening lounge",
                    schedule: "Tonight · 9–11 pm", host: "Host · Afterglow hosts",
                    brief: "A warm listening room for records, conversation, and a little curiosity.",
@@ -62,7 +62,7 @@ final class PlacesReviewTests: XCTestCase {
 
     /// What the approved copy says for an intent at a category's venue: the detail's primary label
     /// and whether it is enabled, the browse line and the detail's last line. A mismatch comes
-    /// before a future label, and only Social or Business at Common Ground is eligible.
+    /// before a future label; all four intents now match the open Common Ground demo.
     private static func expected(_ category: String, _ intent: String) -> (primary: String, enabled: Bool, browse: String, detail: String) {
         let venue = venue(category)
         let title = titles[intent] ?? intent
@@ -477,7 +477,7 @@ final class PlacesReviewTests: XCTestCase {
     /// Direct launch (fixture `places`, Social, Chat first, Upcoming): Fieldwork does not match
     /// Social. Back to the Wristband, Business, forward: the approach is kept and Upcoming is
     /// recomputed (Fieldwork matches; Opens Saturday); Common Ground opens the explanation. Back
-    /// again, Activity: Upcoming matches, Common Ground does not (Not available for Activity).
+    /// again, Activity: Upcoming matches but stays closed; Common Ground permits the preview.
     func testChangingTheBandRecomputesEveryVenue() throws {
         let app = launch(fixture: "places", band: "social", approach: "chatFirst", category: "upcoming")
         let places = PlacesScreen(app: app)
@@ -528,7 +528,7 @@ final class PlacesReviewTests: XCTestCase {
     /// Places fixture at all: the app opens at Welcome, never with an assumed choice. Signal
     /// without an approach keeps Continue preview disabled and Places closed; the Wristband
     /// without an intent keeps Signal closed. The explanation's own destination is guarded: the
-    /// fixture `place-explanation` with Dating or Activity stops on Common Ground's detail.
+    /// four-intent revision permits Dating and Activity at Common Ground, while future venues remain closed.
     func testMissingChoicesAndIneligibleIntentsNeverOpenIt() throws {
         for arguments in [["-ProximeetFixture", "places", "-ProximeetFixtureBand", "social"],
                           ["-ProximeetFixture", "place-detail", "-ProximeetFixtureSignal", "chatFirst"]] {
@@ -560,14 +560,26 @@ final class PlacesReviewTests: XCTestCase {
         XCTAssertFalse(PlacesScreen(app: wristband).headline.exists)
         wristband.terminate()
 
+        // Supersedes the old Common Ground mismatch rows; the same destination guards still run.
         for intent in ["dating", "activity"] {
-            let guarded = launch(fixture: "place-explanation", band: intent, approach: "okayToSayHello")
+            let admitted = launch(fixture: "place-explanation", band: intent, approach: "okayToSayHello")
+            let places = PlacesScreen(app: admitted)
+            waitForLabel(places.explanationHeadline, "Arrive. Then connect.")
+            assertExplanation(places)
+            capture("places-four-intent-explanation-\(intent)-fixture", admitted)
+            admitted.terminate()
+        }
+        // Both an allowed-but-future session and an intent mismatch must still refuse the action.
+        for (intent, category) in [("dating", "later"), ("activity", "upcoming"), ("business", "later")] {
+            let guarded = launch(fixture: "place-detail", band: intent, approach: "okayToSayHello", category: category)
             let places = PlacesScreen(app: guarded)
-            waitForLabel(places.name, "Common Ground")
+            waitForLabel(places.name, Self.venue(category).name)
+            assertDetail(places, category: category, intent: intent)
+            XCTAssertFalse(places.primary.isEnabled)
+            places.primary.tap()
             hold(0.6)
-            XCTAssertFalse(places.explanationHeadline.exists, "\(intent): the explanation is never shown.")
-            assertDetail(places, category: "now", intent: intent)
-            capture("places-guarded-explanation-\(intent)-fixture", guarded)
+            XCTAssertFalse(places.explanationHeadline.exists, "\(intent) / \(category): unavailable session stays closed.")
+            capture("places-guarded-explanation-\(intent)-\(category)-fixture", guarded)
             guarded.terminate()
         }
     }

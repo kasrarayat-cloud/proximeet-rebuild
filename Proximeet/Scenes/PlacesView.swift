@@ -25,7 +25,7 @@ import ProximeetDomain
 /// ticket's end, where View place is.
 ///
 /// Everything is derived from the actual draft: the carried intent decides every helper line and
-/// whether Preview check-in is available (only Social or Business at Common Ground, the one open
+/// whether Preview check-in is available (all four intents at Common Ground, the one open
 /// session of the fixed Thursday 8 pm snapshot); the approach is kept untouched. Nothing here
 /// reads a clock, requests a permission, uses location or the camera, checks anyone in, or makes
 /// anyone visible. The venue scenes are raster decoration (the original 1254² artwork, cropped
@@ -787,16 +787,31 @@ private struct PlacesTicketText: View {
 
 /// The permitted intents: #050606 capsules, 26 tall (radius 13), with #F6F7F2 SemiBold 14/26
 /// labels (the corrected ivory on dark), at their Figma widths (Social 72, Business 96, Activity
-/// 84, Dating 72), 8 apart. Words, never colour alone. At larger text they stack.
+/// 84, Dating 72), 8 apart (4 for a four-chip row). Four intents fit the reference phone's inner
+/// ticket width, wrap into two rows on narrower phones, and stack at larger text sizes.
 private struct IntentChips: View {
     let intents: [BandIntent]
     let identifier: String
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
+            HStack(spacing: intents.count > 2 ? 4 : 8) {
                 ForEach(intents) { intent in
                     IntentChip(intent: intent)
+                }
+            }
+            if intents.count > 2 {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(intents.prefix(2))) { intent in
+                            IntentChip(intent: intent)
+                        }
+                    }
+                    HStack(spacing: 8) {
+                        ForEach(Array(intents.dropFirst(2))) { intent in
+                            IntentChip(intent: intent)
+                        }
+                    }
                 }
             }
             VStack(alignment: .leading, spacing: 8) {

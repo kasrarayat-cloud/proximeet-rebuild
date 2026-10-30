@@ -21,14 +21,15 @@ import ProximeetDomain
 /// through Preview check-in, which only an eligible intent at Common Ground opens: otherwise the
 /// fixture stays on the detail, as the app would). They need an explicit band and approach too.
 ///     -ProximeetFixture room-entry | room-waiting | room-populated | room-ended
-///     -ProximeetRoomBlocked maya | jules | maya-jules | jules-maya   (the order the blocks are applied)
+///     -ProximeetRoomBlocked maya | jules | maya-jules | jules-maya | sam | riley | sam-riley | riley-sam
+///                          (the order the blocks are applied)
 ///     -ProximeetRoomTab people | notes
-///     -ProximeetRoomProfile maya | jules
+///     -ProximeetRoomProfile maya | jules | sam | riley
 ///     -ProximeetRoomPanel global-safety | actor-safety | report
 ///     -ProximeetRoomReason unwantedAttention | harassment | somethingElse
 ///
-/// The Room fixtures (chapter 08) continue from `place-explanation` (so they need an explicit Social or
-/// Business band and an approach) through the app's own transitions: Preview room demo, then, for every
+/// The Room fixtures continue from `place-explanation` (so they need an explicit band and an approach)
+/// through the app's own transitions: Preview room demo, then, for every
 /// stage after the entry, the deliberate Enter room demo, and, for `room-populated`, the labelled Show
 /// populated example. Blocks are applied through each actor's profile safety, in the order given; the tab,
 /// the profile and the panel are opened as a guest would open them. A step the app would refuse is
@@ -46,9 +47,9 @@ import ProximeetDomain
 ///     -ProximeetWaveReason unwantedAttention | harassment | somethingElse    (with report)
 ///     -ProximeetFixtureName <text>
 ///
-/// The Wave fixtures (chapter 09) take the Room's own path first (so they too need an explicit Social or
-/// Business band and an approach): Preview room demo, Enter room demo, Show populated example and any
-/// `-ProximeetRoomBlocked` blocks, then the counterpart's profile (Maya for Social, Jules for Business)
+/// The Wave fixtures take the Room's own path first (so they too need an explicit band and an approach):
+/// Preview room demo, Enter room demo, Show populated example and any
+/// `-ProximeetRoomBlocked` blocks, then the same-intent counterpart's profile
 /// and Preview Wave demo, and from the menu exactly the Wave controls a guest would press to reach the
 /// named screen. A counterpart blocked in the Room first stays blocked: its card and profile are gone, so
 /// the fixture stops on the filtered People, as the app would. `wave-blocked` blocks the counterpart
@@ -367,7 +368,7 @@ enum RoomFixture {
                 session.updateRoomRun(id) { $0.openProfile(profile) }
             }
             // The actor a panel concerns: the open profile's, or Jules's public note on Room notes.
-            let actor = profile ?? .jules
+            let actor = profile ?? session.room?.run?.samplePeople.last ?? .jules
             switch panel {
             case "global-safety":
                 session.updateRoomRun(id) { $0.openGlobalSafety() }
@@ -395,6 +396,10 @@ enum RoomFixture {
         case "jules": blocked = [.jules]
         case "maya-jules": blocked = [.maya, .jules]
         case "jules-maya": blocked = [.jules, .maya]
+        case "sam": blocked = [.sam]
+        case "riley": blocked = [.riley]
+        case "sam-riley": blocked = [.sam, .riley]
+        case "riley-sam": blocked = [.riley, .sam]
         default: blocked = []
         }
         for actor in blocked {
@@ -416,9 +421,9 @@ enum WaveFixture {
               let run = session.room?.run
         else { return }
         RoomFixture.applyBlocks(to: session, run: id, arguments: arguments)
-        // The sample of the guest's own intent (Maya for Social, Jules for Business): the one profile whose
+        // The sample of the guest's own intent: the one profile whose
         // action is Preview Wave demo. Blocked in the Room first, it has no card, so this stops on People.
-        guard let counterpart = RoomActor.allCases.first(where: { run.profileAction(for: $0) == .previewWaveDemo }),
+        guard let counterpart = run.samplePeople.first(where: { run.profileAction(for: $0) == .previewWaveDemo }),
               session.updateRoomRun(id, { $0.openProfile(counterpart) }),
               session.openWaveDemo(id)
         else { return }

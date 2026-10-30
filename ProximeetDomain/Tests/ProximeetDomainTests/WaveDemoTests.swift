@@ -670,7 +670,8 @@ final class WaveDemoTests: XCTestCase {
                        "MAYA → ALEX · INCOMING")
         XCTAssertEqual(WaveCopy.invitationTitle(.outgoingPending, counterpart: .jules), "Waiting for Jules.")
         XCTAssertEqual(WaveCopy.invitationPurpose(.outgoingConfirm, counterpart: .jules),
-                       "A Wave invites a conversation.\nJules chooses whether to accept.")
+                       "A private hello about ideas and opportunities.")
+        XCTAssertEqual(WaveCopy.recipientChoice(counterpart: .jules), "Jules chooses whether to accept.")
         XCTAssertEqual(WaveCopy.block(.jules), "Block Jules in demo")
         XCTAssertEqual(WaveCopy.counterpartSafetyTitle(.jules), "Jules · safety")
         XCTAssertEqual(WaveCopy.roleExplanation(viewer: "Alex"), "You are Alex in both examples.")
@@ -1783,10 +1784,28 @@ final class WaveDemoTests: XCTestCase {
     }
 
     func testEveryApprovedStringExactly() {
-        let social = Dictionary(uniqueKeysWithValues: Self.approvedAlexSocial.map { ($0.node, $0.text) })
-        XCTAssertEqual(social.count, 77, "78 distinct approved strings, less the app's DEMO badge")
-        let business = social.merging(Self.businessSamChanges) { _, new in new }
-        XCTAssertEqual(Set(Self.businessSamChanges.keys).subtracting(social.keys), [],
+        let historical = Dictionary(uniqueKeysWithValues: Self.approvedAlexSocial.map { ($0.node, $0.text) })
+        XCTAssertEqual(historical.count, 77, "78 distinct original strings, less the app's DEMO badge")
+        // The 29 October private-invitation approval supersedes exactly these four presentation nodes.
+        // Keep the original handoff tables above intact; the rest of the state and safety copy stays exact.
+        let socialOverrides = [
+            "I75:307;75:123": "Private invitation",
+            "I75:327;75:164": "A little company.",
+            "I75:327;75:165": "A private hello for coffee and conversation.",
+            "75:342": "Send private invitation",
+        ]
+        let businessOverrides = [
+            "I75:307;75:123": "Private invitation",
+            "I75:327;75:164": "An idea worth sharing.",
+            "I75:327;75:165": "A private hello about ideas and opportunities.",
+            "75:342": "Send private invitation",
+        ]
+        XCTAssertEqual(Set(socialOverrides.keys), Set(businessOverrides.keys))
+        XCTAssertEqual(Set(socialOverrides.keys).subtracting(historical.keys), [])
+        let social = historical.merging(socialOverrides) { _, approved in approved }
+        let business = historical.merging(Self.businessSamChanges) { _, new in new }
+            .merging(businessOverrides) { _, approved in approved }
+        XCTAssertEqual(Set(Self.businessSamChanges.keys).subtracting(historical.keys), [],
                        "Business changes only known nodes")
         for (name, rendered, approved) in [
             ("Social", Self.rendered(viewer: "Alex", intent: .social, approach: .chatFirst), social),
@@ -1922,7 +1941,14 @@ private extension RoomRun {
 
 /// Wave states reached only through the real transitions.
 enum WaveFixture {
-    static func counterpart(_ intent: BandIntent) -> RoomActor { intent == .social ? .maya : .jules }
+    static func counterpart(_ intent: BandIntent) -> RoomActor {
+        switch intent {
+        case .social: return .maya
+        case .business: return .jules
+        case .activity: return .sam
+        case .dating: return .riley
+        }
+    }
 
     static func menu(_ intent: BandIntent, approach: ApproachSignal = .chatFirst, name: String = "Alex",
                      preblock: [RoomActor] = []) -> RoomRun {

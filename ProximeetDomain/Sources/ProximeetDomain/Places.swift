@@ -102,7 +102,7 @@ public enum Venue: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// The intents this session welcomes, in the ticket's order.
     public var permittedIntents: [BandIntent] {
         switch self {
-        case .commonGround: return [.social, .business]
+        case .commonGround: return [.social, .business, .activity, .dating]
         case .afterglow: return [.social, .dating]
         case .fieldwork: return [.activity, .business]
         }
@@ -130,8 +130,8 @@ public enum Venue: String, CaseIterable, Identifiable, Hashable, Sendable {
 /// What the actual intent may do at a venue in the fixed snapshot, and the approved words for it.
 ///
 /// Check-in preview needs both: the session is open in the snapshot AND the venue permits the
-/// guest's actual intent. So only Social or Business at Common Ground may open the explanation;
-/// every other combination keeps the detail's primary action disabled. A mismatch is explained
+/// guest's actual intent. Common Ground now welcomes all four intents for the private-invitation
+/// demo; the future sessions remain closed. A mismatch is explained
 /// before any future-session label. Nothing here changes the intent, the approach or anyone's
 /// visibility, and eligibility is never consent.
 public struct PlaceEligibility: Equatable, Hashable, Sendable {
