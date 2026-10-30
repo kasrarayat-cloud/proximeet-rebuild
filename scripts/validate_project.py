@@ -1348,6 +1348,19 @@ def scan_swift(text: str) -> list[tuple[int, str]]:
     return findings
 
 
+# The owner requested visible, continuous decorative motion on 30 October 2026. Only this
+# isolated scene renderer may use the display-synchronized clock; it owns no invitation state.
+# Scheduling/network/persistence APIs remain forbidden everywhere else, including WaveView and
+# the domain. Keep scan_swift strict so the exception cannot silently become a general allowance.
+DECORATIVE_DISPLAY_SOURCE = "Proximeet/Components/PrivateInvitationArtwork.swift"
+
+
+def scan_app_swift(text: str, relative_path: str) -> list[tuple[int, str]]:
+    return [(line, finding) for line, finding in scan_swift(text)
+            if not (relative_path == DECORATIVE_DISPLAY_SOURCE
+                    and finding == "forbidden API 'CADisplayLink'")]
+
+
 # Known-answer fixture proving the scanner is not vacuous: comment-only tokens and
 # `//` inside a raw string must not hide or create findings.
 SCANNER_FIXTURE = (
@@ -1416,19 +1429,30 @@ WAVE_EXPECTED = [
 ]
 
 
-@check(11, "guardrails: no persistence/network/tracking/timing APIs or dishonest copy")
+@check(11, "guardrails: no persistence/network/tracking/unapproved timing APIs or dishonest copy")
 def check_guardrails(ctx: Context, c: Check) -> None:
     self_test = sorted(scan_swift(SCANNER_FIXTURE))
     c.require(self_test == SCANNER_EXPECTED,
               f"scanner self-test mismatch: got {self_test}, expected {SCANNER_EXPECTED}")
+    display_fixture = "let link: CADisplayLink?\nlet request: URLRequest?\n"
+    c.require(scan_app_swift(display_fixture, DECORATIVE_DISPLAY_SOURCE)
+              == [(2, "forbidden API 'URLRequest'")],
+              "decorative display exception must permit only the display clock")
+    c.require(scan_app_swift(display_fixture, "Proximeet/Scenes/WaveView.swift")
+              == scan_swift(display_fixture),
+              "decorative display exception must not apply to invitation controls")
+    c.require(scan_app_swift("let timer = Timer.publish()", DECORATIVE_DISPLAY_SOURCE)
+              == [(1, "forbidden API 'Timer.'")],
+              "decorative display exception must not permit general timers")
     swift_files = sorted(APP_DIR.rglob("*.swift")) if APP_DIR.is_dir() else []
     for name in COPY_SOURCES:
         # A moved or renamed copy source would otherwise drop out of the scan without a word.
         if c.require((ROOT / name).is_file(), f"copy source {name} missing"):
             swift_files.append(ROOT / name)
     for path in swift_files:
-        for number, finding in scan_swift(path.read_text(encoding="utf-8")):
+        for number, finding in scan_app_swift(path.read_text(encoding="utf-8"), rel(path)):
             c.fail(f"{rel(path)}:{number}: {finding}")
+    c.note("CADisplayLink allowed only in the approved decorative invitation scene; scoped exception self-tests passed")
     c.note(f"scanner self-test passed; scanned {len(swift_files)} Swift file(s) under Proximeet/ and the domain copy sources"
            if self_test == SCANNER_EXPECTED else f"scanned {len(swift_files)} Swift file(s)")
     wave_test = sorted(scan_wave(WAVE_FIXTURE))

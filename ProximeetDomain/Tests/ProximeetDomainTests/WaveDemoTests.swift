@@ -1790,7 +1790,7 @@ final class WaveDemoTests: XCTestCase {
         // Keep the original handoff tables above intact; the rest of the state and safety copy stays exact.
         let socialOverrides = [
             "I75:307;75:123": "Private invitation",
-            "I75:327;75:164": "A little company.",
+            "I75:327;75:164": "Good company starts here.",
             "I75:327;75:165": "A private hello for coffee and conversation.",
             "75:342": "Send private invitation",
         ]

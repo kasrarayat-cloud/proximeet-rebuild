@@ -107,9 +107,9 @@ public enum WaveCopy {
         case .outgoingConfirm:
             switch counterpart.intent {
             case .business: return "An idea worth sharing."
-            case .social: return "A little company."
-            case .activity: return "A plan to join."
-            case .dating: return "A spark to explore."
+            case .social: return "Good company starts here."
+            case .activity: return "Make a plan. Move together."
+            case .dating: return "A little chemistry."
             }
         case .outgoingPending: return "Waiting for \(counterpart.name)."
         case .incomingReview: return "An invitation for you."

@@ -5,6 +5,7 @@ import ProximeetDomain
 /// twelve screens 74:568–74:579, the seven overlays 74:580–74:586 and the report-reason variants
 /// 75:627–75:657). The approved 29 October private-invitation design replaces the common rings with
 /// category-specific native artwork, a compact intent badge, invitation copy and coloured primary actions.
+/// The 30 October revision adds lit sculpted objects and decorative idle motion.
 ///
 /// Shown by `RoomView`, in place of the Room's page and panels, while the shown run has a Wave: from
 /// "Preview Wave demo" on an eligible same-intent profile until the menu closes back to the still-valid
@@ -23,15 +24,11 @@ import ProximeetDomain
 /// the view tree, not hidden; once blocked, the menu's three choices stay, disabled, beside one generic
 /// line that names nobody.
 ///
-/// Motion follows the prototype: every navigation, overlay and reason change is a 240 ms ease-out
-/// dissolve (the Figma CLOSE actions carry no transition, so Close follows the Room's own 240 ms
-/// precedent); Accept updates the artwork in one 800 ms ease-out transition: cards, bubbles and rings
-/// move together, while the Activity route brightens. The invitation's changed words crossfade in place. Reduce Motion
-/// turns the join into a 240 ms crossfade to the accepted artwork with the same text; VoiceOver gets no
-/// animation. The model always changes first; Block and Leave change it with animations disabled, so
-/// they win over a join in flight and nothing they close lingers. Nothing here reads a clock, runs a
-/// timer, stores, sends or logs anything; the one deferred step is moving VoiceOver focus on the next
-/// main-actor turn (`focusSoon`).
+/// Navigation, overlays and text use the existing 240 ms dissolve. The decorative scene drifts while
+/// visible and active; accepting updates its pose in 800 ms. Reduce Motion keeps a static pose and a
+/// short crossfade, and VoiceOver disables animation. The model always changes first: Block and Leave
+/// remove the scene immediately. Scene motion does not send, accept, store or log anything, and pauses
+/// behind overlays, offscreen and in the background. VoiceOver focus moves on the next main-actor turn.
 struct WaveView: View {
     let run: RoomRun
     let wave: WaveDemo
@@ -123,7 +120,7 @@ struct WaveView: View {
                 }
             }
             // A new screen starts at its beginning (Accept's reaction sets `resetScrollPosition`), at once:
-            // the dissolve, or the ring join, is the motion. Explicitly unanimated, as the Room's `reveal`
+            // the dissolve, or the accepted pose, is the transition. Explicitly unanimated, as the Room's `reveal`
             // does: work done in `onChange` inherits the transaction of the change that triggered it, so a
             // bare `scrollTo` would glide for 800 ms under Accept, or 240 ms under Reduce Motion's crossfade.
             .onChange(of: screen) {
@@ -322,7 +319,9 @@ struct WaveView: View {
             PrivateInvitationIntentBadge(intent: wave.intent)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 24)
-            PrivateInvitationArtwork(intent: wave.intent, accepted: false, width: width)
+            PrivateInvitationArtwork(intent: wave.intent, accepted: false, width: width,
+                                     viewerName: "", counterpartName: "",
+                                     isActive: wave.overlay == nil && !blocked)
                 .padding(.top, 12)
             // #A8B0AD on the ground either way (the boundary's own colour, well above AA).
             WristbandBodyText(text: blocked ? WaveCopy.menuBlocked : WaveCopy.menuBoundary, size: 16,
@@ -476,7 +475,9 @@ struct WaveView: View {
         let joined = screen.rings == .joined
         return VStack(spacing: 0) {
             ZStack {
-                PrivateInvitationArtwork(intent: wave.intent, accepted: joined, width: width)
+                PrivateInvitationArtwork(intent: wave.intent, accepted: joined, width: width,
+                                         viewerName: wave.viewerName, counterpartName: wave.counterpart.name,
+                                         isActive: wave.overlay == nil)
                     .id(ringIdentity(joined: joined))
                     .transition(.opacity)
             }
@@ -486,9 +487,8 @@ struct WaveView: View {
         .accessibilityIdentifier("wave.invitation")
     }
 
-    /// The rings' identity: one pair whose pose changes (so Accept's 800 ms move interpolates position and
-    /// rotation, "Halo ring 1" and "Halo ring 2" matched by name), or, under Reduce Motion, a separate and a
-    /// joined pair that crossfade in place: the approved "restrained crossfade" with the same state text.
+    /// Keep one scene for the normal accepted-pose transition. Under Reduce Motion, static separate and
+    /// accepted poses crossfade in place with the same immediately updated state text.
     private func ringIdentity(joined: Bool) -> Int {
         guard adaptive.reduceMotion else { return 0 }
         return joined ? 2 : 1
@@ -1177,7 +1177,7 @@ struct PrivateInvitationButtonStyle: ButtonStyle {
 
 // MARK: - The invitation's title and the closed invitation
 
-/// The invitation's title (ExtraBold 28/40, #050606, centred, 336 wide): the state, in words. It wraps
+/// The invitation's title (ExtraBold 24/32, #050606, centred, 336 wide): the state, in words. It wraps
 /// between words at larger text rather than shrinking. A header.
 struct WaveCardTitle: View {
     let text: String
@@ -1185,7 +1185,7 @@ struct WaveCardTitle: View {
 
     var body: some View {
         Text(text)
-            .manrope(.extraBold, size: 28 * scale, designSize: 28, lineHeight: 40)
+            .manrope(.extraBold, size: 24 * scale, designSize: 24, lineHeight: 32)
             .foregroundStyle(RoomStyle.ink)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)

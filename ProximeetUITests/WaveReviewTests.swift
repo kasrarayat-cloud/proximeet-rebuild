@@ -1275,16 +1275,14 @@ final class WaveReviewTests: XCTestCase {
 
     // MARK: - Reduce Motion
 
-    /// Direct launches (fixture `wave-in-review`) on the 440 × 956 iPhone. With the app-level preview
-    /// flag `-ProximeetReduceMotionPreview YES` (not the system setting): Accept shows the accepted
-    /// result with the same words and no sampled frame shows a ring part-way through its 800-ms move.
-    /// The 29 October design reserves rings for Dating, on a 376 × 220 artwork canvas. The probes below
-    /// follow its separate/accepted ring geometry; all original anchor, sweep and final-pose assertions
-    /// remain. Default motion is attached as an observational control because sampling can miss a move.
+    /// Direct launches on the 440 × 956 phone. The 30 October petals replace the old ring-specific
+    /// rim/sweep coordinates. The same reduced-motion contract is now checked over the rendered
+    /// artwork: visible separate and accepted poses, no translated intermediate pixels outside their
+    /// dissolve envelope, and a stable final pose. Default motion is retained as a timed control.
     func testReduceMotionPreviewAcceptJoinsWithoutAMove() throws {
         let viewer = WaveViewer(name: "Alex", band: "dating", approach: "chatFirst")
-        let reduced = sampleAccept(extra: Self.reduceMotionPreview, viewer, "Reduce Motion")
-        let control = sampleAccept(extra: [], viewer, "default motion")
+        let reduced = try sampleAccept(extra: Self.reduceMotionPreview, viewer, "Reduce Motion")
+        let control = try sampleAccept(extra: [], viewer, "default motion")
         attachNote("Reduce Motion: \(reduced.map { $0.summary } ?? "no sample"). Default motion (control): "
                    + "\(control.map { $0.summary } ?? "no sample").")
         softly {
@@ -1292,28 +1290,39 @@ final class WaveReviewTests: XCTestCase {
                 XCTFail("Reduce Motion: Accept was not sampled.")
                 return
             }
-            guard let pixels = reduced.pixels else {
+            guard let control else {
+                XCTFail("Default-motion control: Accept was not sampled.")
+                return
+            }
+            guard let pixels = reduced.pixels, let controlPixels = control.pixels else {
                 attachNote("Reduce Motion: pixel checks need the 440 × 956 iPhone at the default text size; this run "
                            + "checked the accepted words only.")
                 return
             }
-            XCTAssertGreaterThan(pixels.separateBefore, 0.5, "Reduce Motion: the anchor, the separate first ring's rim "
-                                 + "before Accept (\(pixels.separateBefore)).")
-            guard pixels.separateBefore > 0.5 else { return }
-            XCTAssertLessThan(pixels.sweepBefore, 0.05, "Nothing is drawn in the sweep before Accept (\(pixels.sweepBefore)).")
+            XCTAssertGreaterThan(pixels.beforeVisible, 0.02, "The separate petal artwork is actually rendered.")
+            XCTAssertGreaterThan(pixels.afterVisible, 0.02, "The accepted petal artwork is actually rendered.")
+            XCTAssertGreaterThan(pixels.acceptedDifference, 0.005,
+                                 "Accept must display its distinct final artwork pose.")
             for (index, frame) in pixels.frames.enumerated() {
-                XCTAssertLessThan(frame.sweep, 0.05, "Reduce Motion: frame \(index + 1), \(Int(frame.after * 1000)) ms after "
-                                  + "Accept, shows a ring part-way through a move (\(frame.sweep) of the sweep).")
+                XCTAssertLessThan(frame.outsideEnvelope, 0.005,
+                                  "Reduce Motion: frame \(index + 1), \(Int(frame.after * 1000)) ms after Accept, "
+                                  + "must be a static endpoint or dissolve, not a translated intermediate pose.")
             }
-            XCTAssertGreaterThan(pixels.joinedAfter, 0.5, "Reduce Motion: the joined first ring is drawn (\(pixels.joinedAfter)).")
-            XCTAssertLessThan(pixels.separateAfter, 0.05, "Reduce Motion: the separate pose is gone (\(pixels.separateAfter)).")
-            XCTAssertLessThan(pixels.sweepAfter, 0.05, "Nothing is drawn in the sweep once joined (\(pixels.sweepAfter)).")
+            XCTAssertLessThan(pixels.finalDrift, 0.001, "Reduce Motion keeps the accepted artwork still.")
+            XCTAssertGreaterThan(controlPixels.beforeVisible, 0.02,
+                                 "The default-motion control must render its separate artwork.")
+            XCTAssertGreaterThan(controlPixels.afterVisible, 0.02,
+                                 "The default-motion control must render its accepted artwork.")
+            // Default idle motion also contributes to this difference. The accepted words above
+            // establish committed state; the separate all-four test proves continuing idle motion.
+            XCTAssertGreaterThan(controlPixels.acceptedDifference, 0.005,
+                                 "The default-motion accepted scene must differ from its initial reading.")
         }
     }
 
-    /// Launches the incoming review (with `extra`), proves the anchor, taps Accept, reads four frames at
-    /// once and one settled frame, and checks the accepted result's words.
-    private func sampleAccept(extra: [String], _ viewer: WaveViewer, _ name: String) -> AcceptSample? {
+    /// Samples the composited device screen, including the native scene layer. Timing is retained:
+    /// if XCTest returns from the tap after the transition, the frames prove the settled state only.
+    private func sampleAccept(extra: [String], _ viewer: WaveViewer, _ name: String) throws -> AcceptSample? {
         let app = launchWave(WaveFixture(key: "in-review", screen: .inReview, viewer: viewer), extra: extra)
         defer { app.terminate() }
         let ui = WaveUI(app: app)
@@ -1321,65 +1330,65 @@ final class WaveReviewTests: XCTestCase {
         hold(0.8)
         bringIntoView(ui.accept, app)
         let exact = app.frame.size == CGSize(width: 440, height: 956)
-        let origin = exact ? ringsOrigin(ui) : nil
+        let region: CGRect?
+        if exact { region = try InvitationArtworkPixels.region(in: app) } else { region = nil }
         let width = app.frame.width
         var sample = AcceptSample(name: name)
-        var pixels: AcceptPixels?
-        if let origin, let before = WaveRenderedScreen(XCUIScreen.main.screenshot(), pointWidth: width) {
-            pixels = AcceptPixels(
-                separateBefore: before.fraction(in: RingProbe.separateOnly.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal),
-                sweepBefore: before.fraction(in: RingProbe.sweep.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
-            )
+        var before: InvitationArtworkPixels?
+        if let region {
+            waitQuietly(1.2)
+            let shot = XCUIScreen.main.screenshot()
+            before = try InvitationArtworkPixels(shot, pointWidth: width, region: region)
+            let attachment = XCTAttachment(screenshot: shot)
+            attachment.name = "wave-accept-\(name)-before-full-screen"
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
         waitQuietly(0.8)
         ui.accept.tap()
         let tapped = Date()
         lastTap = tapped
-        if let origin, pixels != nil {
-            for _ in 0..<4 {
+        var frames: [(after: TimeInterval, pixels: InvitationArtworkPixels)] = []
+        if let region, before != nil {
+            for index in 0..<4 {
                 let shot = XCUIScreen.main.screenshot()
                 let after = Date().timeIntervalSince(tapped)
-                if let frame = WaveRenderedScreen(shot, pointWidth: width) {
-                    pixels?.frames.append(AcceptFrame(
-                        after: after,
-                        sweep: frame.fraction(in: RingProbe.sweep.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
-                    ))
-                }
+                frames.append((after, try InvitationArtworkPixels(shot, pointWidth: width, region: region)))
+                let attachment = XCTAttachment(screenshot: shot)
+                attachment.name = "wave-accept-\(name)-sample-\(index)-full-screen"
+                attachment.lifetime = .keepAlways
+                add(attachment)
             }
         }
         guard waitForScreen(.inAccepted, ui, timeout: 5) else { return nil }
         waitQuietly(1.2)
         assertScreen(.inAccepted, viewer, ui, "\(name), accepted: the same words")
-        if let origin, let settled = WaveRenderedScreen(XCUIScreen.main.screenshot(), pointWidth: width) {
-            pixels?.joinedAfter = settled.fraction(in: RingProbe.joinedOnly.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
-            pixels?.separateAfter = settled.fraction(in: RingProbe.separateOnly.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
-            pixels?.sweepAfter = settled.fraction(in: RingProbe.sweep.offsetBy(dx: origin.x, dy: origin.y), where: Self.metal)
+        if let region, let before {
+            let acceptedRegion = try InvitationArtworkPixels.region(in: app)
+            let aligned = abs(region.minX - acceptedRegion.minX) <= 0.5
+                && abs(region.minY - acceptedRegion.minY) <= 0.5
+                && abs(region.width - acceptedRegion.width) <= 0.5
+                && abs(region.height - acceptedRegion.height) <= 0.5
+            _ = try XCTUnwrap(aligned ? acceptedRegion : nil,
+                             "\(name): artwork moved on screen between review \(region) and accepted \(acceptedRegion). "
+                             + "A scroll reset cannot be treated as an artwork animation pixel difference.")
+            let settled = try InvitationArtworkPixels(XCUIScreen.main.screenshot(), pointWidth: width, region: region)
+            waitQuietly(1.2)
+            let stable = try InvitationArtworkPixels(XCUIScreen.main.screenshot(), pointWidth: width, region: region)
+            sample.pixels = AcceptPixels(
+                beforeVisible: before.visibleFraction, afterVisible: settled.visibleFraction,
+                acceptedDifference: settled.difference(from: before),
+                frames: frames.map { AcceptFrame(after: $0.after,
+                    outsideEnvelope: $0.pixels.outsideDissolveEnvelope(from: before, to: settled)) },
+                finalDrift: stable.difference(from: settled))
         }
         capture("wave-accept-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))-\(Int(width.rounded()))pt-fixture", app)
-        // App-scoped captures can omit system-composited chrome/footer in this simulator. Pair the
-        // existing capture with the full screen at the same settled state; neither substitutes for pixels.
         let fullScreen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         fullScreen.name = "wave-accept-\(name.lowercased().replacingOccurrences(of: " ", with: "-"))-full-screen"
         fullScreen.lifetime = .keepAlways
         add(fullScreen)
-        sample.pixels = pixels
         return sample
     }
-
-    /// Native XCTest reports the union of painted artwork and the slip, not the full 376 × 220
-    /// layout canvas. Probes below are calibrated relative to that measured invitation frame. If only
-    /// the slip is exposed, its preceding 220-pt art slot supplies the fallback. Other widths do not
-    /// use these unscaled geometry probes. Before/final anchors must satisfy the independent checks.
-    private func ringsOrigin(_ ui: WaveUI) -> CGPoint? {
-        let card = ui.invitation
-        guard card.exists else { return nil }
-        let frame = card.frame
-        guard abs(frame.width - 376) <= 1.5 else { return nil }
-        return CGPoint(x: frame.minX, y: frame.height >= 250 ? frame.minY : frame.minY - 220)
-    }
-
-    /// Anything brighter than the #050606 ground: the darkest rim stop is #333D40.
-    private static let metal: (UInt8, UInt8, UInt8) -> Bool = { r, g, b in max(r, g, b) >= 48 }
 
     // MARK: - Refused entry
 
@@ -1463,8 +1472,10 @@ final class WaveReviewTests: XCTestCase {
     /// one way. Twelve screens and the blocked menu, 102 texts and buttons.
     private static func largestScreenChecks(_ viewer: WaveViewer) -> [WaveLargestCheck] {
         let ticket: [WaveLargestItem] = [.text("wave.venue.preference", 22), .text("wave.invitation.context", 24)]
+        // The redesigned headline is 24/32 at default size. Keep the existing growth and clipping
+        // checks against its current 32-pt baseline; wrapping remains natural at accessibility sizes.
         let slip: [WaveLargestItem] = [
-            .text("wave.invitation.direction", 22), .text("wave.invitation.title", 40),
+            .text("wave.invitation.direction", 22), .text("wave.invitation.title", 32),
             .text("wave.invitation.purpose", 48), .text("wave.invitation.preference", 22), .text("wave.boundary", 52),
         ]
         let paper: [WaveLargestItem] = [.text("wave.closed.label", 24), .text("wave.closed.choice", 22)]
@@ -3104,9 +3115,9 @@ private enum WaveText {
         case .outConfirm:
             switch counterpart.key {
             case "jules": return "An idea worth sharing."
-            case "sam": return "A plan to join."
-            case "riley": return "A spark to explore."
-            default: return "A little company."
+            case "sam": return "Make a plan. Move together."
+            case "riley": return "A little chemistry."
+            default: return "Good company starts here."
             }
         case .outPending: return "Waiting for \(counterpart.name)."
         case .inReview: return "An invitation for you."
@@ -3466,30 +3477,18 @@ private struct WaveRevealEntry {
     let panel: String?
 }
 
-/// Probes relative to the measured invitation-frame origin, not the invisible layout-canvas origin.
-/// Native retained before/accepted frames on 29 October measured separate=0.8/0, sweep=0/0 and
-/// joined=0/1 with these rectangles (max RGB >= 48). The earlier x105 joined rectangle read only
-/// 0.228 in the test because it crossed the shadow. Its failed result remains retained. These probes
-/// keep the original independent anchor, no-sweep and final-pose thresholds.
-private enum RingProbe {
-    static let separateOnly = CGRect(x: 54, y: 108, width: 5, height: 6)
-    static let joinedOnly = CGRect(x: 113, y: 108, width: 6, height: 6)
-    static let sweep = CGRect(x: 81, y: 107, width: 8, height: 8)
-}
-
 private struct AcceptFrame {
-    /// Seconds after the Accept tap returned.
+    /// Seconds after the Accept tap returned; samples may already be after the transition.
     let after: TimeInterval
-    let sweep: Double
+    let outsideEnvelope: Double
 }
 
 private struct AcceptPixels {
-    var separateBefore: Double
-    var sweepBefore: Double
-    var frames: [AcceptFrame] = []
-    var joinedAfter: Double = 0
-    var separateAfter: Double = 1
-    var sweepAfter: Double = 1
+    let beforeVisible: Double
+    let afterVisible: Double
+    let acceptedDifference: Double
+    let frames: [AcceptFrame]
+    let finalDrift: Double
 }
 
 private struct AcceptSample {
@@ -3498,10 +3497,12 @@ private struct AcceptSample {
 
     var summary: String {
         guard let pixels else { return "\(name): no pixel reading (not the 440 × 956 iPhone, or no anchor)" }
-        let frames = pixels.frames.map { String(format: "%.0f ms %.3f", $0.after * 1000, $0.sweep) }.joined(separator: ", ")
-        return String(format: "%@: before, separate rim %.3f, sweep %.3f; after Accept, sweep [%@]; settled, joined rim %.3f, "
-                      + "separate rim %.3f, sweep %.3f", name, pixels.separateBefore, pixels.sweepBefore, frames,
-                      pixels.joinedAfter, pixels.separateAfter, pixels.sweepAfter)
+        let frames = pixels.frames.map {
+            String(format: "%.0f ms outside-envelope %.5f", $0.after * 1000, $0.outsideEnvelope)
+        }.joined(separator: ", ")
+        return String(format: "%@: visible before %.3f, accepted %.3f; accepted-pose difference %.5f; "
+                      + "after Accept [%@]; final drift %.5f", name, pixels.beforeVisible, pixels.afterVisible,
+                      pixels.acceptedDifference, frames, pixels.finalDrift)
     }
 }
 
@@ -3777,55 +3778,3 @@ private struct WavePass {
     var primary: XCUIElement { app.buttons["pass.primary"] }
 }
 
-/// One screenshot's pixels, addressed in points (`RoomReviewTests.RenderedScreen`, from any screenshot:
-/// here the device screen's, which needs no element lookup, so frames can follow a tap closely).
-@MainActor
-private struct WaveRenderedScreen {
-    private let pixels: [UInt8]
-    private let width: Int
-    private let height: Int
-    private let scale: CGFloat
-
-    init?(_ screenshot: XCUIScreenshot, pointWidth: CGFloat) {
-        guard let image = screenshot.image.cgImage, pointWidth > 0 else {
-            XCTFail("No screenshot to check what is drawn.")
-            return nil
-        }
-        width = image.width
-        height = image.height
-        scale = CGFloat(image.width) / pointWidth
-        var buffer = [UInt8](repeating: 0, count: image.width * image.height * 4)
-        let drawn: Bool = buffer.withUnsafeMutableBytes { bytes in
-            guard let context = CGContext(
-                data: bytes.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8,
-                bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
-            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
-            return true
-        }
-        guard drawn else {
-            XCTFail("The screenshot could not be read.")
-            return nil
-        }
-        pixels = buffer
-    }
-
-    /// The fraction of pixels in `rect` passing `test`.
-    func fraction(in rect: CGRect, where test: (UInt8, UInt8, UInt8) -> Bool) -> Double {
-        let x0 = max(0, Int((rect.minX * scale).rounded())), x1 = min(width, Int((rect.maxX * scale).rounded()))
-        let y0 = max(0, Int((rect.minY * scale).rounded())), y1 = min(height, Int((rect.maxY * scale).rounded()))
-        guard x0 < x1, y0 < y1 else { return 0 }
-        var total = 0, passing = 0
-        for y in y0..<y1 {
-            for x in x0..<x1 {
-                let index = (y * width + x) * 4
-                total += 1
-                if test(pixels[index], pixels[index + 1], pixels[index + 2]) {
-                    passing += 1
-                }
-            }
-        }
-        return total > 0 ? Double(passing) / Double(total) : 0
-    }
-}

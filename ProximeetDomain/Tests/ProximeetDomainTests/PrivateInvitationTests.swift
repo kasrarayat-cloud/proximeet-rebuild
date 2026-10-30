@@ -11,9 +11,9 @@ final class PrivateInvitationTests: XCTestCase {
     func testFourInvitationsHaveTheirApprovedDistinctCopy() {
         let approved: [(RoomActor, String, String)] = [
             (.jules, "An idea worth sharing.", "A private hello about ideas and opportunities."),
-            (.maya, "A little company.", "A private hello for coffee and conversation."),
-            (.sam, "A plan to join.", "A private hello for a walk, workout, or game."),
-            (.riley, "A spark to explore.", "A private hello to see if the interest is mutual."),
+            (.maya, "Good company starts here.", "A private hello for coffee and conversation."),
+            (.sam, "Make a plan. Move together.", "A private hello for a walk, workout, or game."),
+            (.riley, "A little chemistry.", "A private hello to see if the interest is mutual."),
         ]
         XCTAssertEqual(WaveCopy.composeBrand, "Private invitation")
         XCTAssertEqual(WaveCopy.send, "Send private invitation")

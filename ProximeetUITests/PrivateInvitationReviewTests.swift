@@ -20,11 +20,11 @@ final class PrivateInvitationReviewTests: XCTestCase {
         Design(intent: "business", title: "Business", person: "Jules",
                headline: "An idea worth sharing.", purpose: "A private hello about ideas and opportunities."),
         Design(intent: "social", title: "Social", person: "Maya",
-               headline: "A little company.", purpose: "A private hello for coffee and conversation."),
+               headline: "Good company starts here.", purpose: "A private hello for coffee and conversation."),
         Design(intent: "activity", title: "Activity", person: "Sam",
-               headline: "A plan to join.", purpose: "A private hello for a walk, workout, or game."),
+               headline: "Make a plan. Move together.", purpose: "A private hello for a walk, workout, or game."),
         Design(intent: "dating", title: "Dating", person: "Riley",
-               headline: "A spark to explore.", purpose: "A private hello to see if the interest is mutual."),
+               headline: "A little chemistry.", purpose: "A private hello to see if the interest is mutual."),
     ]
 
     override func setUpWithError() throws {
@@ -132,6 +132,61 @@ final class PrivateInvitationReviewTests: XCTestCase {
         }
     }
 
+    /// The 30 October design has visible decorative motion before any Send or Accept. Compare actual
+    /// composited screen pixels (not app-scoped captures, which can omit the SceneKit layer) inside
+    /// the artwork only. Three readings avoid mistaking one coincident loop phase for a still object.
+    /// Reduced Motion gets the same content and controls, with every sampled pose staying still.
+    func testAllFourIdleArtworkMovesAndReducedMotionStaysStill() throws {
+        for design in Self.designs {
+            for reduced in [false, true] {
+                let app = launch("wave-out-confirm", design, extra: reduced
+                                 ? ["-ProximeetReduceMotionPreview", "YES"] : [])
+                defer { app.terminate() }
+                assertScreen("out-confirm", app)
+                try XCTSkipUnless(app.frame.size == CGSize(width: 440, height: 956),
+                                  "Rendered artwork comparisons require the 440 × 956 review phone.")
+                assertComposition(design, try readSnapshot(app))
+                let region = try InvitationArtworkPixels.region(in: app)
+                RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+                var frames: [InvitationArtworkPixels] = []
+                for index in 0..<3 {
+                    if index > 0 { RunLoop.current.run(until: Date().addingTimeInterval(1.2)) }
+                    let shot = XCUIScreen.main.screenshot()
+                    let frame = try InvitationArtworkPixels(shot, pointWidth: app.frame.width, region: region)
+                    XCTAssertGreaterThan(frame.visibleFraction, 0.02,
+                                         "\(design.intent): the actual sculpted artwork must be rendered.")
+                    frames.append(frame)
+                    let attachment = XCTAttachment(screenshot: shot)
+                    attachment.name = "private-invitation-\(design.intent)-\(reduced ? "reduced" : "moving")-idle-\(index)"
+                    attachment.lifetime = .keepAlways
+                    add(attachment)
+                }
+                let differences = frames.dropFirst().map { frames[0].difference(from: $0) }
+                let note = XCTAttachment(string: "intent=\(design.intent), reduced=\(reduced), region=\(region), "
+                    + "visible=\(frames.map(\.visibleFraction)), changedRGBOver12=\(differences)")
+                note.name = "private-invitation-\(design.intent)-idle-motion-pixels"
+                note.lifetime = .keepAlways
+                add(note)
+                if reduced {
+                    for difference in differences {
+                        XCTAssertLessThan(difference, 0.001,
+                                          "\(design.intent): Reduce Motion must stop decorative movement.")
+                    }
+                } else {
+                    XCTAssertGreaterThan(differences.max() ?? 0, 0.005,
+                                         "\(design.intent): artwork must visibly move before Send or Accept.")
+                }
+                assertScreen("out-confirm", app)
+                XCTAssertTrue(element("wave.send", app).exists, "Idle motion never sends an invitation.")
+                XCTAssertFalse(element("wave.accept", app).exists, "Idle motion never grants sender acceptance.")
+                tap("wave.leave", app)
+                assertScreen("session-ended", app)
+                assertClosed(app, person: design.person)
+                print("PRIVATE_INVITATION_IDLE \(design.intent) reduced=\(reduced) differences=\(differences)")
+            }
+        }
+    }
+
     private func launch(_ fixture: String, _ design: Design, extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ProximeetFixture", fixture, "-ProximeetFixtureBand", design.intent,
@@ -233,6 +288,9 @@ final class PrivateInvitationReviewTests: XCTestCase {
         let expression = "(?i).*\\b" + NSRegularExpression.escapedPattern(for: person) + "\\b.*"
         let people = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", expression))
         XCTAssertEqual(people.count, 0, "Closed invitations must remove the counterpart’s identity.")
+        XCTAssertEqual(app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "wave.artwork.")).count, 0,
+                       "Closed invitations must remove their decorative scene as well as their words.")
     }
 
     /// Fourteen looks, as before, but each drag travels only the distance required to reveal the
@@ -378,4 +436,102 @@ final class PrivateInvitationReviewTests: XCTestCase {
         shot.lifetime = .keepAlways
         add(shot)
     }
+}
+
+/// A crop of the device's composited screen, shared by idle-motion and acceptance checks. The scene
+/// is deliberately inaccessible, so its bounds come from the adjacent readable direction line and
+/// the specified 376 × 220 canvas. No clock, title, control or changing state copy enters the crop.
+@MainActor
+struct InvitationArtworkPixels {
+    private let rgba: [UInt8]
+    private let width: Int
+    private let height: Int
+
+    static func region(in app: XCUIApplication) throws -> CGRect {
+        let direction = app.descendants(matching: .any)
+            .matching(identifier: "wave.invitation.direction").firstMatch
+        XCTAssertTrue(direction.waitForExistence(timeout: 5), "The invitation direction anchors its artwork.")
+        let width = min(376, max(0, app.frame.width - 64))
+        let height = 220 * min(1, width / 376)
+        let art = CGRect(x: app.frame.midX - width / 2,
+                         y: direction.frame.minY - 16 - height, width: width, height: height)
+        guard width > 0, app.frame.contains(art), direction.frame.height > 0 else {
+            XCTFail("The full invitation artwork must be on screen for pixel comparison: \(art).")
+            throw PixelError.invalidRegion
+        }
+        return art.insetBy(dx: 8, dy: 8)
+    }
+
+    init(_ screenshot: XCUIScreenshot, pointWidth: CGFloat, region: CGRect) throws {
+        let screen = try XCTUnwrap(screenshot.image.cgImage, "No rendered device screenshot.")
+        guard pointWidth > 0 else { throw PixelError.invalidRegion }
+        let scale = CGFloat(screen.width) / pointWidth
+        let bounds = CGRect(x: region.minX * scale, y: region.minY * scale,
+                            width: region.width * scale, height: region.height * scale).integral
+        let image = try XCTUnwrap(screen.cropping(to: bounds), "Could not crop the actual artwork pixels.")
+        width = image.width
+        height = image.height
+        var buffer = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = buffer.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: image.width, height: image.height,
+                                          bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                                          space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            return true
+        }
+        guard drawn else {
+            XCTFail("Could not decode the actual artwork pixels.")
+            throw PixelError.decodeFailed
+        }
+        rgba = buffer
+    }
+
+    /// Bright surface pixels distinguish an actual object from an unrendered black SceneKit surface.
+    var visibleFraction: Double {
+        var visible = 0
+        for i in stride(from: 0, to: rgba.count, by: 4) {
+            if max(rgba[i], rgba[i + 1], rgba[i + 2]) >= 48 { visible += 1 }
+        }
+        return Double(visible) / Double(width * height)
+    }
+
+    /// RGB deltas greater than 12 ignore tiny antialiasing differences while retaining visible drift.
+    func difference(from other: Self, threshold: Int = 12) -> Double {
+        guard width == other.width, height == other.height else {
+            XCTFail("Artwork crops must have the same geometry.")
+            return 1
+        }
+        var changed = 0
+        for i in stride(from: 0, to: rgba.count, by: 4) {
+            if (0..<3).contains(where: { abs(Int(rgba[i + $0]) - Int(other.rgba[i + $0])) > threshold }) {
+                changed += 1
+            }
+        }
+        return Double(changed) / Double(width * height)
+    }
+
+    /// A dissolve stays between the separate and accepted pixel colors. A translated object draws
+    /// beyond that envelope. This replaces obsolete ring-coordinate probes with the same no-travel
+    /// check for the redesigned petals, while allowing the specified short reduced-motion dissolve.
+    func outsideDissolveEnvelope(from before: Self, to after: Self) -> Double {
+        guard width == before.width, height == before.height,
+              width == after.width, height == after.height else {
+            XCTFail("Acceptance crops must have the same geometry.")
+            return 1
+        }
+        var outside = 0
+        for i in stride(from: 0, to: rgba.count, by: 4) {
+            if (0..<3).contains(where: { component in
+                let value = Int(rgba[i + component])
+                let low = min(Int(before.rgba[i + component]), Int(after.rgba[i + component])) - 18
+                let high = max(Int(before.rgba[i + component]), Int(after.rgba[i + component])) + 18
+                return value < low || value > high
+            }) { outside += 1 }
+        }
+        return Double(outside) / Double(width * height)
+    }
+
+    private enum PixelError: Error { case invalidRegion, decodeFailed }
 }
