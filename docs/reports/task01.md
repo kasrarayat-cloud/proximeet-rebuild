@@ -766,3 +766,24 @@ Exact failed invocation:
 ```sh
 python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae85_controller.py test-large /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae85_config.json
 ```
+
+
+## 30 October 2026 — verified accessibility boundary and Reduce Motion acceptance correction
+
+Attempt6's 347-file source was published as `dae145a11d3e3a663ec38f55245dfce1416db48e`, tree `c056de82b7added86c0bbb71ccde4ebdeddfcbeb`, and independently matched against native bytes and Git modes. Native compilation passed in 23.827 seconds and all 263 domain tests passed. Both `test-large` methods passed: incoming 404.196 seconds, outgoing 291.223 seconds, phase 790.790 seconds. Each of the eight incoming/outgoing artwork structures is now exactly one blank identified native leaf with zero children. All consent, withdrawal, decline and Leave assertions remained unchanged. Its receipt SHA-256 is `3312b04492bf18347ea09316a89eec3b9b5f1ff59b1510f08166c5525e3b4ab1`. Eleven known SceneKit teardown warnings left the original strict gate false; commands, logging, cleanup and preservation passed, with zero invalid-frame warnings.
+
+The subsequent original `test-regression` selection passed `testRealJourneyFromTheRoomProfileThroughTheWaveAndBack` in 291.805 seconds, then failed `testReduceMotionPreviewAcceptJoinsWithoutAMove` in 73.587 seconds. The first frame, approximately 119 ms after Accept, had outside-envelope fraction `0.07366255144032922`, above the unchanged `0.005` limit. The later 260/401/532 ms frames and final PNG are byte-identical; final drift is zero and endpoint crop alignment passed. The immutable receipt is `1fc660dbfd684ee8cd20e48bd1908bfdb9b6bbd2967a38abe311ccafc0a5ca52`. Small-screen and final motion phases, archive and upload did not start.
+
+Exact pixel analysis reproduces that fraction over the original ROI. Every one of the 48,688 violating pixels is darker than the endpoint minimum; none exceeds the maximum. Old-only and new-only pixels fit endpoint opacity weights approximately 0.259 and 0.741 with less than 0.3 RGB RMSE, and zero-displacement registration fits best. The two identity-replaced transparent renderers produce a source-over brightness dip where their shapes overlap; there is no demonstrated translated intermediate pose. Reproducible analysis, original image hashes and the exact source diff are retained in `motion-analysis/acceptance-attempt6/`. Missing unrelated static layers in some composited PNGs are a separate capture limitation outside the comparison ROI, not an explanation for its pixel failure.
+
+The successor changes only `WaveView.swift` and this appended report relative to published attempt6. It removes accepted-dependent renderer identity replacement and the unused helper. Under Reduce Motion, the existing coordinator now changes the same renderer directly to its accepted static pose. Default 800 ms artwork movement, 240 ms text/navigation/overlay fades, VoiceOver behavior, immediate model-first consent and every test assertion remain unchanged. The current design requires static reduced-motion poses and the existing test explicitly permits a static endpoint or dissolve; no threshold or allowance is relaxed. Independent review confirmed all 346 other files unchanged before this required report append.
+
+Four runtime warnings occurred in the failed regression. Three match the earlier teardown pattern. The fourth is a distinct 46-frame signature: the same SceneKit teardown/flush chain is reached through `C3DTransactionCommit`, `InvitationStudioCoordinator.pose`, `tick` and display-link dispatch. It occurred during menu-to-incoming navigation, before Accept, and is separate from the pixel failure. No application-owned semaphore is shown, but duration, impact and harmlessness are not established. It is retained as a separate unresolved warning rather than silently admitted by the older exception. See `review/independent-attempt6-regression-failure-review.json` and `review/independent-persistent-renderer-review.json`.
+
+Exact failed phase command:
+
+```sh
+python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae86_controller.py test-regression /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae86_config.json
+```
+
+The next isolated candidate must compile and run the unchanged regression selection first, then complete all six selected feature methods on the final source before a separate internal-testing release decision. All interrupted/failed results, original strict warning gates and historical open device/aggregate gates remain preserved. Native verification of this successor and new build delivery are still pending.

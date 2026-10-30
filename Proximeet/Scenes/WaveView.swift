@@ -25,9 +25,9 @@ import ProximeetDomain
 /// line that names nobody.
 ///
 /// Navigation, overlays and text use the existing 240 ms dissolve. The decorative scene drifts while
-/// visible and active; accepting updates its pose in 800 ms. Reduce Motion keeps a static pose and a
-/// short crossfade, and VoiceOver disables animation. The model always changes first: Block and Leave
-/// remove the scene immediately. Scene motion does not send, accept, store or log anything, and pauses
+/// visible and active; accepting updates its pose in 800 ms. Reduce Motion switches directly to the
+/// accepted static pose while text fades, and VoiceOver disables animation. The model always changes first:
+/// Block and Leave remove the scene immediately. Scene motion does not send, accept, store or log anything, and pauses
 /// behind overlays, offscreen and in the background. VoiceOver focus moves on the next main-actor turn.
 struct WaveView: View {
     let run: RoomRun
@@ -470,7 +470,8 @@ struct WaveView: View {
     }
 
     /// The approved private invitation: category artwork on a 376 × 220 canvas above a scalable ivory
-    /// slip. The decorative objects are never the source of truth for invitation state or consent.
+    /// slip. One scene persists through acceptance: its coordinator applies the static endpoint under
+    /// Reduce Motion or VoiceOver. The decorative objects are never the source of truth for state or consent.
     private func invitationCard(_ screen: WaveScreen, invitation: WaveInvitation, width: CGFloat) -> some View {
         let joined = screen.rings == .joined
         return VStack(spacing: 0) {
@@ -478,20 +479,12 @@ struct WaveView: View {
                 PrivateInvitationArtwork(intent: wave.intent, accepted: joined, width: width,
                                          viewerName: wave.viewerName, counterpartName: wave.counterpart.name,
                                          isActive: wave.overlay == nil)
-                    .id(ringIdentity(joined: joined))
                     .transition(.opacity)
             }
             invitationSlip(screen, invitation: invitation)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("wave.invitation")
-    }
-
-    /// Keep one scene for the normal accepted-pose transition. Under Reduce Motion, static separate and
-    /// accepted poses crossfade in place with the same immediately updated state text.
-    private func ringIdentity(joined: Bool) -> Int {
-        guard adaptive.reduceMotion else { return 0 }
-        return joined ? 2 : 1
     }
 
     /// The ivory slip's words, all #050606 and centred: the direction and actors (Bold 14/22 at 20, 21),
@@ -989,8 +982,8 @@ struct WaveView: View {
         adaptive.voiceOverRunning ? nil : .easeOut(duration: 0.24)
     }
 
-    /// Accept (75:419): the one 800 ms ease-out move; a 240 ms crossfade under Reduce Motion (the rings
-    /// change identity, see `ringIdentity`); none for VoiceOver.
+    /// Accept (75:419): the artwork's 800 ms ease-out move; a 240 ms text fade under Reduce Motion,
+    /// whose artwork switches directly to its static endpoint. No animation for VoiceOver.
     private var acceptAnimation: Animation? {
         if adaptive.voiceOverRunning { return nil }
         return adaptive.reduceMotion ? .easeOut(duration: 0.24) : .easeOut(duration: 0.8)
