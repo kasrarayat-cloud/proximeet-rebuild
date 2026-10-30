@@ -857,3 +857,11 @@ Actual underlying domain, build, UI-test, archive and export commands (the retai
 # upload
 /usr/bin/xcodebuild -exportArchive -archivePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/Proximeet-Export.xcarchive -exportPath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/Export -exportOptionsPlist /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/ExportOptions.plist -allowProvisioningUpdates
 ```
+
+## 30 October 2026 — Founder Preview availability confirmed
+
+After the user completed Apple sign-in, App Store Connect showed Proximeet Demo **0.1.0 (11)**, build UUID `413d755c-7549-42e3-8f53-ec71ba16fa6b`, as **Ready to Test**. This session assigned that exact build to the existing **Founder Preview** internal group (`7157d67f-0ef6-434a-a0dd-19f9cea5c1fe`) and observed the row change to **Testing** with Founder Preview assigned. Confirmation was recorded at 10:47:58 PDT / 17:47:58 UTC on 30 October 2026.
+
+The visible UI sequence was Build 11 Internal → Add Group → FP Founder Preview, then a wait for the same build row's Testing status. No notification control or confirmation dialog was presented, and no separate notification action was performed; automatic service notification delivery was not observed. No testers were added, group settings changed, or external testing enabled. Evidence: `review/build11-founder-preview-confirmation.json` (SHA-256 `bbb2a327ac0cfbcba08637c90f93dd84eed3c9eaaffb81fcbb469e88d46c7f41`) and its pinned screenshot `build11-founder-preview-confirmed.png`.
+
+This confirms processing completion and internal group availability for the previously uploaded binary. Installation by a tester and separate Apple symbol processing remain unverified. No rebuild, native test or additional upload occurred. The built app remains commit `3d80161b5b3b61746df21709e30d4dd54662e73e`; this append is documentation only. The 23 reviewed SceneKit performance warnings, strict complete Main280/Small7, native D2, physical VoiceOver and broader physical-device gates remain open. The earlier sign-in-block report remains unchanged as historical evidence.
