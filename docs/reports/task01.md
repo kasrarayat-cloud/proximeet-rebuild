@@ -787,3 +787,73 @@ python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae86_c
 ```
 
 The next isolated candidate must compile and run the unchanged regression selection first, then complete all six selected feature methods on the final source before a separate internal-testing release decision. All interrupted/failed results, original strict warning gates and historical open device/aggregate gates remain preserved. Native verification of this successor and new build delivery are still pending.
+
+
+## 30 October 2026 — final native verification and internal TestFlight build 11
+
+The final app source was published and natively bound to commit `3d80161b5b3b61746df21709e30d4dd54662e73e`, tree `0ce4d611d2043aa4a3d70231c7701269a8b136d7`, on `verification/invitation-motion-20261030`. All 347 source files and their modes matched before and after verification, archive and upload. This section is a documentation-only follow-up after delivery; it was not part of that compiled source. Every earlier report byte and all historical interrupted/failed results remain preserved.
+
+Native root: `/Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87`. Xcode 26.6 (17F113), iOS 26.5; `DEVELOPER_DIR` was process-scoped. Native compilation passed in 24.557 seconds and all 263 domain tests passed. Each selected UI phase ran once on its own simulator using the original methods, assertions, thresholds and allowances.
+
+| Phase | Passed methods | Phase seconds | Runtime warnings | Original strict gate |
+|---|---:|---:|---:|---|
+| Regression | 2 | 472.603 | 3 | false |
+| All four incoming/outgoing designs | 2 | 779.166 | 12 | false |
+| Smaller phone, largest text, Reduce Motion | 1 | 683.287 | 3 | false |
+| All four idle-motion comparisons | 1 | 485.496 | 5 | false |
+
+All six selected methods passed, with zero failures, skips or expected failures. All 37 UI phase commands, runtime loggers, simulator cleanup and source/baseline preservation checks passed. There were zero invalid-frame warnings and zero unmatched runtime signatures. The final native index is `verification-review/final-native-evidence-index.json`, SHA-256 `8e0fff50a2c625eba696172ee6b263c4485c77eedad28643d80e20066777bbc6`.
+
+The unchanged acceptance test measured outside-envelope fractions of zero at 115, 246, 380 and 517 ms under Reduce Motion, and zero final drift. Its default-motion control remained visibly changing. The separate idle test measured the following changed-pixel fractions (RGB difference greater than 12) between its first and two later samples:
+
+| Design | Normal motion samples | Reduce Motion samples |
+|---|---|---|
+| Business | 0.1197667 / 0.1573393 | 0 / 0 |
+| Social | 0.1026855 / 0.1429572 | 0 / 0 |
+| Activity | 0.0890296 / 0.1603925 | 0 / 0 |
+| Dating | 0.2077115 / 0.2132882 | 0 / 0 |
+
+All eight incoming/outgoing artwork accessibility snapshots contain exactly one blank identified native leaf with zero children. The iPhone 17e test completed Send, Withdraw and Leave for all four designs at Accessibility XXXL. Current-source images also show the Social default card/sculpture/header and fixed Leave footer, and wrapped Business XXXL text without horizontal clipping. Other content and Send require scrolling on the smaller phone; there is no claim that every control initially fits. Physical VoiceOver and device performance are not established by these simulator results. The previous accepted-screen video also resolved the missing-layer still-capture limitation: its held actual sample at 22.396667 seconds shows the complete header, accepted card and footer; a requested 33-second extraction was not a new frame.
+
+### Explicit internal-testing disposition
+
+Twenty-three Thread Performance Checker warnings remain unresolved: 22 exact 34-frame SceneKit runloop-teardown stacks and one separately reviewed 46-frame stack reaching framework teardown through the app's `InvitationStudioCoordinator.pose`, `tick` and transaction commit. Full messages and backtraces were independently matched, with specific current app UUID substitutions validated against the binaries and six symbolized app frames. The latter stack is explicitly separate from the earlier main-entrypoint pattern. No application-owned wait was demonstrated; wait duration, physical-device impact and harmlessness remain unmeasured.
+
+The coordinator approved this exact source for the existing internal-testing audience after all six selected methods passed, while retaining every original strict-false UI receipt. This is not a warning-free or broad production release claim. The pinned disposition is `verification-review/release-admission/internal-testflight-disposition.json`, SHA-256 `e359887a0fe6f7227d0f417bca5453e3f3919515f6694aeaf78d4973920ab16b`. Combined independent recommendation: `1144d6c7835e2504731dedb804e6b6d4a4efe6e1af4cd1ffd7832d127ea83730`.
+
+A separate reviewed archive controller changes only the required-UI admission branch. It retains all four phases and checks exact source, configuration, payload, tested products, receipt/log hashes, complete methods, commands, logging, cleanup, preservation, independent reviews and exact warning signatures/counts. The original controller, generic `require()` and upload logic remain unchanged. The native read-only validator passed before the archive directory existed (`997ec7b98698faae58d159e8143ab176d2591516b196674f703d34c085e8ff83`). Variant SHA-256: `37153ced061f7f6d6456928a67ab213e8d82ba071c24c55fbd11f04a317b2f2e`; validator: `a89f2b8acc524c9dc6cffbc7eca317c06d2628f9af29472c33b51bd8ad0892ce`; independent code review: `c66e97787b3595b8fec315065984bbd220f899544b5454b3936fe3e1194c33c9`.
+
+### Signed app and symbols delivery
+
+One signed Release archive passed in 29.364 seconds for `com.goseng.proximeet`, team `2G437MAN6W`. App and dSYM arm64 UUIDs both equal `27649A33-D38A-346A-A22F-4635AA07640E`. The original archive remains unchanged; export used a verified copy. The original controller performed one internal-only upload with symbols and managed build numbering. The export command succeeded in 108.089 seconds (complete phase 108.406 seconds).
+
+Apple assigned **0.1.0 (11)** and confirmed successful delivery at **30 October 2026, 10:03:10 PDT / 17:03:10 UTC**. The archive's original local build stamp was 1; it is not the delivered build number. The actual uploaded 24,800,935-byte IPA, SHA-256 `55e4cc66e7c3521e5fe6d9903d3fb331ec8980751f96ea7cbffba07d368705ec`, contains build 11, the matching app UUID, and its 8,254,220-byte `Symbols/27649A33-D38A-346A-A22F-4635AA07640E.symbols` member (SHA-256 `6d0ef32ea51dc988b06f72663c7fd4131512a57a8e9445a13e0a6b464ace7308`). The distribution pipeline identifies this exact IPA, and ContentDelivery confirms successful upload. This verifies symbol inclusion in the delivered package; separate Apple symbol processing was not observed.
+
+Primary receipts: archive `13720087d0b70985fb18f9526b0e7fc28ddaa774d576132d2bdf73da08520278`; app/signature/symbol check `daab614fa812a9b544bc581d7b50b80f9faee4f8e2a0f44ba09664bc9d31b282`; upload `dfa967106be42d18fd8a6202c87d4fb34904d696ec4ed6a32ac275434aa9b863`; actual uploaded package check `f4277355ebf72f230b9ecc91908e9f9cbb38c815a6f3cf2fda2f49340f954aa5`; final delivery `763d031dee270f656c1ce255dd1fb51ff309dd284b6dc6086ca79bd622f87945`. The exact IPA, ContentDelivery log and distribution pipeline log are preserved privately under `upload/retained-delivery`, verified by receipt `6e96bd8bfac927a8599e6175ad9a1fea28bdc61b80375f623aa75b411c31628c`. No raw distribution logs or IPA were transferred out of the Mac. All four owned phase simulators were removed; the user's booted simulator and historical shutdown simulator were preserved.
+
+### Delivery limit and next action
+
+The browser connection recovered and showed the existing Founder Preview group with two testers and manual Xcode build distribution. After upload, refreshing App Store Connect redirected to Apple's sign-in form with `authResult=FAILED`. No credentials were submitted, no new tester or notification was added, and build 11 was not assigned to a group through this session. Apple processing completion, Founder Preview assignment and install availability therefore remain unverified. The existing App Store Connect tab is left for the user to sign in; existing authorization is sufficient to finish processing/group verification afterward.
+
+Strict complete Main280/Small7 successful invocations, native D2, physical VoiceOver and broader physical-device verification remain open. These six selected methods do not close those separate requirements.
+
+Actual underlying domain, build, UI-test, archive and export commands (the retained receipts also include all setup, capture, summary and cleanup commands):
+
+```sh
+# domain
+/usr/bin/xcrun swift test --package-path /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/source/ProximeetDomain --scratch-path /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/domain/Build --jobs 4
+# build
+/usr/bin/xcodebuild build-for-testing -project /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/source/Proximeet.xcodeproj -scheme Proximeet -configuration Debug -testPlan WaveVerificationMain -destination 'generic/platform=iOS Simulator' -derivedDataPath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/DerivedData -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/build/Build.xcresult ARCHS=arm64 CODE_SIGNING_ALLOWED=NO
+# regression
+/usr/bin/xcodebuild test-without-building -xctestrun /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/DerivedData/Build/Products/test-regression.xctestrun -destination 'platform=iOS Simulator,id=A4ABEC4C-66DD-4327-B64A-D63900CED08C' -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/test-regression/Tests.xcresult -parallel-testing-enabled NO
+# large
+/usr/bin/xcodebuild test-without-building -xctestrun /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/DerivedData/Build/Products/test-large.xctestrun -destination 'platform=iOS Simulator,id=633502C0-B361-400A-B42B-B01A221666A9' -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/test-large/Tests.xcresult -parallel-testing-enabled NO
+# small
+/usr/bin/xcodebuild test-without-building -xctestrun /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/DerivedData/Build/Products/test-small.xctestrun -destination 'platform=iOS Simulator,id=F8A02D54-5DCF-4243-9586-5149518F9A2D' -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/test-small/Tests.xcresult -parallel-testing-enabled NO
+# motion
+/usr/bin/xcodebuild test-without-building -xctestrun /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/DerivedData/Build/Products/test-motion.xctestrun -destination 'platform=iOS Simulator,id=CA912FB5-EC03-4CB8-A443-2FA302B33109' -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/test-motion/Tests.xcresult -parallel-testing-enabled NO
+# archive
+/usr/bin/xcodebuild archive -project /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/source/Proximeet.xcodeproj -scheme Proximeet -configuration Release -destination generic/platform=iOS -archivePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/archive/Proximeet.xcarchive -derivedDataPath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/archive/DerivedData -resultBundlePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/archive/Archive.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=2G437MAN6W -allowProvisioningUpdates
+# upload
+/usr/bin/xcodebuild -exportArchive -archivePath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/Proximeet-Export.xcarchive -exportPath /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/Export -exportOptionsPlist /Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae87/upload/ExportOptions.plist -allowProvisioningUpdates
+```
