@@ -109,6 +109,11 @@ final class PrivateInvitationReviewTests: XCTestCase {
             ])
             assertScreen("out-confirm", app)
             assertComposition(design, try readSnapshot(app))
+            capture("private-invitation-\(design.intent)-largest-text-initial", app)
+            let initialScreen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            initialScreen.name = "private-invitation-\(design.intent)-largest-text-initial-full-screen"
+            initialScreen.lifetime = .keepAlways
+            add(initialScreen)
             for id in ["wave.intent.\(design.intent)", "wave.invitation.title", "wave.invitation.purpose", "wave.invitation.consent"] {
                 let item = reveal(id, app)
                 XCTAssertGreaterThan(item.frame.height, 0, "\(id) has laid-out text.")
@@ -230,24 +235,129 @@ final class PrivateInvitationReviewTests: XCTestCase {
         XCTAssertEqual(people.count, 0, "Closed invitations must remove the counterpart’s identity.")
     }
 
+    /// Fourteen looks, as before, but each drag travels only the distance required to reveal the
+    /// target. Whole-view swipes overshot a fitting AX XXXL title and alternated up/down. Snapshot
+    /// geometry is local to one look; every new drag gets a new snapshot and final hit testing is live.
     @discardableResult
     private func reveal(_ id: String, _ app: XCUIApplication) -> XCUIElement {
         let item = element(id, app)
         XCTAssertTrue(item.waitForExistence(timeout: 5), "Missing \(id).")
-        let top = app.frame.minY + 100
-        let footer = element("wave.leave", app)
-        for _ in 0..<14 {
-            let frame = item.frame
-            let bottom = footer.exists && id != "wave.leave" ? footer.frame.minY - 8 : app.frame.maxY - 30
-            if item.isHittable, frame.maxY > top, frame.minY < bottom,
-               (frame.height > bottom - top || (frame.minY >= top && frame.maxY <= bottom)) { return item }
-            let scroller = app.scrollViews.firstMatch
-            guard scroller.exists else { break }
-            if frame.minY < top { scroller.swipeDown(velocity: .slow) }
-            else { scroller.swipeUp(velocity: .slow) }
+        var previousTop: CGFloat?
+        var previousDirection: CGFloat = 0
+        var stalled = 0
+        for attempt in 0..<14 {
+            guard let look = revealLook(id, app) else { break }
+            let frame = look.target
+            let fixed = look.scroller == nil || id == "wave.leave"
+            let top = fixed ? look.screen.minY : max(look.screen.minY + 100, look.scroller?.minY ?? 0)
+            let bottom = id != "wave.leave" && look.footer != nil
+                ? look.footer!.minY - 8 : look.screen.maxY - 30
+            let tall = frame.height > bottom - top
+            let visible = frame.maxY > top && frame.minY < bottom
+                && (tall || (frame.minY >= top && frame.maxY <= bottom))
+            print("PRIVATE_INVITATION_SCROLL \(id) look=\(attempt + 1) target=\(frame) viewport=\(top)...\(bottom)")
+            if visible {
+                XCTAssertTrue(item.isHittable, "\(id) must remain reachable by scrolling.")
+                return item
+            }
+            guard let scroller = look.scroller, !fixed else { break }
+            if let previousTop {
+                let progress = (previousTop - frame.minY) * previousDirection
+                stalled = progress < 2 ? stalled + 1 : 0
+                if stalled >= 2 {
+                    XCTFail("\(id) did not move after two measured drags; target=\(frame).")
+                    return item
+                }
+            }
+            let fingerUp = frame.minY >= top
+            let distance: CGFloat
+            if fingerUp {
+                distance = tall ? frame.minY - (bottom - 44) : frame.maxY - bottom + 8
+            } else {
+                distance = top - frame.minY + 8
+            }
+            let bandTop = max(top, scroller.minY) + 12
+            let bandBottom = min(bottom, scroller.maxY) - 12
+            guard bandBottom - bandTop >= 40 else {
+                XCTFail("\(id) has no safe scroll viewport: \(bandTop)...\(bandBottom).")
+                return item
+            }
+            // The 0.2-s hold before release removes swipe momentum. The 24-pt minimum clears the
+            // scroll recognizer's threshold; the target's fitting bounds then stop the next look.
+            let travel = min(max(distance, 24), min(280, bandBottom - bandTop))
+            let xs = [min(scroller.maxX, look.screen.maxX) - 16, scroller.midX,
+                      max(scroller.minX + 48, look.screen.minX + 48)]
+            let startRange: ClosedRange<CGFloat> = fingerUp
+                ? (bandTop + travel)...bandBottom : bandTop...(bandBottom - travel)
+            let ys = [fingerUp ? startRange.upperBound : startRange.lowerBound,
+                      (startRange.lowerBound + startRange.upperBound) / 2,
+                      fingerUp ? startRange.lowerBound : startRange.upperBound]
+            var start: CGPoint?
+            for x in xs where start == nil {
+                for y in ys {
+                    let point = CGPoint(x: x, y: y)
+                    guard scroller.contains(point), x > look.screen.minX + 40,
+                          !look.controls.contains(where: { $0.insetBy(dx: -10, dy: -10).contains(point) })
+                    else { continue }
+                    start = point
+                    break
+                }
+            }
+            guard let start else {
+                XCTFail("\(id) has no safe scroll touch point away from controls.")
+                return item
+            }
+            let end = CGPoint(x: start.x, y: start.y + (fingerUp ? -travel : travel))
+            let remaining = 0.7 - Date().timeIntervalSince(lastTap)
+            if remaining > 0 { RunLoop.current.run(until: Date().addingTimeInterval(remaining)) }
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: start.x, dy: start.y))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: end.x, dy: end.y)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            lastTap = Date()
+            previousTop = frame.minY
+            previousDirection = fingerUp ? 1 : -1
+            print("PRIVATE_INVITATION_SCROLL \(id) drag=\(fingerUp ? "up" : "down") distance=\(travel)")
         }
         XCTAssertTrue(item.isHittable, "\(id) must remain reachable by scrolling.")
         return item
+    }
+
+    private struct InvitationRevealLook {
+        let screen: CGRect
+        let target: CGRect
+        let scroller: CGRect?
+        let footer: CGRect?
+        let controls: [CGRect]
+    }
+
+    private func revealLook(_ id: String, _ app: XCUIApplication) -> InvitationRevealLook? {
+        do {
+            let root = try app.snapshot()
+            var pending: [(node: any XCUIElementSnapshot, scroller: CGRect?)] = [(root, nil)]
+            var target: (frame: CGRect, scroller: CGRect?)?
+            var footer: CGRect?
+            var controls: [CGRect] = []
+            while let entry = pending.popLast() {
+                let node = entry.node
+                if node.identifier == id && target == nil { target = (node.frame, entry.scroller) }
+                if node.identifier == "wave.leave" { footer = node.frame }
+                if node.elementType == .button || node.elementType == .link || node.elementType == .textField {
+                    controls.append(node.frame)
+                }
+                let scroller = node.elementType == .scrollView ? node.frame : entry.scroller
+                for child in node.children.reversed() { pending.append((child, scroller)) }
+            }
+            guard let target else {
+                XCTFail("Missing \(id) in the fresh scroll snapshot.")
+                return nil
+            }
+            return InvitationRevealLook(screen: root.frame, target: target.frame, scroller: target.scroller,
+                                        footer: footer, controls: controls)
+        } catch {
+            XCTFail("Could not measure \(id) for scrolling: \(error).")
+            return nil
+        }
     }
 
     private func tap(_ id: String, _ app: XCUIApplication) {

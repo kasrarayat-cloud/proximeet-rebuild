@@ -36,6 +36,7 @@ struct WaveView: View {
     let run: RoomRun
     let wave: WaveDemo
     @Environment(DemoSession.self) private var session
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Adaptive private var adaptive
     @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
     @AccessibilityFocusState private var focus: WaveFocus?
@@ -167,7 +168,46 @@ struct WaveView: View {
     /// decision of 30 September 2026, the menu use 75:119 instead: the Back chevron and the title "Wave"
     /// at x 60 (on the menu Back returns to the Room; on the confirmation it discards the unsent example).
     /// The ended screen (75:130) keeps the badge in place and leaves the shield's slot empty.
+    @ViewBuilder
     private func chrome(_ screen: WaveScreen) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            accessibilityChrome(screen)
+        } else {
+            standardChrome(screen)
+        }
+    }
+
+    /// At accessibility sizes the heading gets the full column width instead of competing with the
+    /// controls. Its font still follows the user's text size, and "invitation" can wrap as one word.
+    private func accessibilityChrome(_ screen: WaveScreen) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                if let back = backControl(screen) {
+                    RoomIconButton(pieces: RoomPaths.chevron, action: back.action)
+                        .accessibilityLabel("Back")
+                        .accessibilityHint(Text(verbatim: back.hint))
+                        .accessibilityIdentifier("wave.back")
+                }
+                Spacer(minLength: 8)
+                WaveDemoBadge()
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                ZStack {
+                    safetyButton(screen)
+                }
+                .frame(width: 44, height: 44)
+            }
+            .frame(minHeight: 44)
+            WaveChromeTitle(text: screen.chrome == .back || screen.showsCounterpart
+                            ? WaveCopy.composeBrand : WaveCopy.brand)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("wave.brand")
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 2)
+    }
+
+    private func standardChrome(_ screen: WaveScreen) -> some View {
         HStack(spacing: 0) {
             ZStack(alignment: .leading) {
                 // One branch for both Backs, so going from the menu to the confirmation keeps the chevron
