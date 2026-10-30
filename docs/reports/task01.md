@@ -727,3 +727,42 @@ The first new idle-motion invocation failed at Activity under Reduce Motion afte
 The native iOS SDK header and Apple camera documentation confirm that `wantsExposureAdaptation` defaults to true. The scene enabled HDR but had not disabled that automatic exposure animation. This successor sets `camera.wantsExposureAdaptation = false` so the authored studio has fixed tone mapping, including under Reduce Motion. Geometry, lights, materials, layout and all test thresholds remain unchanged.
 
 The failed invocation also recorded four Thread Performance Checker priority-inversion events and zero invalid-frame warnings. Their cause remains under review at this append; no runtime-warning waiver or successful later test is claimed. The pipeline stopped before the outgoing/incoming, journey/acceptance and smaller-device phases, and the owned simulator was cleaned up. Earlier captures, failed results, exact source manifests and pixel analysis are retained. Native compilation and the current-source motion/runtime checks must pass before the remaining suite and delivery proceed.
+
+
+## 30 October 2026 — interrupted native recovery and decorative child boundary correction
+
+The source at published commit `8d59e5be6e15ba926e84d0016317516972bf7737` (tree `20aca0d36acf8fedcb11077b861a1592d21e81cd`, 347 files) remains preserved in the prior native candidate and the local attempt4 snapshot. The original motion invocation ended with `BUILD INTERRUPTED` at 03:00:03 PDT, an incomplete xcresult and no final receipt. The initiating cause is not established. Its files were preserved before recovery; the old process was absent. No later phase, archive or upload occurred in that interrupted invocation.
+
+One separately named recovery used the identical source, built products, selected test, assertions and 900-second default / 1,200-second maximum test allowances. The controller only added a phase alias. Under `/Users/user299580/ProximeetDiagnostics/private-invitations-redesign-20261030-b6f3ae84`, `test-motion-recovery1` passed the selected method in 387.722 seconds (485.883-second phase). All four designs visibly moved normally; every Reduce Motion screenshot pair had zero changed pixels. This verifies the fixed-exposure correction on that source. The existing native domain output also confirms 263 tests, zero failures.
+
+The recovery recorded eight identical SceneKit teardown priority-inversion events, zero invalid-frame warnings, successful logging and simulator cleanup, and exact baseline/candidate preservation. Independent review matched all 34 stack frames and warning messages against the known signature. The original strict zero-warning gate remains false. No claim is made about blocked duration, harmlessness, resolution or a production release. A separate coordinator decision admitted only the three still-unrun verification phases.
+
+The next phase, `test-large`, failed both selected methods on `XCTAssertTrue(art.children.isEmpty)` in `PrivateInvitationReviewTests.swift`. The outgoing and accepted Business artwork roots contained blank structural wrappers and SceneKit geometry descendants. These snapshots establish unwanted automation-tree descendants; they do not prove spoken-content leakage or physical VoiceOver focus behavior. The phase exited 65 with zero runtime/invalid-frame warnings, successful cleanup and preservation. Regression and small-device phases were not started, and no archive or upload occurred. Its immutable receipt SHA-256 is `b15d1885e9c2ebe5ef476f0c7c13d4c8c7ebcabefaa2111e67d68cd396aa1bfa`.
+
+The successor changes only `PrivateInvitationArtwork.swift` and this appended report relative to that published source. It installs explicit empty `accessibilityElementsBlock` and `automationElementsBlock` providers on `InvitationSceneView`, which contains decorative geometry only. Invitation text and controls remain SwiftUI siblings. Existing identifiers, every test assertion, all geometry/materials, fixed exposure, display-clock behavior and time limits remain unchanged. The two providers are always active, not test-only or DEBUG behavior. Native UIKit SDK declarations confirm iOS 17 availability and precedence over property overrides; evidence is retained in `native-control/attempt4-recovery1/sdk-accessibility-blocks-evidence.json`. Relevant public API documentation: https://developer.apple.com/documentation/uikit/uiaccessibilitycontainer and https://developer.apple.com/documentation/objectivec/nsobject-swift.class/automationelementsblock .
+
+Exact prior commands:
+
+```sh
+python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae84_recovery1_controller.py test-motion-recovery1 /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae84_recovery1_config.json
+python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae84_recovery1_controller.py test-large /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae84_recovery1_config.json
+```
+
+Verification of the successor is pending. A new isolated native candidate will use the original controller and build prerequisites, then run the previously failing `test-large` phase first with the unchanged child-count assertion. All six selected feature methods must complete on the final source before a separate internal-testing release decision. Original failures and strict warning gates remain recorded. Physical VoiceOver, strict Main280/Small7 and other historical device gates remain separate and open. No new build is claimed by this report append.
+
+Local successor validation passed: `python3 -B scripts/validate_project.py --no-plutil` (13 checks, zero failures) and `python3 -B scripts/generate_project.py --check` (up to date). These are project checks, not native Swift compilation or UI verification.
+
+
+## 30 October 2026 — identify the empty native decorative boundary
+
+Attempt5 at `private-invitations-redesign-20261030-b6f3ae85` compiled successfully in 23.940 seconds; its domain phase passed 263 tests with zero failures. The unchanged two-method `test-large` phase still failed `art.children.isEmpty` (exit 65, 188.142-second phase). Its receipt SHA-256 is `600d48c73c2bd51357ad8d45f41dbdf068d74fd6ffbaf81ed1b950a0a988f5ff`. No later UI phase, archive or upload started. Logging, cleanup and preservation passed; zero runtime or invalid-frame warnings occurred in this failed phase.
+
+The new native attachments establish that the explicit providers removed the entire SceneKit geometry subtree. Each remaining structure was only the identified SwiftUI host with one blank native leaf whose child count was already zero. Thus the remaining issue is which boundary the diagnostic identifier describes, not continuing geometry exposure. Physical VoiceOver behavior is not established by these snapshots.
+
+The successor moves the same `wave.artwork.<intent>` identifier from the representable's SwiftUI host onto the actual `InvitationSceneView`, assigning it on creation and intent updates. It adds no proxy marker and changes no identifier value. Both empty accessibility/automation providers, hiding flags, semantic controls, assertions, geometry and motion remain unchanged. Independent review verified this exact change against the preserved 347-file attempt5 snapshot. This successor remains unverified natively until the same two-method phase and remaining selected feature methods complete; previous failures are retained.
+
+Exact failed invocation:
+
+```sh
+python3 -B /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae85_controller.py test-large /Users/user299580/ProximeetDiagnostics/private_invitations_b6f3ae85_config.json
+```

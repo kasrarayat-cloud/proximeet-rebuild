@@ -27,7 +27,6 @@ struct PrivateInvitationArtwork: View {
             .frame(width: availableWidth, height: 220 * factor)
             .allowsHitTesting(false)
             .accessibilityElement(children: .ignore)
-            .accessibilityIdentifier("wave.artwork.\(intent.rawValue)")
             .accessibilityHidden(true)
     }
 }
@@ -55,11 +54,19 @@ private struct InvitationStudioView: UIViewRepresentable {
         view.isUserInteractionEnabled = false
         view.isAccessibilityElement = false
         view.accessibilityElementsHidden = true
+        // Identify the native decorative leaf rather than the representable's SwiftUI host.
+        view.accessibilityIdentifier = "wave.artwork.\(intent.rawValue)"
         context.coordinator.attach(view)
+        // SceneKit can supply its scene graph separately to accessibility and UI automation.
+        // This renderer contains decoration only; invitation text and controls are SwiftUI siblings.
+        // Explicit child providers keep both hierarchies empty without changing rendered geometry.
+        view.accessibilityElementsBlock = { [] }
+        view.automationElementsBlock = { [] }
         return view
     }
 
     func updateUIView(_ view: InvitationSceneView, context: Context) {
+        view.accessibilityIdentifier = "wave.artwork.\(intent.rawValue)"
         context.coordinator.update(intent: intent, accepted: accepted, viewerName: viewerName,
                                    counterpartName: counterpartName, active: active, staticPose: staticPose)
     }
